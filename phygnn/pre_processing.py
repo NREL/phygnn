@@ -64,6 +64,9 @@ class PreProcess:
             else:
                 numerical_ind.append(i)
 
+        if not one_hot_ind:
+            return self._features
+
         if one_hot_ind:
             if self._pd:
                 processed = self._features.iloc[:, numerical_ind]
@@ -79,5 +82,5 @@ class PreProcess:
                 processed = np.hstack((self._features[:, numerical_ind],
                                        np.hstack(one_hot_data)))
 
-        processed = processed.astype(np.float32)
-        return processed
+            processed = processed.astype(np.float32)
+            return processed
