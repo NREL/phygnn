@@ -3,7 +3,7 @@ Test the custom tensorflow utilities
 """
 import numpy as np
 import tensorflow as tf
-from mlclouds.tf_utilities import tf_isin, tf_log10
+from phygnn.tf_utilities import tf_isin, tf_log10
 
 
 def test_tf_isin():

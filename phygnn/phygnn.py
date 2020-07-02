@@ -378,7 +378,8 @@ class PhysicsGuidedNeuralNetwork:
         return x_batches, y_batches, p_batches
 
     def fit(self, x, y, p, n_batch=16, n_epoch=10, shuffle=True,
-            validation_split=0.2, p_kwargs=None, run_preflight=True):
+            validation_split=0.2, p_kwargs=None, run_preflight=True,
+            return_diagnostics=False):
         """Fit the neural network to data from x and y.
 
         Parameters
@@ -404,6 +405,8 @@ class PhysicsGuidedNeuralNetwork:
             Optional kwargs for the physical loss function self._p_fun.
         run_preflight : bool
             Flag to run preflight checks.
+        return_diagnostics : bool
+            Flag to return training diagnostics dictionary.
 
         Returns
         -------
@@ -454,7 +457,8 @@ class PhysicsGuidedNeuralNetwork:
                        'history': self.history,
                        }
 
-        return diagnostics
+        if return_diagnostics:
+            return diagnostics
 
     def predict(self, x, to_numpy=True):
         """Run a prediction on input features.
