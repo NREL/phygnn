@@ -12,6 +12,8 @@ import logging
 import tensorflow as tf
 from tensorflow.keras import layers, optimizers, initializers
 
+from phygnn.loss_metrics import METRICS
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +22,7 @@ class PhysicsGuidedNeuralNetwork:
     """Simple Deep Neural Network with custom physical loss function."""
 
     def __init__(self, p_fun, hidden_layers, loss_weights=(0.5, 0.5),
-                 input_dims=1, output_dims=1,
+                 input_dims=1, output_dims=1, metric='mae',
                  initializer=None, optimizer=None,
                  learning_rate=0.01, history=None):
         """
@@ -48,6 +50,9 @@ class PhysicsGuidedNeuralNetwork:
             Number of input features.
         output_dims : int
             Number of output labels.
+        metric : str
+            Loss metric option for the NN loss function (not the physical
+            loss function). Must be a valid key in phygnn.loss_metrics.METRICS
         initializer : tensorflow.keras.initializers
             Instantiated initializer object. None defaults to GlorotUniform
         optimizer : tensorflow.keras.optimizers
@@ -70,6 +75,15 @@ class PhysicsGuidedNeuralNetwork:
         self._optimizer = None
         self._history = history
         self._learning_rate = learning_rate
+
+        if metric.lower() not in METRICS:
+            e = ('Could not recognize error metric "{}". The following error '
+                 'metrics are available: {}'
+                 .format(metric, list(METRICS.keys())))
+            logger.error(e)
+            raise KeyError(e)
+        else:
+            self._metric_fun = METRICS[metric.lower()]
 
         self._initializer = initializer
         if initializer is None:
@@ -161,11 +175,7 @@ class PhysicsGuidedNeuralNetwork:
         if p_kwargs is None:
             p_kwargs = {}
 
-        nn_err = y_predicted - y_true
-        nn_err = tf.boolean_mask(nn_err, ~tf.math.is_nan(nn_err))
-        nn_err = tf.boolean_mask(nn_err, tf.math.is_finite(nn_err))
-        nn_loss = tf.reduce_mean(tf.abs(nn_err))
-
+        nn_loss = self._metric_fun(y_predicted, y_true)
         p_loss = self._p_fun(y_predicted, y_true, p, **p_kwargs)
 
         loss = self._loss_weights[0] * nn_loss

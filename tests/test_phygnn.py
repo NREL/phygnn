@@ -85,8 +85,8 @@ def test_nn():
     assert len(model.layers) == 4
     assert len(model.weights) == 6
     assert len(model.history) == 20
-    assert model.history.validation_loss.values[-1] < 0.1
-    assert model.history.validation_loss.values[-1] < test_mae
+    assert model.history.validation_loss.values[-1] < 0.15
+    assert test_mae < 0.15
 
 
 def test_phygnn():
@@ -103,8 +103,8 @@ def test_phygnn():
     assert len(model.layers) == 4
     assert len(model.weights) == 6
     assert len(model.history) == 20
-    assert model.history.validation_loss.values[-1] < 0.01
-    assert test_mae < 0.01
+    assert model.history.validation_loss.values[-1] < 0.015
+    assert test_mae < 0.015
 
 
 def test_save_load():
