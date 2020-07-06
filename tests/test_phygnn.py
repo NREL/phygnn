@@ -2,12 +2,14 @@
 Tests for basic phygnn functionality and execution.
 """
 # pylint: disable=W0613
-
+import os
 import pytest
 import numpy as np
 import tensorflow as tf
-from phygnn import PhysicsGuidedNeuralNetwork
+from phygnn import PhysicsGuidedNeuralNetwork, TESTDATADIR
 
+
+FPATH = os.path.join(TESTDATADIR, '_temp_model.pkl')
 
 N = 100
 A = np.linspace(-1, 1, N)
@@ -103,6 +105,24 @@ def test_phygnn():
     assert len(model.history) == 20
     assert model.history.validation_loss.values[-1] < 0.01
     assert test_mae < 0.01
+
+
+def test_save_load():
+    """Test the save/load operations of PGNN"""
+    PhysicsGuidedNeuralNetwork.seed(0)
+    model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                       hidden_layers=HIDDEN_LAYERS,
+                                       loss_weights=(0.0, 1.0),
+                                       input_dims=2, output_dims=1)
+
+    model.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
+    y_pred = model.predict(X)
+
+    model.save(FPATH)
+    loaded = PhysicsGuidedNeuralNetwork.load(FPATH)
+    y_pred_loaded = loaded.predict(X)
+    assert np.allclose(y_pred, y_pred_loaded)
+    os.remove(FPATH)
 
 
 def test_bad_pfun():
