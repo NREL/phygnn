@@ -107,6 +107,59 @@ class PhysicsGuidedNeuralNetwork:
         assert len(x) == len(y), 'Number of input observations dont match!'
         return True
 
+    def _preflight_p_fun(self, x, y_true, p, p_kwargs):
+        """Run a pre-flight check making sure the p_fun is differentiable."""
+
+        if p_kwargs is None:
+            p_kwargs = {}
+
+        with tf.GradientTape() as tape:
+            for layer in self._layers:
+                tape.watch(layer.variables)
+
+            y_predicted = self.predict(x, to_numpy=False)
+            p_loss = self._p_fun(y_predicted, y_true, p, **p_kwargs)
+            grad = tape.gradient(p_loss, self.weights)
+
+            if not tf.is_tensor(p_loss):
+                emsg = 'Loss output from p_fun() must be a tensor!'
+                logger.error(emsg)
+                raise TypeError(emsg)
+
+            if p_loss.ndim > 1:
+                emsg = ('Loss output from p_fun() should be a scalar tensor '
+                        'but received a tensor with shape {}'
+                        .format(p_loss.shape))
+                logger.error(emsg)
+                raise ValueError(emsg)
+
+            assert isinstance(grad, list)
+            if grad[0] is None:
+                emsg = ('The input p_fun was not differentiable! '
+                        'Please use only tensor math in the p_fun.')
+                logger.error(emsg)
+                raise RuntimeError(emsg)
+
+        logger.debug('p_fun passed preflight check.')
+
+    def _preflight_data(self, x, y, p):
+        """Run simple preflight checks on data shapes."""
+        self._check_shapes(x, y)
+        self._check_shapes(x, p)
+        x_msg = ('x data has {} features but expected {}'
+                 .format(x.shape[1], self._input_dims))
+        y_msg = ('y data has {} features but expected {}'
+                 .format(y.shape[1], self._output_dims))
+        assert x.shape[1] == self._input_dims, x_msg
+        assert y.shape[1] == self._output_dims, y_msg
+
+    def _preflight_predict(self, x):
+        """Run simple preflight checks on feature data shape for prediction."""
+        assert len(x.shape) == 2, 'PhyGNN can only predict on 2D data!'
+        x_msg = ('x data has {} features but expected {}'
+                 .format(x.shape[1], self._input_dims))
+        assert x.shape[1] == self._input_dims, x_msg
+
     @staticmethod
     def seed(s=0):
         """Set the random seed for reproducable results."""
@@ -233,41 +286,6 @@ class PhysicsGuidedNeuralNetwork:
         grad, loss = self._get_grad(x, y_true, p, p_kwargs)
         self._optimizer.apply_gradients(zip(grad, self.weights))
         return grad, loss
-
-    def _p_fun_preflight(self, x, y_true, p, p_kwargs):
-        """Run a pre-flight check making sure the p_fun is differentiable."""
-
-        if p_kwargs is None:
-            p_kwargs = {}
-
-        with tf.GradientTape() as tape:
-            for layer in self._layers:
-                tape.watch(layer.variables)
-
-            y_predicted = self.predict(x, to_numpy=False)
-            p_loss = self._p_fun(y_predicted, y_true, p, **p_kwargs)
-            grad = tape.gradient(p_loss, self.weights)
-
-            if not tf.is_tensor(p_loss):
-                emsg = 'Loss output from p_fun() must be a tensor!'
-                logger.error(emsg)
-                raise TypeError(emsg)
-
-            if p_loss.ndim > 1:
-                emsg = ('Loss output from p_fun() should be a scalar tensor '
-                        'but received a tensor with shape {}'
-                        .format(p_loss.shape))
-                logger.error(emsg)
-                raise ValueError(emsg)
-
-            assert isinstance(grad, list)
-            if grad[0] is None:
-                emsg = ('The input p_fun was not differentiable! '
-                        'Please use only tensor math in the p_fun.')
-                logger.error(emsg)
-                raise RuntimeError(emsg)
-
-        logger.debug('p_fun passed preflight check.')
 
     @staticmethod
     def _get_val_split(x, y, p, shuffle=True, validation_split=0.2):
@@ -425,8 +443,7 @@ class PhysicsGuidedNeuralNetwork:
             Namespace of training parameters that can be used for diagnostics.
         """
 
-        self._check_shapes(x, y)
-        self._check_shapes(x, p)
+        self._preflight_data(x, y, p)
 
         epochs = list(range(n_epoch))
 
@@ -441,7 +458,7 @@ class PhysicsGuidedNeuralNetwork:
             x, y, p, shuffle=shuffle, validation_split=validation_split)
 
         if self._loss_weights[1] > 0 and run_preflight:
-            self._p_fun_preflight(x_val, y_val, p_val, p_kwargs)
+            self._preflight_p_fun(x_val, y_val, p_val, p_kwargs)
 
         t0 = time.time()
         for epoch in epochs:
@@ -487,6 +504,7 @@ class PhysicsGuidedNeuralNetwork:
             Predicted output data in a 2D array.
         """
 
+        self._preflight_predict(x)
         y = self._layers[0](x)
         for layer in self._layers[1:]:
             y = layer(y)
