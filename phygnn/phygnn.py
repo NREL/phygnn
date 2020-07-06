@@ -66,15 +66,15 @@ class PhysicsGuidedNeuralNetwork:
 
         self._p_fun = p_fun
         self._hidden_layers = copy.deepcopy(hidden_layers)
-        assert np.sum(loss_weights) > 0, 'Sum of loss_weights must be > 0!'
-        assert len(loss_weights) == 2, 'loss_weights can only have two values!'
-        self._loss_weights = loss_weights
+        self._loss_weights = None
         self._input_dims = input_dims
         self._output_dims = output_dims
         self._layers = []
         self._optimizer = None
         self._history = history
         self._learning_rate = learning_rate
+
+        self.set_loss_weights(loss_weights)
 
         if metric.lower() not in METRICS:
             e = ('Could not recognize error metric "{}". The following error '
@@ -89,15 +89,15 @@ class PhysicsGuidedNeuralNetwork:
         if initializer is None:
             self._initializer = initializers.GlorotUniform()
 
+        self._optimizer = optimizer
+        if optimizer is None:
+            self._optimizer = optimizers.Adam(learning_rate=learning_rate)
+
         self._layers.append(layers.InputLayer(input_shape=[input_dims]))
         for hidden_layer in hidden_layers:
             self.add_layer(hidden_layer)
         self._layers.append(layers.Dense(
             output_dims, kernel_initializer=self._initializer))
-
-        self._optimizer = optimizer
-        if optimizer is None:
-            self._optimizer = optimizers.Adam(learning_rate=learning_rate)
 
     @staticmethod
     def _check_shapes(x, y):
@@ -216,7 +216,7 @@ class PhysicsGuidedNeuralNetwork:
                 self._layers.append(d_layer)
 
     def _get_grad(self, x, y_true, p, p_kwargs):
-        """Get the gradient based on a batch of x and y_true data."""
+        """Get the gradient based on a mini-batch of x and y_true data."""
         with tf.GradientTape() as tape:
             for layer in self._layers:
                 tape.watch(layer.variables)
@@ -228,8 +228,8 @@ class PhysicsGuidedNeuralNetwork:
         return grad, loss
 
     def _run_sgd(self, x, y_true, p, p_kwargs):
-        """Run stochastic gradient descent for one batch of (x, y_true) and
-        adjust NN weights."""
+        """Run stochastic gradient descent for one mini-batch of (x, y_true)
+        and adjust NN weights."""
         grad, loss = self._get_grad(x, y_true, p, p_kwargs)
         self._optimizer.apply_gradients(zip(grad, self.weights))
         return grad, loss
@@ -401,9 +401,10 @@ class PhysicsGuidedNeuralNetwork:
         p : np.ndarray
             Supplemental feature data for the physics loss function in 2D array
         n_batch : int
-            Number of times to update the NN weights per epoch. The training
-            data will be split into this many batches and the NN will train on
-            each batch, update weights, then move onto the next batch.
+            Number of times to update the NN weights per epoch (number of
+            mini-batches). The training data will be split into this many
+            mini-batches and the NN will train on each mini-batch, update
+            weights, then move onto the next mini-batch.
         n_epoch : int
             Number of times to iterate on the training data.
         shuffle : bool
