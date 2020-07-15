@@ -12,6 +12,8 @@ import logging
 import tensorflow as tf
 from tensorflow.keras import layers, optimizers, initializers
 
+from phygnn.loss_metrics import METRICS
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +22,7 @@ class PhysicsGuidedNeuralNetwork:
     """Simple Deep Neural Network with custom physical loss function."""
 
     def __init__(self, p_fun, hidden_layers, loss_weights=(0.5, 0.5),
-                 input_dims=1, output_dims=1,
+                 input_dims=1, output_dims=1, metric='mae',
                  initializer=None, optimizer=None,
                  learning_rate=0.01, history=None):
         """
@@ -48,6 +50,9 @@ class PhysicsGuidedNeuralNetwork:
             Number of input features.
         output_dims : int
             Number of output labels.
+        metric : str
+            Loss metric option for the NN loss function (not the physical
+            loss function). Must be a valid key in phygnn.loss_metrics.METRICS
         initializer : tensorflow.keras.initializers
             Instantiated initializer object. None defaults to GlorotUniform
         optimizer : tensorflow.keras.optimizers
@@ -61,9 +66,7 @@ class PhysicsGuidedNeuralNetwork:
 
         self._p_fun = p_fun
         self._hidden_layers = copy.deepcopy(hidden_layers)
-        assert np.sum(loss_weights) > 0, 'Sum of loss_weights must be > 0!'
-        assert len(loss_weights) == 2, 'loss_weights can only have two values!'
-        self._loss_weights = loss_weights
+        self._loss_weights = None
         self._input_dims = input_dims
         self._output_dims = output_dims
         self._layers = []
@@ -71,19 +74,30 @@ class PhysicsGuidedNeuralNetwork:
         self._history = history
         self._learning_rate = learning_rate
 
+        self.set_loss_weights(loss_weights)
+
+        if metric.lower() not in METRICS:
+            e = ('Could not recognize error metric "{}". The following error '
+                 'metrics are available: {}'
+                 .format(metric, list(METRICS.keys())))
+            logger.error(e)
+            raise KeyError(e)
+        else:
+            self._metric_fun = METRICS[metric.lower()]
+
         self._initializer = initializer
         if initializer is None:
             self._initializer = initializers.GlorotUniform()
+
+        self._optimizer = optimizer
+        if optimizer is None:
+            self._optimizer = optimizers.Adam(learning_rate=learning_rate)
 
         self._layers.append(layers.InputLayer(input_shape=[input_dims]))
         for hidden_layer in hidden_layers:
             self.add_layer(hidden_layer)
         self._layers.append(layers.Dense(
             output_dims, kernel_initializer=self._initializer))
-
-        self._optimizer = optimizer
-        if optimizer is None:
-            self._optimizer = optimizers.Adam(learning_rate=learning_rate)
 
     @staticmethod
     def _check_shapes(x, y):
@@ -92,6 +106,59 @@ class PhysicsGuidedNeuralNetwork:
         assert len(y.shape) == 2, 'Input dimensions must be 2D!'
         assert len(x) == len(y), 'Number of input observations dont match!'
         return True
+
+    def _preflight_p_fun(self, x, y_true, p, p_kwargs):
+        """Run a pre-flight check making sure the p_fun is differentiable."""
+
+        if p_kwargs is None:
+            p_kwargs = {}
+
+        with tf.GradientTape() as tape:
+            for layer in self._layers:
+                tape.watch(layer.variables)
+
+            y_predicted = self.predict(x, to_numpy=False)
+            p_loss = self._p_fun(y_predicted, y_true, p, **p_kwargs)
+            grad = tape.gradient(p_loss, self.weights)
+
+            if not tf.is_tensor(p_loss):
+                emsg = 'Loss output from p_fun() must be a tensor!'
+                logger.error(emsg)
+                raise TypeError(emsg)
+
+            if p_loss.ndim > 1:
+                emsg = ('Loss output from p_fun() should be a scalar tensor '
+                        'but received a tensor with shape {}'
+                        .format(p_loss.shape))
+                logger.error(emsg)
+                raise ValueError(emsg)
+
+            assert isinstance(grad, list)
+            if grad[0] is None:
+                emsg = ('The input p_fun was not differentiable! '
+                        'Please use only tensor math in the p_fun.')
+                logger.error(emsg)
+                raise RuntimeError(emsg)
+
+        logger.debug('p_fun passed preflight check.')
+
+    def _preflight_data(self, x, y, p):
+        """Run simple preflight checks on data shapes."""
+        self._check_shapes(x, y)
+        self._check_shapes(x, p)
+        x_msg = ('x data has {} features but expected {}'
+                 .format(x.shape[1], self._input_dims))
+        y_msg = ('y data has {} features but expected {}'
+                 .format(y.shape[1], self._output_dims))
+        assert x.shape[1] == self._input_dims, x_msg
+        assert y.shape[1] == self._output_dims, y_msg
+
+    def _preflight_predict(self, x):
+        """Run simple preflight checks on feature data shape for prediction."""
+        assert len(x.shape) == 2, 'PhyGNN can only predict on 2D data!'
+        x_msg = ('x data has {} features but expected {}'
+                 .format(x.shape[1], self._input_dims))
+        assert x.shape[1] == self._input_dims, x_msg
 
     @staticmethod
     def seed(s=0):
@@ -161,11 +228,7 @@ class PhysicsGuidedNeuralNetwork:
         if p_kwargs is None:
             p_kwargs = {}
 
-        nn_err = y_predicted - y_true
-        nn_err = tf.boolean_mask(nn_err, ~tf.math.is_nan(nn_err))
-        nn_err = tf.boolean_mask(nn_err, tf.math.is_finite(nn_err))
-        nn_loss = tf.reduce_mean(tf.abs(nn_err))
-
+        nn_loss = self._metric_fun(y_predicted, y_true)
         p_loss = self._p_fun(y_predicted, y_true, p, **p_kwargs)
 
         loss = self._loss_weights[0] * nn_loss
@@ -206,7 +269,7 @@ class PhysicsGuidedNeuralNetwork:
                 self._layers.append(d_layer)
 
     def _get_grad(self, x, y_true, p, p_kwargs):
-        """Get the gradient based on a batch of x and y_true data."""
+        """Get the gradient based on a mini-batch of x and y_true data."""
         with tf.GradientTape() as tape:
             for layer in self._layers:
                 tape.watch(layer.variables)
@@ -218,46 +281,11 @@ class PhysicsGuidedNeuralNetwork:
         return grad, loss
 
     def _run_sgd(self, x, y_true, p, p_kwargs):
-        """Run stochastic gradient descent for one batch of (x, y_true) and
-        adjust NN weights."""
+        """Run stochastic gradient descent for one mini-batch of (x, y_true)
+        and adjust NN weights."""
         grad, loss = self._get_grad(x, y_true, p, p_kwargs)
         self._optimizer.apply_gradients(zip(grad, self.weights))
         return grad, loss
-
-    def _p_fun_preflight(self, x, y_true, p, p_kwargs):
-        """Run a pre-flight check making sure the p_fun is differentiable."""
-
-        if p_kwargs is None:
-            p_kwargs = {}
-
-        with tf.GradientTape() as tape:
-            for layer in self._layers:
-                tape.watch(layer.variables)
-
-            y_predicted = self.predict(x, to_numpy=False)
-            p_loss = self._p_fun(y_predicted, y_true, p, **p_kwargs)
-            grad = tape.gradient(p_loss, self.weights)
-
-            if not tf.is_tensor(p_loss):
-                emsg = 'Loss output from p_fun() must be a tensor!'
-                logger.error(emsg)
-                raise TypeError(emsg)
-
-            if p_loss.ndim > 1:
-                emsg = ('Loss output from p_fun() should be a scalar tensor '
-                        'but received a tensor with shape {}'
-                        .format(p_loss.shape))
-                logger.error(emsg)
-                raise ValueError(emsg)
-
-            assert isinstance(grad, list)
-            if grad[0] is None:
-                emsg = ('The input p_fun was not differentiable! '
-                        'Please use only tensor math in the p_fun.')
-                logger.error(emsg)
-                raise RuntimeError(emsg)
-
-        logger.debug('p_fun passed preflight check.')
 
     @staticmethod
     def _get_val_split(x, y, p, shuffle=True, validation_split=0.2):
@@ -391,9 +419,10 @@ class PhysicsGuidedNeuralNetwork:
         p : np.ndarray
             Supplemental feature data for the physics loss function in 2D array
         n_batch : int
-            Number of times to update the NN weights per epoch. The training
-            data will be split into this many batches and the NN will train on
-            each batch, update weights, then move onto the next batch.
+            Number of times to update the NN weights per epoch (number of
+            mini-batches). The training data will be split into this many
+            mini-batches and the NN will train on each mini-batch, update
+            weights, then move onto the next mini-batch.
         n_epoch : int
             Number of times to iterate on the training data.
         shuffle : bool
@@ -414,8 +443,7 @@ class PhysicsGuidedNeuralNetwork:
             Namespace of training parameters that can be used for diagnostics.
         """
 
-        self._check_shapes(x, y)
-        self._check_shapes(x, p)
+        self._preflight_data(x, y, p)
 
         epochs = list(range(n_epoch))
 
@@ -430,7 +458,7 @@ class PhysicsGuidedNeuralNetwork:
             x, y, p, shuffle=shuffle, validation_split=validation_split)
 
         if self._loss_weights[1] > 0 and run_preflight:
-            self._p_fun_preflight(x_val, y_val, p_val, p_kwargs)
+            self._preflight_p_fun(x_val, y_val, p_val, p_kwargs)
 
         t0 = time.time()
         for epoch in epochs:
@@ -476,6 +504,7 @@ class PhysicsGuidedNeuralNetwork:
             Predicted output data in a 2D array.
         """
 
+        self._preflight_predict(x)
         y = self._layers[0](x)
         for layer in self._layers[1:]:
             y = layer(y)
