@@ -231,12 +231,13 @@ class PhysicsGuidedNeuralNetwork:
         nn_loss = self._metric_fun(y_predicted, y_true)
         p_loss = self._p_fun(y_predicted, y_true, p, **p_kwargs)
 
-        loss = self._loss_weights[0] * nn_loss
-        if not tf.math.is_nan(p_loss) and self._loss_weights[1] > 0:
-            loss += self._loss_weights[1] * p_loss
+        loss = self._loss_weights[0] * nn_loss + self._loss_weights[1] * p_loss
 
         logger.debug('NN Loss: {:.2e}, P Loss: {:.2e}, Total Loss: {:.2e}'
                      .format(nn_loss, p_loss, loss))
+
+        if tf.math.is_nan(loss):
+            raise ArithmeticError('Loss is nan.')
 
         return loss, nn_loss, p_loss
 
