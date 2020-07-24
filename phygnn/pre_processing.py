@@ -16,6 +16,9 @@ class PreProcess:
         features : np.ndarray | pd.DataFrame
             Feature data in a 2D array or DataFrame.
         """
+        if not features.index.is_unique:
+            raise AttributeError('DataFrame indices must be unique')
+
         self._features = features
         self._pd = False
         if isinstance(self._features, pd.DataFrame):
@@ -69,7 +72,7 @@ class PreProcess:
 
         if one_hot_ind:
             if self._pd:
-                processed = self._features.iloc[:, numerical_ind]
+                num_df = self._features.iloc[:, numerical_ind]
                 cols = [[self._features.columns[j] + '_' + str(k)
                          for k in range(one_hot_data[i].shape[1])]
                         for i, j in enumerate(one_hot_ind)]
@@ -77,10 +80,14 @@ class PreProcess:
                 one_hot_df = pd.DataFrame(np.hstack(one_hot_data),
                                           columns=cols,
                                           index=self._features.index)
-                processed = processed.join(one_hot_df)
+                processed = num_df.join(one_hot_df)
+
+                assert processed.shape[0] == num_df.shape[0] == \
+                    one_hot_df.shape[0]
             else:
                 processed = np.hstack((self._features[:, numerical_ind],
                                        np.hstack(one_hot_data)))
+                assert processed.shape[0] == self.features.shape[0]
 
             processed = processed.astype(np.float32)
             return processed
