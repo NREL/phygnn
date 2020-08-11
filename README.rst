@@ -2,7 +2,12 @@
 PHYGNN
 ******
 
-An open source repo for Physics-Guided Neural Networks.
+An open source implementation of Physics-Guided Neural Networks (PHYGNN). 
+This implementation of PHYGNN augments a traditional neural network loss 
+function with a generic loss term that can be used to guide the neural 
+network to learn physical or theoretical constraints.
+
+.. inclusion-intro
 
 Installation
 ============
