@@ -19,20 +19,23 @@ class PreProcess:
         features : np.ndarray | pd.DataFrame
             Feature data in a 2D array or DataFrame.
         categories : dict
-            Categories to use for one hot encoding. Format:
+            Categories to use for one hot encoding. Empty dict results in
+            categories being determined automatically. Format:
                 {
                     'col_name1' : ['cat1', 'cat2', 'cat3'],
                     'col_name2' : ['other_cat1', 'other_cat2']
                 }
         """
-        if not features.index.is_unique:
-            raise AttributeError('DataFrame indices must be unique')
 
         self._categories = categories
         self._features = features
         self._pd = False
         if isinstance(self._features, pd.DataFrame):
             self._pd = True
+
+        if self._pd:
+            if not features.index.is_unique:
+                raise AttributeError('DataFrame indices must be unique')
 
     def process_one_hot(self, convert_int=False):
         """Process str and int columns in the feature data to one-hot vectors.
@@ -53,7 +56,11 @@ class PreProcess:
         one_hot_data = []
         numerical_ind = []
 
-        for i, col_name in enumerate(self._features.columns):
+        for i in range(self._features.shape[1]):
+            if self._pd:
+                col_name = self._features.columns[i]
+            else:
+                col_name = None
 
             n = len(self._features)
             if self._pd:
@@ -104,7 +111,7 @@ class PreProcess:
             else:
                 processed = np.hstack((self._features[:, numerical_ind],
                                        np.hstack(one_hot_data)))
-                assert processed.shape[0] == self.features.shape[0]
+                assert processed.shape[0] == self._features.shape[0]
 
             processed = processed.astype(np.float32)
             return processed

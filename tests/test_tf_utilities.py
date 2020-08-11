@@ -18,7 +18,7 @@ def test_tf_isin():
 
 def test_tf_log10():
     """Test the tensorflow log base 10 utility method"""
-    a = np.arange(10)
+    a = np.arange(1, 10)
     tfa = tf.convert_to_tensor(a, dtype=np.float32)
     b = np.log10(a)
     tfb = tf_log10(tfa)
