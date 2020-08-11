@@ -17,12 +17,17 @@ except ImportError:
 
 here = os.path.abspath(os.path.dirname(__file__))
 
+with open(os.path.join(here, "phygnn", "version.py"), encoding="utf-8") as f:
+    version = f.read()
+
+version = version.split('=')[-1].strip().strip('"').strip("'")
+
 with open("README.rst", encoding="utf-8") as readme_file:
     readme = convert_text(readme_file.read(), "md", format="md")
 
 setup(
     name="phygnn",
-    version="0.0.0",
+    version=version,
     description="Physics-Guided Neural Networks",
     long_description=readme,
     author="Grant Buster",
