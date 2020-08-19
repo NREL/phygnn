@@ -139,6 +139,76 @@ def test_df_input():
         assert "Cannot work with input y columns: ['y']" in str(e)
 
 
+def test_kernel_regularization():
+    """Test the kernel regularization of phygnn."""
+    base = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                      hidden_layers=HIDDEN_LAYERS,
+                                      loss_weights=(1.0, 0.0),
+                                      input_dims=2, output_dims=1)
+
+    model_l1 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                          hidden_layers=HIDDEN_LAYERS,
+                                          loss_weights=(1.0, 0.0),
+                                          input_dims=2, output_dims=1,
+                                          kernel_reg_rate=0.01,
+                                          kernel_reg_power=1)
+
+    model_l2 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                          hidden_layers=HIDDEN_LAYERS,
+                                          loss_weights=(1.0, 0.0),
+                                          input_dims=2, output_dims=1,
+                                          kernel_reg_rate=0.01,
+                                          kernel_reg_power=2)
+
+    base.seed(0)
+    base.fit(X, Y_NOISE, P, n_batch=1, n_epoch=20)
+    model_l1.seed(0)
+    model_l1.fit(X, Y_NOISE, P, n_batch=1, n_epoch=20)
+    model_l2.seed(0)
+    model_l2.fit(X, Y_NOISE, P, n_batch=1, n_epoch=20)
+
+    assert base.kernel_reg_term > model_l1.kernel_reg_term
+    assert model_l1.kernel_reg_term > model_l2.kernel_reg_term
+    assert np.abs(base.kernel_reg_term - 497.95) < 1
+    assert np.abs(model_l1.kernel_reg_term - 84.55) < 1
+    assert np.abs(model_l2.kernel_reg_term - 17.29) < 1
+
+
+def test_bias_regularization():
+    """Test the bias regularization of phygnn."""
+    base = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                      hidden_layers=HIDDEN_LAYERS,
+                                      loss_weights=(1.0, 0.0),
+                                      input_dims=2, output_dims=1)
+
+    model_l1 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                          hidden_layers=HIDDEN_LAYERS,
+                                          loss_weights=(1.0, 0.0),
+                                          input_dims=2, output_dims=1,
+                                          bias_reg_rate=0.01,
+                                          bias_reg_power=1)
+
+    model_l2 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                          hidden_layers=HIDDEN_LAYERS,
+                                          loss_weights=(1.0, 0.0),
+                                          input_dims=2, output_dims=1,
+                                          bias_reg_rate=0.01,
+                                          bias_reg_power=2)
+
+    base.seed(0)
+    base.fit(X, Y_NOISE, P, n_batch=1, n_epoch=20)
+    model_l1.seed(0)
+    model_l1.fit(X, Y_NOISE, P, n_batch=1, n_epoch=20)
+    model_l2.seed(0)
+    model_l2.fit(X, Y_NOISE, P, n_batch=1, n_epoch=20)
+
+    assert base.bias_reg_term > model_l1.bias_reg_term
+    assert model_l1.bias_reg_term > model_l2.bias_reg_term
+    assert np.abs(base.bias_reg_term - 5.77) < 1
+    assert np.abs(model_l1.bias_reg_term - 2.37) < 1
+    assert np.abs(model_l2.bias_reg_term - 0.30) < 1
+
+
 def test_save_load():
     """Test the save/load operations of PGNN"""
     PhysicsGuidedNeuralNetwork.seed(0)

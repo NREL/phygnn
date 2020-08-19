@@ -297,11 +297,12 @@ class PhysicsGuidedNeuralNetwork:
         weights = []
         for layer in self._layers:
             weights += layer.variables
+
         return weights
 
     @property
     def kernel_weights(self):
-        """Get a list of the NN kernel weights
+        """Get a list of the NN kernel weights (tensors)
 
         (can be used for kernel regularization).
 
@@ -311,13 +312,13 @@ class PhysicsGuidedNeuralNetwork:
         weights = []
         for layer in self.layers:
             if isinstance(layer, Dense):
-                weights.append(layer.get_weights()[0])
+                weights.append(layer.variables[0])
 
         return weights
 
     @property
     def bias_weights(self):
-        """Get a list of the NN bias weights
+        """Get a list of the NN bias weights (tensors)
 
         (can be used for bias regularization).
 
@@ -327,9 +328,33 @@ class PhysicsGuidedNeuralNetwork:
         weights = []
         for layer in self.layers:
             if isinstance(layer, Dense):
-                weights.append(layer.get_weights()[1])
+                weights.append(layer.variables[1])
 
         return weights
+
+    @property
+    def kernel_reg_term(self):
+        """Get the regularization term for the kernel regularization without
+        the regularization rate applied."""
+        loss_k_reg = [tf.math.abs(x) for x in self.kernel_weights]
+        loss_k_reg = [tf.math.pow(x, self.kernel_reg_power)
+                      for x in loss_k_reg]
+        loss_k_reg = tf.math.reduce_sum(
+            [tf.math.reduce_sum(x) for x in loss_k_reg])
+
+        return loss_k_reg
+
+    @property
+    def bias_reg_term(self):
+        """Get the regularization term for the bias regularization without
+        the regularization rate applied."""
+        loss_b_reg = [tf.math.abs(x) for x in self.bias_weights]
+        loss_b_reg = [tf.math.pow(x, self.bias_reg_power)
+                      for x in loss_b_reg]
+        loss_b_reg = tf.math.reduce_sum(
+            [tf.math.reduce_sum(x) for x in loss_b_reg])
+
+        return loss_b_reg
 
     def reset_history(self):
         """Erase previous training history without resetting trained weights"""
@@ -349,30 +374,6 @@ class PhysicsGuidedNeuralNetwork:
         assert np.sum(loss_weights) > 0, 'Sum of loss_weights must be > 0!'
         assert len(loss_weights) == 2, 'loss_weights can only have two values!'
         self._loss_weights = loss_weights
-
-    @property
-    def kernel_regularization_term(self):
-        """Get the regularization term for the kernel regularization without
-        the regularization rate applied."""
-        loss_k_reg = [tf.math.abs(x) for x in self.kernel_weights]
-        loss_k_reg = [tf.math.pow(x, self.kernel_reg_power)
-                      for x in loss_k_reg]
-        loss_k_reg = tf.math.reduce_sum(
-            [tf.math.reduce_sum(x) for x in loss_k_reg])
-
-        return loss_k_reg
-
-    @property
-    def bias_regularization_term(self):
-        """Get the regularization term for the bias regularization without
-        the regularization rate applied."""
-        loss_b_reg = [tf.math.abs(x) for x in self.bias_weights]
-        loss_b_reg = [tf.math.pow(x, self.bias_reg_power)
-                      for x in loss_b_reg]
-        loss_b_reg = tf.math.reduce_sum(
-            [tf.math.reduce_sum(x) for x in loss_b_reg])
-
-        return loss_b_reg
 
     def loss(self, y_predicted, y_true, p, p_kwargs):
         """Calculate the loss function by comparing model-predicted y to y_true
@@ -418,16 +419,14 @@ class PhysicsGuidedNeuralNetwork:
         logger.debug('NN Loss: {:.2e}, P Loss: {:.2e}, Total Loss: {:.2e}'
                      .format(nn_loss, p_loss, loss))
 
-        if self.kernel_reg_rate > 0:
-            loss_kernel_reg = (self.kernel_regularization_term
-                               * self.kernel_reg_rate)
+        if self.kernel_reg_rate != 0:
+            loss_kernel_reg = self.kernel_reg_term * self.kernel_reg_rate
             loss += loss_kernel_reg
             logger.debug('Kernel regularization loss: {:.2e}, '
                          'Total Loss: {:.2e}'.format(loss_kernel_reg, loss))
 
-        if self.bias_reg_rate > 0:
-            loss_bias_reg = (self.bias_regularization_term
-                             * self.bias_reg_rate)
+        if self.bias_reg_rate != 0:
+            loss_bias_reg = self.bias_reg_term * self.bias_reg_rate
             loss += loss_bias_reg
             logger.debug('Bias regularization loss: {:.2e}, '
                          'Total Loss: {:.2e}'.format(loss_bias_reg, loss))
