@@ -10,7 +10,8 @@ import numpy as np
 import pandas as pd
 import logging
 import tensorflow as tf
-from tensorflow.keras import layers, optimizers, initializers
+from tensorflow.keras import optimizers, initializers
+from tensorflow.keras.layers import InputLayer, Dense, Dropout
 
 from phygnn.loss_metrics import METRICS
 
@@ -25,6 +26,8 @@ class PhysicsGuidedNeuralNetwork:
                  input_dims=1, output_dims=1, metric='mae',
                  initializer=None, optimizer=None,
                  learning_rate=0.01, history=None,
+                 kernel_reg_rate=0.0, kernel_reg_power=1,
+                 bias_reg_rate=0.0, bias_reg_power=1,
                  feature_names=None, output_names=None):
         """
         Parameters
@@ -63,6 +66,26 @@ class PhysicsGuidedNeuralNetwork:
             Optimizer learning rate.
         history : None | pd.DataFrame
             Learning history if continuing a training session.
+        kernel_reg_rate : float
+            Kernel regularization rate. Increasing this value above zero will
+            add a structural loss term to the loss function that
+            disincentivizes large hidden layer weights and should reduce
+            model complexity. Setting this to 0.0 will disable kernel
+            regularization.
+        kernel_reg_power : int
+            Kernel regularization power. kernel_reg_power=1 is L1
+            regularization (lasso regression), and kernel_reg_power=2 is L2
+            regularization (ridge regression).
+        bias_reg_rate : float
+            Bias regularization rate. Increasing this value above zero will
+            add a structural loss term to the loss function that
+            disincentivizes large hidden layer biases and should reduce
+            model complexity. Setting this to 0.0 will disable bias
+            regularization.
+        bias_reg_power : int
+            Bias regularization power. bias_reg_power=1 is L1
+            regularization (lasso regression), and bias_reg_power=2 is L2
+            regularization (ridge regression).
         feature_names : list | tuple | None
             Training feature names (strings). Mostly a convenience so that a
             loaded-from-disk model will have declared feature names, making it
@@ -84,6 +107,10 @@ class PhysicsGuidedNeuralNetwork:
         self._optimizer = None
         self._history = history
         self._learning_rate = learning_rate
+        self.kernel_reg_rate = kernel_reg_rate
+        self.kernel_reg_power = kernel_reg_power
+        self.bias_reg_rate = bias_reg_rate
+        self.bias_reg_power = bias_reg_power
         self.feature_names = feature_names
         self.output_names = output_names
 
@@ -106,10 +133,10 @@ class PhysicsGuidedNeuralNetwork:
         if optimizer is None:
             self._optimizer = optimizers.Adam(learning_rate=learning_rate)
 
-        self._layers.append(layers.InputLayer(input_shape=[input_dims]))
+        self._layers.append(InputLayer(input_shape=[input_dims]))
         for hidden_layer in hidden_layers:
             self.add_layer(hidden_layer)
-        self._layers.append(layers.Dense(
+        self._layers.append(Dense(
             output_dims, kernel_initializer=self._initializer))
 
     @staticmethod
@@ -272,6 +299,38 @@ class PhysicsGuidedNeuralNetwork:
             weights += layer.variables
         return weights
 
+    @property
+    def kernel_weights(self):
+        """Get a list of the NN kernel weights
+
+        (can be used for kernel regularization).
+
+        Does not include input layer or dropout layers.
+        Does include the output layer.
+        """
+        weights = []
+        for layer in self.layers:
+            if isinstance(layer, Dense):
+                weights.append(layer.get_weights()[0])
+
+        return weights
+
+    @property
+    def bias_weights(self):
+        """Get a list of the NN bias weights
+
+        (can be used for bias regularization).
+
+        Does not include input layer or dropout layers.
+        Does include the output layer.
+        """
+        weights = []
+        for layer in self.layers:
+            if isinstance(layer, Dense):
+                weights.append(layer.get_weights()[1])
+
+        return weights
+
     def reset_history(self):
         """Erase previous training history without resetting trained weights"""
         self._history = None
@@ -290,6 +349,30 @@ class PhysicsGuidedNeuralNetwork:
         assert np.sum(loss_weights) > 0, 'Sum of loss_weights must be > 0!'
         assert len(loss_weights) == 2, 'loss_weights can only have two values!'
         self._loss_weights = loss_weights
+
+    @property
+    def kernel_regularization_term(self):
+        """Get the regularization term for the kernel regularization without
+        the regularization rate applied."""
+        loss_k_reg = [tf.math.abs(x) for x in self.kernel_weights]
+        loss_k_reg = [tf.math.pow(x, self.kernel_reg_power)
+                      for x in loss_k_reg]
+        loss_k_reg = tf.math.reduce_sum(
+            [tf.math.reduce_sum(x) for x in loss_k_reg])
+
+        return loss_k_reg
+
+    @property
+    def bias_regularization_term(self):
+        """Get the regularization term for the bias regularization without
+        the regularization rate applied."""
+        loss_b_reg = [tf.math.abs(x) for x in self.bias_weights]
+        loss_b_reg = [tf.math.pow(x, self.bias_reg_power)
+                      for x in loss_b_reg]
+        loss_b_reg = tf.math.reduce_sum(
+            [tf.math.reduce_sum(x) for x in loss_b_reg])
+
+        return loss_b_reg
 
     def loss(self, y_predicted, y_true, p, p_kwargs):
         """Calculate the loss function by comparing model-predicted y to y_true
@@ -335,8 +418,24 @@ class PhysicsGuidedNeuralNetwork:
         logger.debug('NN Loss: {:.2e}, P Loss: {:.2e}, Total Loss: {:.2e}'
                      .format(nn_loss, p_loss, loss))
 
+        if self.kernel_reg_rate > 0:
+            loss_kernel_reg = (self.kernel_regularization_term
+                               * self.kernel_reg_rate)
+            loss += loss_kernel_reg
+            logger.debug('Kernel regularization loss: {:.2e}, '
+                         'Total Loss: {:.2e}'.format(loss_kernel_reg, loss))
+
+        if self.bias_reg_rate > 0:
+            loss_bias_reg = (self.bias_regularization_term
+                             * self.bias_reg_rate)
+            loss += loss_bias_reg
+            logger.debug('Bias regularization loss: {:.2e}, '
+                         'Total Loss: {:.2e}'.format(loss_bias_reg, loss))
+
         if tf.math.is_nan(loss):
-            raise ArithmeticError('Loss is nan.')
+            msg = 'phygnn calculated a NaN loss value!'
+            logger.error(msg)
+            raise ArithmeticError(msg)
 
         return loss, nn_loss, p_loss
 
@@ -355,14 +454,14 @@ class PhysicsGuidedNeuralNetwork:
         """
 
         dropout = layer_kwargs.pop('dropout', None)
-        layer = layers.Dense(**layer_kwargs)
+        layer = Dense(**layer_kwargs)
         if insert_index:
             self._layers.insert(insert_index, layer)
         else:
             self._layers.append(layer)
 
         if dropout is not None:
-            d_layer = layers.Dropout(dropout)
+            d_layer = Dropout(dropout)
             if insert_index:
                 self._layers.insert(insert_index + 1, d_layer)
             else:
@@ -656,6 +755,10 @@ class PhysicsGuidedNeuralNetwork:
                         'learning_rate': self._learning_rate,
                         'weight_dict': weight_dict,
                         'history': self._history,
+                        'kernel_reg_rate': self.kernel_reg_rate,
+                        'kernel_reg_power': self.kernel_reg_power,
+                        'bias_reg_rate': self.bias_reg_rate,
+                        'bias_reg_power': self.bias_reg_power,
                         'feature_names': self.feature_names,
                         'output_names': self.output_names,
                         }
