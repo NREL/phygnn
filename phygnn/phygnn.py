@@ -24,7 +24,8 @@ class PhysicsGuidedNeuralNetwork:
     def __init__(self, p_fun, hidden_layers, loss_weights=(0.5, 0.5),
                  input_dims=1, output_dims=1, metric='mae',
                  initializer=None, optimizer=None,
-                 learning_rate=0.01, history=None):
+                 learning_rate=0.01, history=None,
+                 feature_names=None, output_names=None):
         """
         Parameters
         ----------
@@ -62,6 +63,14 @@ class PhysicsGuidedNeuralNetwork:
             Optimizer learning rate.
         history : None | pd.dataframe
             Learning history if continuing a training session.
+        feature_names : list | tuple | None
+            Training feature names (strings). Mostly a convenience so that a
+            loaded-from-disk model will have declared feature names, making it
+            easier to feed in features for prediction.
+        output_names : list | tuple | None
+            Prediction output names (strings). Mostly a convenience so that a
+            loaded-from-disk model will have declared output names, making it
+            easier to understand prediction output.
         """
 
         self._p_fun = p_fun
@@ -73,6 +82,8 @@ class PhysicsGuidedNeuralNetwork:
         self._optimizer = None
         self._history = history
         self._learning_rate = learning_rate
+        self.feature_names = feature_names
+        self.output_names = output_names
 
         self.set_loss_weights(loss_weights)
 
@@ -554,6 +565,8 @@ class PhysicsGuidedNeuralNetwork:
                         'learning_rate': self._learning_rate,
                         'weight_dict': weight_dict,
                         'history': self._history,
+                        'feature_names': self.feature_names,
+                        'output_names': self.output_names,
                         }
 
         with open(fpath, 'wb') as f:
