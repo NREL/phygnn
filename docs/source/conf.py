@@ -22,8 +22,8 @@ import sys
 # -- Project information -----------------------------------------------------
 
 project = 'phygnn'
-copyright = '2018, Alliance for Sustainable Energy, LLC'
-author = 'Grant Buster, Michael Rossol'
+copyright = '2020, Alliance for Sustainable Energy, LLC'
+author = 'Grant Buster, Michael Rossol, Mike Bannister, Dylan Hettinger'
 
 pkg = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
 pkg = os.path.dirname(pkg)
@@ -159,7 +159,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'phygnn.tex', 'phygnn Documentation',
-     'Grant Buster, Michael Rossol', 'manual'),
+     'Grant Buster, Michael Rossol, Mike Bannister, Dylan Hettinger', 'manual'),
 ]
 
 
