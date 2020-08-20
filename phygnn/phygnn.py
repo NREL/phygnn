@@ -41,10 +41,12 @@ class PhysicsGuidedNeuralNetwork:
         hidden_layers : list
             List of dictionaries of key word arguments for each hidden
             layer in the NN. For example:
-            hidden_layers=[{'units': 64, 'activation': 'relu',
-                            'name': 'layer1', 'dropout': 0.01},
-                           {'units': 64, 'activation': 'relu',
-                            'name': 'layer2', 'dropout': 0.01}]
+                hidden_layers=[
+                    {'units': 64, 'activation': 'relu',
+                     'name': 'hidden_layer1', 'dropout': 0.01},
+                    {'units': 64, 'activation': 'relu',
+                     'name': 'hidden_layer2', 'dropout': 0.01},
+                    ]
         loss_weights : tuple
             Loss weights for the neural network y_predicted vs. y_true
             and for the p_fun loss, respectively. For example,
