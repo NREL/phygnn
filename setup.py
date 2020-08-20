@@ -53,7 +53,7 @@ class PostDevelopCommand(develop):
 setup(
     name="NREL-phygnn",
     version=version,
-    description="Physics-Guided Neural Networks",
+    description="Physics-Guided Neural Networks (phygnn)",
     long_description=readme,
     author="Grant Buster",
     author_email="grant.buster@nrel.gov",
