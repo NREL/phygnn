@@ -41,17 +41,14 @@ class PhysicsGuidedNeuralNetwork:
         hidden_layers : list
             List of dictionaries of key word arguments for each hidden
             layer in the NN. For example:
-            ```
-            hidden_layers=[{'units': 64, 'activation': 'relu',
-                            'name': 'hidden_layer1', 'dropout': 0.01},
-                           {'units': 64, 'activation': 'relu',
-                            'name': 'hidden_layer2', 'dropout': 0.01},
-                          ]
-            ```
+                hidden_layers=[{'units': 64, 'activation': 'relu',
+                                'name': 'hidden_layer1', 'dropout': 0.01},
+                               {'units': 64, 'activation': 'relu',
+                                'name': 'hidden_layer2', 'dropout': 0.01}]
         loss_weights : tuple
             Loss weights for the neural network y_predicted vs. y_true
             and for the p_fun loss, respectively. For example,
-            loss_weights=(0.0, 1.0) would simplify the PGNN loss function
+            loss_weights=(0.0, 1.0) would simplify the phygnn loss function
             to just the p_fun output.
         input_dims : int
             Number of input features.
@@ -371,7 +368,7 @@ class PhysicsGuidedNeuralNetwork:
         loss_weights : tuple
             Loss weights for the neural network y_predicted vs. y_true
             and for the p_fun loss, respectively. For example,
-            loss_weights=(0.0, 1.0) would simplify the PGNN loss function
+            loss_weights=(0.0, 1.0) would simplify the phygnn loss function
             to just the p_fun output.
         """
         assert np.sum(loss_weights) > 0, 'Sum of loss_weights must be > 0!'
@@ -726,7 +723,7 @@ class PhysicsGuidedNeuralNetwork:
         return y
 
     def save(self, fpath):
-        """Save pgnn model to pickle file.
+        """Save phygnn model to pickle file.
 
         Parameters
         ----------
@@ -770,7 +767,7 @@ class PhysicsGuidedNeuralNetwork:
 
     @classmethod
     def load(cls, fpath):
-        """Load a pgnn model that has been saved to a pickle file.
+        """Load a phygnn model that has been saved to a pickle file.
 
         Parameters
         ----------
