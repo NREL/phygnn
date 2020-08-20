@@ -136,7 +136,9 @@ class PreProcess:
 
     def _make_df_one_hot_cols_labels(self, one_hot_ind, one_hot_data,
                                      categories=None):
-        """
+        """Make unique column labels for the new one-hot data. This will use
+        column labels from categories if available.
+
         Parameters
         ----------
         one_hot_ind : list
@@ -155,6 +157,11 @@ class PreProcess:
             results in category names being determined automatically. Format:
                 {'col_name1' : ['cat1', 'cat2', 'cat3'],
                  'col_name2' : ['other_cat1', 'other_cat2']}
+
+        Returns
+        -------
+        col_labels : list
+            List of string labels corresponding to np.hstack(one_hot_data).
         """
 
         if categories is None:
