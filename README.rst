@@ -30,9 +30,10 @@ Engineers and researchers can use the phygnn framework to:
 
 Here are additional examples of similar architectures from the literature which helped inspire this work: 
 
-    * Willard, Jared et al. “Integrating Physics-Based Modeling with Machine Learning: A Survey.” ArXiv abs/2003.04919 (2020): n. pag.
+    * Jared Willard, Xiaowei Jia, Shaoming Xu, Michael Steinbach, and Vipin Kumar, “Integrating Physics-Based Modeling with Machine Learning: A Survey.” ArXiv abs/2003.04919 (2020).
     * Forssell, U. and P. Lindskog. “Combining Semi-Physical and Neural Network Modeling: An Example ofIts Usefulness.” IFAC Proceedings Volumes 30 (1997): 767-770.
-    * Anuj Karpatne, William Watkins, Jordan Read, Vipin Kumar, "Physics-guided Neural Networks (PGNN): An Application in Lake Temperature Modeling". arXiv:1710.11431v2 (2018).
+    * Xinyue Hu, Haoji Hu, Saurabh Verma, and Zhi-Li Zhang, “Physics-Guided Deep Neural Networks for PowerFlow Analysis”, arXiv:2002.00097v1 (2020).
+    * Anuj Karpatne, William Watkins, Jordan Read, and Vipin Kumar, "Physics-guided Neural Networks (PGNN): An Application in Lake Temperature Modeling". arXiv:1710.11431v2 (2018).
     * Anuj Karpatne, Gowtham Atluri, James H Faghmous, Michael Steinbach, Arindam Banerjee, Auroop Ganguly, Shashi Shekhar, Nagiza Samatova, and Vipin Kumar. 2017. Theory-guided data science: A new paradigm for scientific discovery from data. IEEE Transactions on knowledge and data engineering 29, 10 (2017), 2318–2331.
 
     
