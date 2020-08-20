@@ -5,6 +5,7 @@ Tests for basic phygnn functionality and execution.
 import os
 import pytest
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from phygnn import PhysicsGuidedNeuralNetwork, TESTDATADIR
 
@@ -77,7 +78,9 @@ def test_nn():
     model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                        hidden_layers=HIDDEN_LAYERS,
                                        loss_weights=(1.0, 0.0),
-                                       input_dims=2, output_dims=1)
+                                       input_dims=2, output_dims=1,
+                                       feature_names=['a', 'b'],
+                                       output_names=['c'])
     model.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
 
     test_mae = np.mean(np.abs(model.predict(X) - Y))
@@ -107,13 +110,114 @@ def test_phygnn():
     assert test_mae < 0.015
 
 
+def test_df_input():
+    """Test the operation of the PGNN with labeled input dataframes."""
+    PhysicsGuidedNeuralNetwork.seed(0)
+    model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                       hidden_layers=HIDDEN_LAYERS,
+                                       loss_weights=(0.0, 1.0),
+                                       input_dims=2, output_dims=1)
+    x_df = pd.DataFrame(X, columns=('a', 'b'))
+    y_df = pd.DataFrame(Y_NOISE, columns=('c',))
+    p_df = pd.DataFrame(P, columns=('a', 'b'))
+    model.fit(x_df, y_df, p_df, n_batch=1, n_epoch=2)
+
+    assert model.feature_names == ['a', 'b']
+    assert model.output_names == ['c']
+
+    x_df_bad = pd.DataFrame(X, columns=('x1', 'x2'))
+    y_df_bad = pd.DataFrame(Y_NOISE, columns=('y',))
+
+    try:
+        model.fit(x_df_bad, y_df_bad, p_df, n_batch=1, n_epoch=2)
+    except AssertionError as e:
+        assert "Cannot work with input x columns: ['x1', 'x2']" in str(e)
+
+    try:
+        model.fit(x_df, y_df_bad, p_df, n_batch=1, n_epoch=2)
+    except AssertionError as e:
+        assert "Cannot work with input y columns: ['y']" in str(e)
+
+
+def test_kernel_regularization():
+    """Test the kernel regularization of phygnn."""
+    base = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                      hidden_layers=HIDDEN_LAYERS,
+                                      loss_weights=(1.0, 0.0),
+                                      input_dims=2, output_dims=1)
+
+    model_l1 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                          hidden_layers=HIDDEN_LAYERS,
+                                          loss_weights=(1.0, 0.0),
+                                          input_dims=2, output_dims=1,
+                                          kernel_reg_rate=0.01,
+                                          kernel_reg_power=1)
+
+    model_l2 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                          hidden_layers=HIDDEN_LAYERS,
+                                          loss_weights=(1.0, 0.0),
+                                          input_dims=2, output_dims=1,
+                                          kernel_reg_rate=0.01,
+                                          kernel_reg_power=2)
+
+    base.seed(0)
+    base.fit(X, Y_NOISE, P, n_batch=1, n_epoch=20)
+    model_l1.seed(0)
+    model_l1.fit(X, Y_NOISE, P, n_batch=1, n_epoch=20)
+    model_l2.seed(0)
+    model_l2.fit(X, Y_NOISE, P, n_batch=1, n_epoch=20)
+
+    assert base.kernel_reg_term > model_l1.kernel_reg_term
+    assert model_l1.kernel_reg_term > model_l2.kernel_reg_term
+    assert np.abs(base.kernel_reg_term - 497.95) < 1
+    assert np.abs(model_l1.kernel_reg_term - 84.55) < 1
+    assert np.abs(model_l2.kernel_reg_term - 17.29) < 1
+
+
+def test_bias_regularization():
+    """Test the bias regularization of phygnn."""
+    base = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                      hidden_layers=HIDDEN_LAYERS,
+                                      loss_weights=(1.0, 0.0),
+                                      input_dims=2, output_dims=1)
+
+    model_l1 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                          hidden_layers=HIDDEN_LAYERS,
+                                          loss_weights=(1.0, 0.0),
+                                          input_dims=2, output_dims=1,
+                                          bias_reg_rate=0.01,
+                                          bias_reg_power=1)
+
+    model_l2 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                          hidden_layers=HIDDEN_LAYERS,
+                                          loss_weights=(1.0, 0.0),
+                                          input_dims=2, output_dims=1,
+                                          bias_reg_rate=0.01,
+                                          bias_reg_power=2)
+
+    base.seed(0)
+    base.fit(X, Y_NOISE, P, n_batch=1, n_epoch=20)
+    model_l1.seed(0)
+    model_l1.fit(X, Y_NOISE, P, n_batch=1, n_epoch=20)
+    model_l2.seed(0)
+    model_l2.fit(X, Y_NOISE, P, n_batch=1, n_epoch=20)
+
+    assert base.bias_reg_term > model_l1.bias_reg_term
+    assert model_l1.bias_reg_term > model_l2.bias_reg_term
+    assert np.abs(base.bias_reg_term - 5.77) < 1
+    assert np.abs(model_l1.bias_reg_term - 2.37) < 1
+    assert np.abs(model_l2.bias_reg_term - 0.30) < 1
+
+
 def test_save_load():
     """Test the save/load operations of PGNN"""
     PhysicsGuidedNeuralNetwork.seed(0)
     model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                        hidden_layers=HIDDEN_LAYERS,
                                        loss_weights=(0.0, 1.0),
-                                       input_dims=2, output_dims=1)
+                                       input_dims=2, output_dims=1,
+                                       feature_names=['a', 'b'],
+                                       output_names=['c'])
 
     model.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
     y_pred = model.predict(X)
@@ -122,6 +226,8 @@ def test_save_load():
     loaded = PhysicsGuidedNeuralNetwork.load(FPATH)
     y_pred_loaded = loaded.predict(X)
     assert np.allclose(y_pred, y_pred_loaded)
+    assert loaded.feature_names == ['a', 'b']
+    assert loaded.output_names == ['c']
     os.remove(FPATH)
 
 

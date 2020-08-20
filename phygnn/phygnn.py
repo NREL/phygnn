@@ -10,7 +10,8 @@ import numpy as np
 import pandas as pd
 import logging
 import tensorflow as tf
-from tensorflow.keras import layers, optimizers, initializers
+from tensorflow.keras import optimizers, initializers
+from tensorflow.keras.layers import InputLayer, Dense, Dropout
 
 from phygnn.loss_metrics import METRICS
 
@@ -24,7 +25,10 @@ class PhysicsGuidedNeuralNetwork:
     def __init__(self, p_fun, hidden_layers, loss_weights=(0.5, 0.5),
                  input_dims=1, output_dims=1, metric='mae',
                  initializer=None, optimizer=None,
-                 learning_rate=0.01, history=None):
+                 learning_rate=0.01, history=None,
+                 kernel_reg_rate=0.0, kernel_reg_power=1,
+                 bias_reg_rate=0.0, bias_reg_power=1,
+                 feature_names=None, output_names=None):
         """
         Parameters
         ----------
@@ -60,8 +64,38 @@ class PhysicsGuidedNeuralNetwork:
             None defaults to Adam.
         learning_rate : float
             Optimizer learning rate.
-        history : None | pd.dataframe
+        history : None | pd.DataFrame
             Learning history if continuing a training session.
+        kernel_reg_rate : float
+            Kernel regularization rate. Increasing this value above zero will
+            add a structural loss term to the loss function that
+            disincentivizes large hidden layer weights and should reduce
+            model complexity. Setting this to 0.0 will disable kernel
+            regularization.
+        kernel_reg_power : int
+            Kernel regularization power. kernel_reg_power=1 is L1
+            regularization (lasso regression), and kernel_reg_power=2 is L2
+            regularization (ridge regression).
+        bias_reg_rate : float
+            Bias regularization rate. Increasing this value above zero will
+            add a structural loss term to the loss function that
+            disincentivizes large hidden layer biases and should reduce
+            model complexity. Setting this to 0.0 will disable bias
+            regularization.
+        bias_reg_power : int
+            Bias regularization power. bias_reg_power=1 is L1
+            regularization (lasso regression), and bias_reg_power=2 is L2
+            regularization (ridge regression).
+        feature_names : list | tuple | None
+            Training feature names (strings). Mostly a convenience so that a
+            loaded-from-disk model will have declared feature names, making it
+            easier to feed in features for prediction. This will also get set
+            if phygnn is trained on a DataFrame.
+        output_names : list | tuple | None
+            Prediction output names (strings). Mostly a convenience so that a
+            loaded-from-disk model will have declared output names, making it
+            easier to understand prediction output. This will also get set
+            if phygnn is trained on a DataFrame.
         """
 
         self._p_fun = p_fun
@@ -73,6 +107,12 @@ class PhysicsGuidedNeuralNetwork:
         self._optimizer = None
         self._history = history
         self._learning_rate = learning_rate
+        self.kernel_reg_rate = kernel_reg_rate
+        self.kernel_reg_power = kernel_reg_power
+        self.bias_reg_rate = bias_reg_rate
+        self.bias_reg_power = bias_reg_power
+        self.feature_names = feature_names
+        self.output_names = output_names
 
         self.set_loss_weights(loss_weights)
 
@@ -93,10 +133,10 @@ class PhysicsGuidedNeuralNetwork:
         if optimizer is None:
             self._optimizer = optimizers.Adam(learning_rate=learning_rate)
 
-        self._layers.append(layers.InputLayer(input_shape=[input_dims]))
+        self._layers.append(InputLayer(input_shape=[input_dims]))
         for hidden_layer in hidden_layers:
             self.add_layer(hidden_layer)
-        self._layers.append(layers.Dense(
+        self._layers.append(Dense(
             output_dims, kernel_initializer=self._initializer))
 
     @staticmethod
@@ -107,7 +147,7 @@ class PhysicsGuidedNeuralNetwork:
         assert len(x) == len(y), 'Number of input observations dont match!'
         return True
 
-    def _preflight_p_fun(self, x, y_true, p, p_kwargs):
+    def preflight_p_fun(self, x, y_true, p, p_kwargs):
         """Run a pre-flight check making sure the p_fun is differentiable."""
 
         if p_kwargs is None:
@@ -142,8 +182,37 @@ class PhysicsGuidedNeuralNetwork:
 
         logger.debug('p_fun passed preflight check.')
 
-    def _preflight_data(self, x, y, p):
-        """Run simple preflight checks on data shapes."""
+    def preflight_data(self, x, y, p):
+        """Run simple preflight checks on data shapes.
+
+        Parameters
+        ----------
+        x : np.ndarray | pd.DataFrame
+            Feature data in a 2D array or DataFrame. If this is a DataFrame,
+            the index is ignored, the columns are used with self.feature_names,
+            and the df is converted into a numpy array for batching and passing
+            to the training algorithm.
+        y : np.ndarray | pd.DataFrame
+            Known output data in a 2D array or DataFrame. If this is a
+            DataFrame, the index is ignored, the columns are used with
+            self.output_names, and the df is converted into a numpy array for
+            batching and passing to the training algorithm.
+        p : np.ndarray | pd.DataFrame
+            Supplemental feature data for the physics loss function in 2D array
+            or DataFrame. If this is a DataFrame, the index and column labels
+            are ignored and the df is converted into a numpy array for batching
+            and passing to the training algorithm and physical loss function.
+
+        Returns
+        ----------
+        x : np.ndarray
+            Feature data in a 2D array
+        y : np.ndarray
+            Known output data in a 2D array
+        p : np.ndarray
+            Supplemental feature data for the physics loss function in 2D array
+        """
+
         self._check_shapes(x, y)
         self._check_shapes(x, p)
         x_msg = ('x data has {} features but expected {}'
@@ -153,12 +222,58 @@ class PhysicsGuidedNeuralNetwork:
         assert x.shape[1] == self._input_dims, x_msg
         assert y.shape[1] == self._output_dims, y_msg
 
-    def _preflight_predict(self, x):
-        """Run simple preflight checks on feature data shape for prediction."""
-        assert len(x.shape) == 2, 'PhyGNN can only predict on 2D data!'
+        x = self.preflight_features(x)
+
+        if isinstance(y, pd.DataFrame):
+            y_cols = y.columns.values.tolist()
+            if self.output_names is None:
+                self.output_names = y_cols
+            else:
+                msg = ('Cannot work with input y columns: {}, previously set '
+                       'output names are: {}'
+                       .format(y_cols, self.output_names))
+                assert self.output_names == y_cols, msg
+            y = y.values
+
+        if isinstance(p, pd.DataFrame):
+            p = p.values
+
+        return x, y, p
+
+    def preflight_features(self, x):
+        """Run preflight checks and data conversions on feature data.
+
+        Parameters
+        ----------
+        x : np.ndarray | pd.DataFrame
+            Feature data in a 2D array or DataFrame. If this is a DataFrame,
+            the index is ignored, the columns are used with self.feature_names,
+            and the df is converted into a numpy array for batching and passing
+            to the training algorithm.
+
+        Returns
+        ----------
+        x : np.ndarray
+            Feature data in a 2D array
+        """
+
+        assert len(x.shape) == 2, 'PhyGNN can only use 2D data as input!'
         x_msg = ('x data has {} features but expected {}'
                  .format(x.shape[1], self._input_dims))
         assert x.shape[1] == self._input_dims, x_msg
+
+        if isinstance(x, pd.DataFrame):
+            x_cols = x.columns.values.tolist()
+            if self.feature_names is None:
+                self.feature_names = x_cols
+            else:
+                msg = ('Cannot work with input x columns: {}, previously set '
+                       'feature names are: {}'
+                       .format(x_cols, self.feature_names))
+                assert self.feature_names == x_cols, msg
+            x = x.values
+
+        return x
 
     @staticmethod
     def seed(s=0):
@@ -168,7 +283,7 @@ class PhysicsGuidedNeuralNetwork:
 
     @property
     def history(self):
-        """Get the training history dataframe (None if not yet trained)."""
+        """Get the training history DataFrame (None if not yet trained)."""
         return self._history
 
     @property
@@ -182,7 +297,64 @@ class PhysicsGuidedNeuralNetwork:
         weights = []
         for layer in self._layers:
             weights += layer.variables
+
         return weights
+
+    @property
+    def kernel_weights(self):
+        """Get a list of the NN kernel weights (tensors)
+
+        (can be used for kernel regularization).
+
+        Does not include input layer or dropout layers.
+        Does include the output layer.
+        """
+        weights = []
+        for layer in self.layers:
+            if isinstance(layer, Dense):
+                weights.append(layer.variables[0])
+
+        return weights
+
+    @property
+    def bias_weights(self):
+        """Get a list of the NN bias weights (tensors)
+
+        (can be used for bias regularization).
+
+        Does not include input layer or dropout layers.
+        Does include the output layer.
+        """
+        weights = []
+        for layer in self.layers:
+            if isinstance(layer, Dense):
+                weights.append(layer.variables[1])
+
+        return weights
+
+    @property
+    def kernel_reg_term(self):
+        """Get the regularization term for the kernel regularization without
+        the regularization rate applied."""
+        loss_k_reg = [tf.math.abs(x) for x in self.kernel_weights]
+        loss_k_reg = [tf.math.pow(x, self.kernel_reg_power)
+                      for x in loss_k_reg]
+        loss_k_reg = tf.math.reduce_sum(
+            [tf.math.reduce_sum(x) for x in loss_k_reg])
+
+        return loss_k_reg
+
+    @property
+    def bias_reg_term(self):
+        """Get the regularization term for the bias regularization without
+        the regularization rate applied."""
+        loss_b_reg = [tf.math.abs(x) for x in self.bias_weights]
+        loss_b_reg = [tf.math.pow(x, self.bias_reg_power)
+                      for x in loss_b_reg]
+        loss_b_reg = tf.math.reduce_sum(
+            [tf.math.reduce_sum(x) for x in loss_b_reg])
+
+        return loss_b_reg
 
     def reset_history(self):
         """Erase previous training history without resetting trained weights"""
@@ -223,6 +395,10 @@ class PhysicsGuidedNeuralNetwork:
             Sum of the NN loss function comparing the y_predicted against
             y_true and the physical loss function (self._p_fun) with
             respective weights applied.
+        nn_loss : tf.tensor
+            Standard NN training loss comparing y to y_predicted.
+        p_loss : tf.tensor
+            Physics loss from p_fun.
         """
 
         if p_kwargs is None:
@@ -243,8 +419,22 @@ class PhysicsGuidedNeuralNetwork:
         logger.debug('NN Loss: {:.2e}, P Loss: {:.2e}, Total Loss: {:.2e}'
                      .format(nn_loss, p_loss, loss))
 
+        if self.kernel_reg_rate != 0:
+            loss_kernel_reg = self.kernel_reg_term * self.kernel_reg_rate
+            loss += loss_kernel_reg
+            logger.debug('Kernel regularization loss: {:.2e}, '
+                         'Total Loss: {:.2e}'.format(loss_kernel_reg, loss))
+
+        if self.bias_reg_rate != 0:
+            loss_bias_reg = self.bias_reg_term * self.bias_reg_rate
+            loss += loss_bias_reg
+            logger.debug('Bias regularization loss: {:.2e}, '
+                         'Total Loss: {:.2e}'.format(loss_bias_reg, loss))
+
         if tf.math.is_nan(loss):
-            raise ArithmeticError('Loss is nan.')
+            msg = 'phygnn calculated a NaN loss value!'
+            logger.error(msg)
+            raise ArithmeticError(msg)
 
         return loss, nn_loss, p_loss
 
@@ -263,14 +453,14 @@ class PhysicsGuidedNeuralNetwork:
         """
 
         dropout = layer_kwargs.pop('dropout', None)
-        layer = layers.Dense(**layer_kwargs)
+        layer = Dense(**layer_kwargs)
         if insert_index:
             self._layers.insert(insert_index, layer)
         else:
             self._layers.append(layer)
 
         if dropout is not None:
-            d_layer = layers.Dropout(dropout)
+            d_layer = Dropout(dropout)
             if insert_index:
                 self._layers.insert(insert_index + 1, d_layer)
             else:
@@ -288,8 +478,8 @@ class PhysicsGuidedNeuralNetwork:
 
         return grad, loss
 
-    def _run_sgd(self, x, y_true, p, p_kwargs):
-        """Run stochastic gradient descent for one mini-batch of (x, y_true)
+    def _run_gradient_descent(self, x, y_true, p, p_kwargs):
+        """Run gradient descent for one mini-batch of (x, y_true)
         and adjust NN weights."""
         grad, loss = self._get_grad(x, y_true, p, p_kwargs)
         self._optimizer.apply_gradients(zip(grad, self.weights))
@@ -420,12 +610,21 @@ class PhysicsGuidedNeuralNetwork:
 
         Parameters
         ----------
-        x : np.ndarray
-            Feature data in a 2D array
-        y : np.ndarray
-            Known output data in a 2D array.
-        p : np.ndarray
+        x : np.ndarray | pd.DataFrame
+            Feature data in a 2D array or DataFrame. If this is a DataFrame,
+            the index is ignored, the columns are used with self.feature_names,
+            and the df is converted into a numpy array for batching and passing
+            to the training algorithm.
+        y : np.ndarray | pd.DataFrame
+            Known output data in a 2D array or DataFrame. If this is a
+            DataFrame, the index is ignored, the columns are used with
+            self.output_names, and the df is converted into a numpy array for
+            batching and passing to the training algorithm.
+        p : np.ndarray | pd.DataFrame
             Supplemental feature data for the physics loss function in 2D array
+            or DataFrame. If this is a DataFrame, the index and column labels
+            are ignored and the df is converted into a numpy array for batching
+            and passing to the training algorithm and physical loss function.
         n_batch : int
             Number of times to update the NN weights per epoch (number of
             mini-batches). The training data will be split into this many
@@ -451,7 +650,7 @@ class PhysicsGuidedNeuralNetwork:
             Namespace of training parameters that can be used for diagnostics.
         """
 
-        self._preflight_data(x, y, p)
+        x, y, p = self.preflight_data(x, y, p)
 
         epochs = list(range(n_epoch))
 
@@ -466,7 +665,7 @@ class PhysicsGuidedNeuralNetwork:
             x, y, p, shuffle=shuffle, validation_split=validation_split)
 
         if self._loss_weights[1] > 0 and run_preflight:
-            self._preflight_p_fun(x_val, y_val, p_val, p_kwargs)
+            self.preflight_p_fun(x_val, y_val, p_val, p_kwargs)
 
         t0 = time.time()
         for epoch in epochs:
@@ -476,7 +675,8 @@ class PhysicsGuidedNeuralNetwork:
 
             batch_iter = zip(x_batches, y_batches, p_batches)
             for x_batch, y_batch, p_batch in batch_iter:
-                tr_loss = self._run_sgd(x_batch, y_batch, p_batch, p_kwargs)[1]
+                tr_loss = self._run_gradient_descent(
+                    x_batch, y_batch, p_batch, p_kwargs)[1]
 
             y_val_pred = self.predict(x_val, to_numpy=False)
             val_loss = self.loss(y_val_pred, y_val, p_val, p_kwargs)[0]
@@ -512,7 +712,7 @@ class PhysicsGuidedNeuralNetwork:
             Predicted output data in a 2D array.
         """
 
-        self._preflight_predict(x)
+        x = self.preflight_features(x)
         y = self._layers[0](x)
         for layer in self._layers[1:]:
             y = layer(y)
@@ -554,6 +754,12 @@ class PhysicsGuidedNeuralNetwork:
                         'learning_rate': self._learning_rate,
                         'weight_dict': weight_dict,
                         'history': self._history,
+                        'kernel_reg_rate': self.kernel_reg_rate,
+                        'kernel_reg_power': self.kernel_reg_power,
+                        'bias_reg_rate': self.bias_reg_rate,
+                        'bias_reg_power': self.bias_reg_power,
+                        'feature_names': self.feature_names,
+                        'output_names': self.output_names,
                         }
 
         with open(fpath, 'wb') as f:
