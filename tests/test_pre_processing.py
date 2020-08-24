@@ -3,7 +3,7 @@ Test the pre processing module.
 """
 import numpy as np
 import pandas as pd
-from phygnn.pre_processing import PreProcess
+from phygnn.utilities.pre_processing import PreProcess
 
 
 index = pd.date_range('20180101', '20190101', freq='5min')

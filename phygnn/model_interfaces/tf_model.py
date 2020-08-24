@@ -9,7 +9,7 @@ import os
 import pandas as pd
 import tensorflow as tf
 from tensorflow import feature_column
-from tensorflow.keras import layers
+from tensorflow.keras.layers import InputLayer, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 from warnings import warn
 
@@ -41,6 +41,72 @@ class TfModel(ModelBase):
                          label_names=label_names, norm_params=norm_params)
 
         self._history = None
+
+    @property
+    def layers(self):
+        """
+        Model layers
+
+        Returns
+        -------
+        list
+        """
+        return self.model.layers
+
+    @property
+    def weights(self):
+        """
+        Get a list of layer weights for gradient calculations.
+
+        Returns
+        -------
+        list
+        """
+        weights = []
+        for layer in self.layers:
+            weights += layer.get_weights()
+
+        return weights
+
+    @property
+    def kernel_weights(self):
+        """
+        Get a list of the NN kernel weights (tensors)
+
+        (can be used for kernel regularization).
+
+        Does not include input layer or dropout layers.
+        Does include the output layer.
+
+        Returns
+        -------
+        list
+        """
+        weights = []
+        for layer in self.layers:
+            weights.append(layer.get_weights()[0])
+
+        return weights
+
+    @property
+    def bias_weights(self):
+        """
+        Get a list of the NN bias weights (tensors)
+
+        (can be used for bias regularization).
+
+        Does not include input layer or dropout layers.
+        Does include the output layer.
+
+        Returns
+        -------
+        list
+        """
+        weights = []
+        for layer in self.layers:
+            weights.append(layer.get_weights()[1])
+
+        return weights
 
     @property
     def history(self):
@@ -230,19 +296,19 @@ class TfModel(ModelBase):
             Compiled tensorflow Sequential model
         """
         model = tf.keras.models.Sequential()
-        model.add(layers.InputLayer(input_shape=[n_features]))
+        model.add(InputLayer(input_shape=[n_features]))
         if hidden_layers is None:
             # Add a single linear layer
-            model.add(layers.Dense(n_labels))
+            model.add(Dense(n_labels))
         else:
             for layer in hidden_layers:
                 dropout = layer.pop('dropout', None)
-                model.add(layers.Dense(**layer))
+                model.add(Dense(**layer))
 
                 if dropout is not None:
-                    model.add(layers.Dropout(dropout))
+                    model.add(Dropout(dropout))
 
-            model.add(layers.Dense(n_labels))
+            model.add(Dense(n_labels))
 
         if isinstance(metrics, tuple):
             metrics = list(metrics)
@@ -389,6 +455,9 @@ class TfModel(ModelBase):
         model : TfModel
             Initialized TfKeraModel obj
         """
+        if isinstance(label_names, str):
+            label_names = [label_names]
+
         model = TfModel.compile_model(len(feature_names),
                                       n_labels=len(label_names),
                                       hidden_layers=hidden_layers,

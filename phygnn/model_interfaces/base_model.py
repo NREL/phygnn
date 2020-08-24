@@ -760,7 +760,9 @@ class ModelBase:
         if process_one_hot:
             kwargs.update({'return_ind': True})
             features, one_hot_ind = PreProcess.one_hot(features, **kwargs)
-            self._check_one_hot_norm_params(self.feature_names[one_hot_ind])
+            if one_hot_ind:
+                one_hot_features = [self.feature_names[i] for i in one_hot_ind]
+                self._check_one_hot_norm_params(one_hot_features)
 
         features = self.normalize(features, names=feature_names)
 
