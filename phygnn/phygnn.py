@@ -13,7 +13,7 @@ import tensorflow as tf
 from tensorflow.keras import optimizers, initializers
 from tensorflow.keras.layers import InputLayer, Dense, Dropout
 
-from phygnn.loss_metrics import METRICS
+from phygnn.utilities.loss_metrics import METRICS
 
 
 logger = logging.getLogger(__name__)

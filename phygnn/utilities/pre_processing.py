@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Data pre-processing module.
 """
@@ -195,14 +196,15 @@ class PreProcess:
 
         return col_labels
 
-    def process_one_hot(self, convert_int=False, categories=None):
+    def process_one_hot(self, convert_int=False, categories=None,
+                        return_ind=False):
         """Process str and int columns in the feature data to one-hot vectors.
 
         Parameters
         ----------
-        convert_int : bool
-            Flag to convert integer data to one-hot vectors.
-        categories : dict | None
+        convert_int : bool, optional
+            Flag to convert integer data to one-hot vectors, by default False
+        categories : dict | None, optional
             Categories to use for one hot encoding where a key is the original
             column name in the feature dataframe and value is a list of the
             possible unique values of the feature column. The value list must
@@ -212,6 +214,9 @@ class PreProcess:
             results in category names being determined automatically. Format:
                 {'col_name1' : ['cat1', 'cat2', 'cat3'],
                  'col_name2' : ['other_cat1', 'other_cat2']}
+            by default None
+        return_ind : bool, optional
+            Return one hot column indices, by default False
 
         Returns
         -------
@@ -220,6 +225,9 @@ class PreProcess:
             vectors appended as new columns. If features is a dataframe and
             categories is input, the new one-hot columns will be named
             according to categories.
+        one_hot_ind : list, optional
+            List of numeric column indices in the native data that are
+            to-be-transformed into one-hot vectors.
         """
 
         if categories is None:
@@ -229,7 +237,7 @@ class PreProcess:
             convert_int=convert_int, categories=categories)
 
         if not one_hot_ind:
-            return self._features
+            processed = self._features
 
         else:
             if self._pd:
@@ -250,4 +258,54 @@ class PreProcess:
                 assert processed.shape[0] == self._features.shape[0]
 
             processed = processed.astype(np.float32)
+
+        if return_ind:
+            return processed, one_hot_ind
+        else:
             return processed
+
+    @classmethod
+    def one_hot(cls, features, convert_int=False, categories=None,
+                return_ind=False):
+        """
+        Process str and int columns in the feature data to one-hot vectors.
+
+        Parameters
+        ----------
+        features : np.ndarray | pd.DataFrame
+            Feature data in a 2D array or DataFrame.
+        convert_int : bool, optional
+            Flag to convert integer data to one-hot vectors, by default False
+        categories : dict | None, optional
+            Categories to use for one hot encoding where a key is the original
+            column name in the feature dataframe and value is a list of the
+            possible unique values of the feature column. The value list must
+            have as many or more entries as unique values in the feature
+            column. This will name the feature column headers for the new
+            one-hot-encoding if features is a dataframe. Empty dict or None
+            results in category names being determined automatically. Format:
+                {'col_name1' : ['cat1', 'cat2', 'cat3'],
+                 'col_name2' : ['other_cat1', 'other_cat2']}
+            by default None
+        return_ind : bool, optional
+            Return one hot column indices, by default False
+
+        Returns
+        -------
+        processed : np.ndarray | pd.DataFrame
+            Feature data with str and int columns removed and one-hot boolean
+            vectors appended as new columns. If features is a dataframe and
+            categories is input, the new one-hot columns will be named
+            according to categories.
+        one_hot_ind : list, optional
+            List of numeric column indices in the native data that are
+            to-be-transformed into one-hot vectors.
+        """
+        logger.debug('Checking for one-hot items and converting them '
+                     'to binary values')
+        pp = cls(features)
+        out = pp.process_one_hot(convert_int=convert_int,
+                                 categories=categories,
+                                 return_ind=return_ind)
+
+        return out
