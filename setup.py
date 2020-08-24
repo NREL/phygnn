@@ -15,20 +15,17 @@ py_version = sys.version_info
 if py_version.major < 3:
     raise RuntimeError("phygnn is only compatible with python 3!")
 
-
 here = os.path.abspath(os.path.dirname(__file__))
-
 
 with open(os.path.join(here, "phygnn", "version.py"), encoding="utf-8") as f:
     version = f.read()
-version = version.split('=')[-1].strip().strip('"').strip("'")
 
+version = version.split('=')[-1].strip().strip('"').strip("'")
 
 with open(os.path.join(here, "README.rst"), encoding="utf-8") as f:
     readme = f.read()
 
-
-with open("requirements.txt") as f:
+with open(os.path.join(here, "requirements.txt")) as f:
     install_requires = f.readlines()
 
 
