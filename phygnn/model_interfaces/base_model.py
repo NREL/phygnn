@@ -734,6 +734,8 @@ class ModelBase:
             Parsed features array normalized and with str columns converted
             to one hot vectors if desired
         """
+        features, feature_names = self._parse_data(features, names=names)
+
         if len(features.shape) != 2:
             msg = ('{} can only use 2D data as input!'
                    .format(self.__class__.__name__))
@@ -746,8 +748,6 @@ class ModelBase:
                        .format(features.shape[1], self.feature_dims))
                 logger.error(msg)
                 raise RuntimeError(msg)
-
-        features, feature_names = self._parse_data(features, names=names)
 
         if self._feature_names is None:
             self._feature_names = feature_names
@@ -786,6 +786,8 @@ class ModelBase:
         labels : ndarray
             Parsed labels array, normalized if desired
         """
+        labels, label_names = self._parse_data(labels, names=names)
+
         if self.label_names is not None:
             if len(labels.shape) == 1:
                 n_labels = len(labels)
@@ -797,8 +799,6 @@ class ModelBase:
                        .format(labels.shape[1], self.label_dims))
                 logger.error(msg)
                 raise RuntimeError(msg)
-
-        labels, label_names = self._parse_data(labels, names=names)
 
         if self._label_names is None:
             self._label_names = label_names
