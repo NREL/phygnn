@@ -33,7 +33,7 @@ class RandomForestModel(ModelBase):
             parameters (mean, stdev), by default None
         """
         super().__init__(model, feature_names=feature_names,
-                         label_name=label_name, norm_params=norm_params)
+                         label_names=label_name, norm_params=norm_params)
 
         if len(self.label_names) > 1:
             msg = ("Only a single label can be supplied to {}, but {} were"
@@ -133,8 +133,7 @@ class RandomForestModel(ModelBase):
 
         features = self._parse_features(features, **parse_kwargs)
 
-        label = self._parse_data(label, normalize=norm_label,
-                                 names=True)
+        label = self._parse_labels(label, normalize=norm_label)
 
         if fit_kwargs is None:
             fit_kwargs = {}
@@ -204,10 +203,10 @@ class RandomForestModel(ModelBase):
             compile_kwargs = {}
 
         _, feature_names = cls._parse_data(features)
-        _, label_names = cls._parse_data(label)
+        _, label_name = cls._parse_data(label)
 
         model = cls(cls.compile_model(**compile_kwargs),
-                    feature_names=feature_names, label_names=label_names)
+                    feature_names=feature_names, label_name=label_name)
 
         model.train_model(features, label, norm_label=norm_label,
                           parse_kwargs=parse_kwargs, fit_kwargs=fit_kwargs)

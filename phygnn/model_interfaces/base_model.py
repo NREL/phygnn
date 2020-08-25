@@ -2,6 +2,7 @@
 """
 Base Model Interface
 """
+from abc import ABC
 import logging
 import numpy as np
 import pandas as pd
@@ -12,7 +13,7 @@ from phygnn.utilities.pre_processing import PreProcess
 logger = logging.getLogger(__name__)
 
 
-class ModelBase:
+class ModelBase(ABC):
     """
     Base Model Interface
     """
@@ -381,6 +382,28 @@ class ModelBase:
 
         return data, names
 
+    @staticmethod
+    def _get_item_number(arr):
+        """
+        Get number of items in array (labels or features)
+
+        Parameters
+        ----------
+        arr : ndarray
+            1 or 2D array
+
+        Returns
+        -------
+        n : int
+            Number of items
+        """
+        if len(arr.shape) == 1:
+            n = 1
+        else:
+            n = arr.shape[1]
+
+        return n
+
     def get_norm_params(self, names):
         """
         Get means and stdevs for given feature/label names
@@ -527,7 +550,8 @@ class ModelBase:
         norm_arr : ndarray
             Normalized features/label
         """
-        if len(names) != arr.shape[1]:
+        n_names = self._get_item_number(arr)
+        if len(names) != n_names:
             msg = ("Number of item names ({}) does not match number of items "
                    "({})".format(len(names), arr.shape[1]))
             logger.error(msg)
@@ -647,7 +671,8 @@ class ModelBase:
         native_arr : ndarray
             Native features/label array
         """
-        if len(names) != arr.shape[1]:
+        n_names = self._get_item_number(arr)
+        if len(names) != n_names:
             msg = ("Number of item names ({}) does not match number of items "
                    "({})".format(len(names), arr.shape[1]))
             logger.error(msg)
@@ -789,11 +814,7 @@ class ModelBase:
         labels, label_names = self._parse_data(labels, names=names)
 
         if self.label_names is not None:
-            if len(labels.shape) == 1:
-                n_labels = len(labels)
-            else:
-                n_labels = labels.shape[1]
-
+            n_labels = self._get_item_number(labels)
             if n_labels != len(self.label_names):
                 msg = ('data has {} labels but expected {}'
                        .format(labels.shape[1], self.label_dims))
