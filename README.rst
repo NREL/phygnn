@@ -4,23 +4,27 @@ phygnn
 
 phygnn stands for **physics-guided neural networks**.
 
-This implementation of physics-guided neural networks augments a traditional 
-neural network loss function with a generic loss term that can be used to 
-guide the neural network to learn physical or theoretical constraints. 
-phygnn enables scientific software developers and data scientists to easily 
-integrate machine learning models into physics and engineering applications. 
-This framework should help alleviate some challenges that are often encountered 
-when applying purely data-driven machine learning models to scientific applications, 
-such as when machine learning models produce physically inconsistent results or have trouble 
-generalizing to out-of-sample scenarios. 
+This implementation of physics-guided neural networks augments a traditional
+neural network loss function with a generic loss term that can be used to
+guide the neural network to learn physical or theoretical constraints.
+phygnn enables scientific software developers and data scientists to easily
+integrate machine learning models into physics and engineering applications.
+This framework should help alleviate some challenges that are often encountered
+when applying purely data-driven machine learning models to scientific
+applications, such as when machine learning models produce physically
+inconsistent results or have trouble generalizing to out-of-sample scenarios.
 
 For details on the phygnn class framework see `the phygnn module documentation here. <https://nrel.github.io/phygnn/phygnn/phygnn.phygnn.html>`_
 
-At the National Renewable Energy Lab (NREL), we are using the phygnn framework to supplement traditional satellite-based cloud property prediction models. 
-We use phygnn to predict cloud optical properties when the traditional mechanistic models fail and use a full tensor-based radiative transfer model as 
-the physical loss function to transform the predicted cloud properties into phygnn-predicted irradiance data. We then calculate a loss value comparing 
-the phygnn-predicted irradiance to high quality ground measurements. We have seen excellent improvements in the predicted irradiance data in rigorous 
-out-of-sample-validation experiments. 
+At the National Renewable Energy Lab (NREL), we are using the phygnn framework
+to supplement traditional satellite-based cloud property prediction models. We
+use phygnn to predict cloud optical properties when the traditional mechanistic
+models fail and use a full tensor-based radiative transfer model as the
+physical loss function to transform the predicted cloud properties into
+phygnn-predicted irradiance data. We then calculate a loss value comparing the
+phygnn-predicted irradiance to high quality ground measurements. We have seen
+excellent improvements in the predicted irradiance data in rigorous
+out-of-sample-validation experiments.
 
 Engineers and researchers can use the phygnn framework to:
 
@@ -28,7 +32,8 @@ Engineers and researchers can use the phygnn framework to:
     * Use the physics loss function to extend training data, e.g. train against "known" outputs but also train using the downstream application of the predicted variables
     * Use the physics loss function to adjust theoretical models based on empirical observation using respective loss weights
 
-Here are additional examples of similar architectures from the literature which helped inspire this work: 
+Here are additional examples of similar architectures from the literature which
+helped inspire this work:
 
     * Jared Willard, Xiaowei Jia, Shaoming Xu, Michael Steinbach, and Vipin Kumar, “Integrating Physics-Based Modeling with Machine Learning: A Survey.” ArXiv abs/2003.04919 (2020).
     * Forssell, U. and P. Lindskog. “Combining Semi-Physical and Neural Network Modeling: An Example ofIts Usefulness.” IFAC Proceedings Volumes 30 (1997): 767-770.
@@ -36,7 +41,7 @@ Here are additional examples of similar architectures from the literature which 
     * Anuj Karpatne, William Watkins, Jordan Read, and Vipin Kumar, "Physics-guided Neural Networks (PGNN): An Application in Lake Temperature Modeling". arXiv:1710.11431v2 (2018).
     * Anuj Karpatne, Gowtham Atluri, James H Faghmous, Michael Steinbach, Arindam Banerjee, Auroop Ganguly, Shashi Shekhar, Nagiza Samatova, and Vipin Kumar. 2017. Theory-guided data science: A new paradigm for scientific discovery from data. IEEE Transactions on knowledge and data engineering 29, 10 (2017), 2318–2331.
 
-    
+
 Installation
 ============
 
