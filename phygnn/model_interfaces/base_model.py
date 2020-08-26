@@ -259,65 +259,6 @@ class ModelBase(ABC):
         return stdevs
 
     @staticmethod
-    def _normalize(native_arr, mean=None, stdev=None):
-        """
-        Normalize features with mean at 0 and stdev of 1.
-
-        Parameters
-        ----------
-        native_arr : ndarray
-            native data
-        mean : float | None
-            mean to use for normalization
-        stdev : float | None
-            stdev to use for normalization
-
-        Returns
-        -------
-        norm_arr : ndarray
-            normalized data
-        mean : float
-            mean used for normalization
-        stdev : float
-            stdev used for normalization
-        """
-
-        if mean is None:
-            mean = np.nanmean(native_arr, axis=0)
-
-        if stdev is None:
-            stdev = np.nanstd(native_arr, axis=0)
-
-        norm_arr = native_arr - mean
-        norm_arr /= stdev
-
-        return norm_arr, mean, stdev
-
-    @staticmethod
-    def _unnormalize(norm_arr, mean, stdev):
-        """
-        Unnormalize data with mean at 0 and stdev of 1.
-
-        Parameters
-        ----------
-        norm_arr : ndarray
-            normalized data
-        mean : float
-            mean used for normalization
-        stdev : float
-            stdev used for normalization
-
-        Returns
-        -------
-        native_arr : ndarray
-            native un-normalized data
-        """
-        native_arr = norm_arr * stdev
-        native_arr += mean
-
-        return native_arr
-
-    @staticmethod
     def dict_json_convert(inp):
         """Recursively convert numeric values in dict to work with json dump
 
@@ -494,8 +435,8 @@ class ModelBase(ABC):
             stdev = self.get_stdev(key)
             update = mean is None or stdev is None
             try:
-                value, mean, stdev = self._normalize(value, mean=mean,
-                                                     stdev=stdev)
+                value, mean, stdev = PreProcess.normalize(value, mean=mean,
+                                                          stdev=stdev)
                 if update:
                     norm_params = {key: {'mean': mean, 'stdev': stdev}}
                     self._norm_params.update(norm_params)
@@ -525,8 +466,8 @@ class ModelBase(ABC):
         means, stdevs = self.get_norm_params(df.columns)
         update = means is None or stdevs is None
 
-        norm_df, means, stdevs = self._normalize(df, mean=means,
-                                                 stdev=stdevs)
+        norm_df, means, stdevs = PreProcess.normalize(df, mean=means,
+                                                      stdev=stdevs)
         if update:
             for i, c in enumerate(df.columns):
                 norm_params = {c: {'mean': means[i], 'stdev': stdevs[i]}}
@@ -560,8 +501,8 @@ class ModelBase(ABC):
         means, stdevs = self.get_norm_params(names)
         update = means is None or stdevs is None
 
-        norm_arr, means, stdevs = self._normalize(arr, mean=means,
-                                                  stdev=stdevs)
+        norm_arr, means, stdevs = PreProcess.normalize(arr, mean=means,
+                                                       stdev=stdevs)
         if update:
             for i, n in enumerate(names):
                 norm_params = {n: {'mean': means[i], 'stdev': stdevs[i]}}
@@ -623,8 +564,8 @@ class ModelBase(ABC):
         for key, value in items.items():
             norm_params = self.normalization_parameters[key]
             if norm_params is not None:
-                value = self._unnormalize(value, norm_params['mean'],
-                                          norm_params['stdev'])
+                value = PreProcess.unnormalize(value, norm_params['mean'],
+                                               norm_params['stdev'])
             else:
                 msg = ("Normalization Parameters unavailable for {}"
                        .format(key))
@@ -651,7 +592,7 @@ class ModelBase(ABC):
         """
         means, stdevs = self.get_norm_params(df.columns)
 
-        native_df = self._unnormalize(df, means, stdevs)
+        native_df = PreProcess.unnormalize(df, means, stdevs)
 
         return native_df
 
@@ -680,7 +621,7 @@ class ModelBase(ABC):
 
         means, stdevs = self.get_norm_params(names)
 
-        native_arr = self._unnormalize(arr, means, stdevs)
+        native_arr = PreProcess.unnormalize(arr, means, stdevs)
 
         return native_arr
 
