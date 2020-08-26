@@ -1,4 +1,4 @@
 # -*- coding: utf-8 -*-
 """Physics Guided Neural Network version."""
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
