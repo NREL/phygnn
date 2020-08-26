@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import logging
 from sklearn.preprocessing import OneHotEncoder
+from warnings import warn
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,93 @@ class PreProcess:
         if self._pd:
             if not features.index.is_unique:
                 raise AttributeError('DataFrame indices must be unique')
+
+    @staticmethod
+    def _check_stdev(stdev):
+        """
+        Check stdev values for 0s or near 0 values, replace with 1s
+
+        Parameters
+        ----------
+        stdev : int | ndarray
+            Normalization stdev value(s)
+
+        Returns
+        -------
+        stdev : int | ndarray
+            Normalization stdev values(s) with 0s replaced with 1s
+        """
+        zeros = np.isclose(stdev, 0)
+        if np.any(zeros):
+            msg = ('Standard deviation is ~0 and will be set to 1')
+            logger.warning(msg)
+            warn(msg)
+            if isinstance(zeros, bool):
+                stdev = 1
+            else:
+                stdev[zeros] = 1
+
+        return stdev
+
+    @staticmethod
+    def normalize(native_arr, mean=None, stdev=None):
+        """
+        Normalize features with mean at 0 and stdev of 1.
+
+        Parameters
+        ----------
+        native_arr : ndarray
+            native data
+        mean : float | None
+            mean to use for normalization
+        stdev : float | None
+            stdev to use for normalization
+
+        Returns
+        -------
+        norm_arr : ndarray
+            normalized data
+        mean : float
+            mean used for normalization
+        stdev : float
+            stdev used for normalization
+        """
+
+        if mean is None:
+            mean = np.nanmean(native_arr, axis=0)
+
+        if stdev is None:
+            stdev = np.nanstd(native_arr, axis=0)
+            stdev = PreProcess._check_stdev(stdev)
+
+        norm_arr = native_arr - mean
+        norm_arr /= stdev
+
+        return norm_arr, mean, stdev
+
+    @staticmethod
+    def unnormalize(norm_arr, mean, stdev):
+        """
+        Unnormalize data with mean at 0 and stdev of 1.
+
+        Parameters
+        ----------
+        norm_arr : ndarray
+            normalized data
+        mean : float
+            mean used for normalization
+        stdev : float
+            stdev used for normalization
+
+        Returns
+        -------
+        native_arr : ndarray
+            native un-normalized data
+        """
+        native_arr = norm_arr * stdev
+        native_arr += mean
+
+        return native_arr
 
     @staticmethod
     def _is_one_hot(arr, convert_int=False):
