@@ -28,28 +28,28 @@ def mbe(y_predicted, y_true):
     err = y_predicted - y_true
     err = tf.boolean_mask(err, ~tf.math.is_nan(err))
     err = tf.boolean_mask(err, tf.math.is_finite(err))
-    err = tf.abs(tf.reduce_mean(err))
+    err = tf.reduce_mean(err)
     return err
 
 
 def relative_mae(y_predicted, y_true):
     """Calculate the relative Mean Absolute Error (MAE)"""
     err = mae(y_predicted, y_true)
-    err /= tf.reduce_mean(y_true)
+    err /= tf.abs(tf.reduce_mean(y_true))
     return err
 
 
 def relative_mse(y_predicted, y_true):
     """Calculate the relative Mean Squared Error (MSE)"""
     err = mse(y_predicted, y_true)
-    err /= tf.reduce_mean(y_true)
+    err /= tf.abs(tf.reduce_mean(y_true))
     return err
 
 
 def relative_mbe(y_predicted, y_true):
     """Calculate the relative Mean Bias Error (MBE)"""
     err = mbe(y_predicted, y_true)
-    err /= tf.reduce_mean(y_true)
+    err /= tf.abs(tf.reduce_mean(y_true))
     return err
 
 
