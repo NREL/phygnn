@@ -29,6 +29,7 @@ out-of-sample-validation experiments.
 Engineers and researchers can use the phygnn framework to:
 
     * Enforce physically-consistent predictions from a deep neural network (see lake temperature reference below)
+    * Implement custom regularization (e.g. topological regularization)
     * Use the physics loss function to extend training data, e.g. train against "known" outputs but also train using the downstream application of the predicted variables
     * Use the physics loss function to adjust theoretical models based on empirical observation using respective loss weights
 
