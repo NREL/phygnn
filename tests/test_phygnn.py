@@ -253,7 +253,44 @@ def test_dropouts():
                                        hidden_layers=HIDDEN_LAYERS,
                                        loss_weights=(0.0, 1.0),
                                        input_dims=2, output_dims=1)
-    assert len(model.layers) == 6
+    assert len(model.layers) == 6, "dropout layers did not get added!"
+
+    model.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
+    y_pred = model.predict(X)
+
+    model.save(FPATH)
+    loaded = PhysicsGuidedNeuralNetwork.load(FPATH)
+    y_pred_loaded = loaded.predict(X)
+    assert np.allclose(y_pred, y_pred_loaded)
+    assert len(model.layers) == len(loaded.layers)
+    os.remove(FPATH)
+
+
+def test_batch_norm():
+    """Test the addition of BatchNormalization layers"""
+    HIDDEN_LAYERS = [{'units': 64, 'activation': 'relu', 'name': 'relu1',
+                      'batch_normalization': {}},
+                     {'units': 64, 'activation': 'relu', 'name': 'relu2',
+                      'batch_normalization': {}},
+                     ]
+    model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                       hidden_layers=HIDDEN_LAYERS,
+                                       loss_weights=(0.0, 1.0),
+                                       input_dims=2, output_dims=1)
+
+    assert len(model.layers) == 6, "Batch norm layers did not get added!"
+
+    model.fit(X, Y_NOISE, P, n_batch=1, n_epoch=10)
+    y_pred = model.predict(X)
+
+    model.save(FPATH)
+    loaded = PhysicsGuidedNeuralNetwork.load(FPATH)
+    y_pred_loaded = loaded.predict(X)
+
+    assert np.allclose(y_pred, y_pred_loaded)
+    assert len(model.layers) == len(loaded.layers)
+
+    os.remove(FPATH)
 
 
 def test_validation_split_shuffle():
