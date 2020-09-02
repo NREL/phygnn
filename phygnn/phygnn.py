@@ -41,11 +41,15 @@ class PhysicsGuidedNeuralNetwork:
             loss value (output.ndim == 0).
         hidden_layers : list
             List of dictionaries of key word arguments for each hidden
-            layer in the NN. For example:
-                hidden_layers=[{'units': 64, 'activation': 'relu',
-                                'name': 'hidden_layer1', 'dropout': 0.01},
-                               {'units': 64, 'activation': 'relu',
-                                'name': 'hidden_layer2', 'dropout': 0.01}]
+            layer in the NN. Dense linear layers can be input with their
+            activations or separately for more explicit control over the layer
+            ordering. For example, this is a valid input for hidden_layers that
+            will yield 7 hidden layers (9 layers total):
+                [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
+                 {'units': 64},
+                 {'batch_normalization': {'axis': -1}},
+                 {'activation': 'relu'},
+                 {'dropout': 0.01}]
         loss_weights : tuple
             Loss weights for the neural network y_predicted vs. y_true
             and for the p_fun loss, respectively. For example,
@@ -452,46 +456,49 @@ class PhysicsGuidedNeuralNetwork:
         Parameters
         ----------
         layer_kwargs : dict
-            Dictionary of key word arguments for list layer. For example:
-            layer_kwargs={'units': 64, 'activation': 'relu',
-                          'name': 'relu1', 'dropout': 0.01}
+            Dictionary of key word arguments for list layer. For example,
+            any of the following are valid inputs:
+                {'units': 64, 'activation': 'relu', 'dropout': 0.05}
+                {'units': 64, 'name': 'relu1'}
+                {'activation': 'relu'}
+                {'batch_normalization': {'axis': -1}}
+                {'dropout': 0.1}
         insert_index : int | None
             Optional index to insert the new layer at. None will append
             the layer to the end of the layer list.
         """
 
-        activ = layer_kwargs.pop('activation', None)
-        dropout = layer_kwargs.pop('dropout', None)
-        batch_norm = layer_kwargs.pop('batch_normalization', None)
+        dense_layer = None
+        bn_layer = None
+        a_layer = None
+        d_layer = None
+        activation_arg = layer_kwargs.pop('activation', None)
+        dropout_rate = layer_kwargs.pop('dropout', None)
+        batch_norm_kwargs = layer_kwargs.pop('batch_normalization', None)
 
-        layer = Dense(**layer_kwargs)
-        if insert_index:
-            self._layers.insert(insert_index, layer)
-        else:
-            self._layers.append(layer)
-
-        if batch_norm is not None:
-            bn_layer = BatchNormalization(**batch_norm)
-            if insert_index:
-                self._layers.insert(insert_index + 1, bn_layer)
-                insert_index += 1
+        if 'units' in layer_kwargs:
+            dense_layer = Dense(**layer_kwargs)
+            if insert_index is not None:
+                self._layers.insert(insert_index, dense_layer)
             else:
-                self._layers.append(bn_layer)
+                self._layers.append(dense_layer)
 
-        if activ is not None:
-            a_layer = Activation(activ)
-            if insert_index:
-                self._layers.insert(insert_index + 1, a_layer)
-                insert_index += 1
-            else:
-                self._layers.append(a_layer)
+        if batch_norm_kwargs is not None:
+            bn_layer = BatchNormalization(**batch_norm_kwargs)
+        if activation_arg is not None:
+            a_layer = Activation(activation_arg)
+        if dropout_rate is not None:
+            d_layer = Dropout(dropout_rate)
 
-        if dropout is not None:
-            d_layer = Dropout(dropout)
-            if insert_index:
-                self._layers.insert(insert_index + 1, d_layer)
-            else:
-                self._layers.append(d_layer)
+        # This ensures proper default ordering of layers if requested together.
+        for layer in [bn_layer, a_layer, d_layer]:
+            if layer is not None:
+                if insert_index is not None:
+                    if dense_layer is not None:
+                        insert_index += 1
+                    self._layers.insert(insert_index, layer)
+                else:
+                    self._layers.append(layer)
 
     def _get_grad(self, x, y_true, p, p_kwargs):
         """Get the gradient based on a mini-batch of x and y_true data."""

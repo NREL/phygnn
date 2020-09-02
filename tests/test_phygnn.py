@@ -7,6 +7,8 @@ import pytest
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
+                                     BatchNormalization)
 from phygnn import PhysicsGuidedNeuralNetwork, TESTDATADIR
 
 
@@ -106,6 +108,12 @@ def test_phygnn():
     assert len(model.layers) == 6
     assert len(model.weights) == 6
     assert len(model.history) == 20
+    assert isinstance(model.layers[0], InputLayer)
+    assert isinstance(model.layers[1], Dense)
+    assert isinstance(model.layers[2], Activation)
+    assert isinstance(model.layers[3], Dense)
+    assert isinstance(model.layers[4], Activation)
+    assert isinstance(model.layers[5], Dense)
     assert model.history.validation_loss.values[-1] < 0.015
     assert test_mae < 0.015
 
@@ -248,13 +256,21 @@ def test_bad_pfun():
 def test_dropouts():
     """Test the dropout rate kwargs for adding dropout layers."""
     HIDDEN_LAYERS = [
-        {'units': 64, 'activation': 'relu', 'name': 'relu1', 'dropout': 0.1},
+        {'units': 64}, {'activation': 'relu'}, {'dropout': 0.1},
         {'units': 64, 'activation': 'relu', 'name': 'relu2', 'dropout': 0.1}]
     model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                        hidden_layers=HIDDEN_LAYERS,
                                        loss_weights=(0.0, 1.0),
                                        input_dims=2, output_dims=1)
+
     assert len(model.layers) == 8, "dropout layers did not get added!"
+    assert isinstance(model.layers[0], InputLayer)
+    assert isinstance(model.layers[1], Dense)
+    assert isinstance(model.layers[2], Activation)
+    assert isinstance(model.layers[3], Dropout)
+    assert isinstance(model.layers[4], Dense)
+    assert isinstance(model.layers[5], Activation)
+    assert isinstance(model.layers[6], Dropout)
 
     model.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
     y_pred = model.predict(X)
@@ -269,10 +285,11 @@ def test_dropouts():
 
 def test_batch_norm():
     """Test the addition of BatchNormalization layers"""
-    HIDDEN_LAYERS = [{'units': 64, 'activation': 'relu', 'name': 'relu1',
-                      'batch_normalization': {}},
-                     {'units': 64, 'activation': 'relu', 'name': 'relu2',
-                      'batch_normalization': {}},
+    HIDDEN_LAYERS = [{'units': 64},
+                     {'batch_normalization': {'axis': 1}},
+                     {'activation': 'relu'},
+                     {'units': 64, 'activation': 'relu',
+                      'batch_normalization': {'axis': 1}},
                      ]
     model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                        hidden_layers=HIDDEN_LAYERS,
@@ -280,6 +297,13 @@ def test_batch_norm():
                                        input_dims=2, output_dims=1)
 
     assert len(model.layers) == 8, "Batch norm layers did not get added!"
+    assert isinstance(model.layers[0], InputLayer)
+    assert isinstance(model.layers[1], Dense)
+    assert isinstance(model.layers[2], BatchNormalization)
+    assert isinstance(model.layers[3], Activation)
+    assert isinstance(model.layers[4], Dense)
+    assert isinstance(model.layers[5], BatchNormalization)
+    assert isinstance(model.layers[6], Activation)
 
     model.fit(X, Y_NOISE, P, n_batch=1, n_epoch=10)
     y_pred = model.predict(X)
