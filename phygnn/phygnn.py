@@ -11,7 +11,7 @@ import pandas as pd
 import logging
 import tensorflow as tf
 from tensorflow.keras import optimizers, initializers
-from tensorflow.keras.layers import (InputLayer, Dense, Dropout,
+from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
                                      BatchNormalization)
 
 from phygnn.utilities.loss_metrics import METRICS
@@ -460,6 +460,7 @@ class PhysicsGuidedNeuralNetwork:
             the layer to the end of the layer list.
         """
 
+        activ = layer_kwargs.pop('activation', None)
         dropout = layer_kwargs.pop('dropout', None)
         batch_norm = layer_kwargs.pop('batch_normalization', None)
 
@@ -469,19 +470,28 @@ class PhysicsGuidedNeuralNetwork:
         else:
             self._layers.append(layer)
 
+        if batch_norm is not None:
+            bn_layer = BatchNormalization(**batch_norm)
+            if insert_index:
+                self._layers.insert(insert_index + 1, bn_layer)
+                insert_index += 1
+            else:
+                self._layers.append(bn_layer)
+
+        if activ is not None:
+            a_layer = Activation(activ)
+            if insert_index:
+                self._layers.insert(insert_index + 1, a_layer)
+                insert_index += 1
+            else:
+                self._layers.append(a_layer)
+
         if dropout is not None:
             d_layer = Dropout(dropout)
             if insert_index:
                 self._layers.insert(insert_index + 1, d_layer)
             else:
                 self._layers.append(d_layer)
-
-        if batch_norm is not None:
-            bn_layer = BatchNormalization(**batch_norm)
-            if insert_index:
-                self._layers.insert(insert_index + 1, bn_layer)
-            else:
-                self._layers.append(bn_layer)
 
     def _get_grad(self, x, y_true, p, p_kwargs):
         """Get the gradient based on a mini-batch of x and y_true data."""

@@ -85,7 +85,7 @@ def test_nn():
 
     test_mae = np.mean(np.abs(model.predict(X) - Y))
 
-    assert len(model.layers) == 4
+    assert len(model.layers) == 6
     assert len(model.weights) == 6
     assert len(model.history) == 20
     assert model.history.validation_loss.values[-1] < 0.15
@@ -103,7 +103,7 @@ def test_phygnn():
 
     test_mae = np.mean(np.abs(model.predict(X) - Y))
 
-    assert len(model.layers) == 4
+    assert len(model.layers) == 6
     assert len(model.weights) == 6
     assert len(model.history) == 20
     assert model.history.validation_loss.values[-1] < 0.015
@@ -169,9 +169,10 @@ def test_kernel_regularization():
 
     assert base.kernel_reg_term > model_l1.kernel_reg_term
     assert model_l1.kernel_reg_term > model_l2.kernel_reg_term
-    assert np.abs(base.kernel_reg_term - 497.95) < 1
-    assert np.abs(model_l1.kernel_reg_term - 84.55) < 1
-    assert np.abs(model_l2.kernel_reg_term - 17.29) < 1
+
+    assert np.abs(base.kernel_reg_term - 498.0725) < 1
+    assert np.abs(model_l1.kernel_reg_term - 56.2454) < 1
+    assert np.abs(model_l2.kernel_reg_term - 8.8731) < 1
 
 
 def test_bias_regularization():
@@ -204,9 +205,9 @@ def test_bias_regularization():
 
     assert base.bias_reg_term > model_l1.bias_reg_term
     assert model_l1.bias_reg_term > model_l2.bias_reg_term
-    assert np.abs(base.bias_reg_term - 5.77) < 1
-    assert np.abs(model_l1.bias_reg_term - 2.37) < 1
-    assert np.abs(model_l2.bias_reg_term - 0.30) < 1
+    assert np.abs(base.bias_reg_term - 5.777) < 1
+    assert np.abs(model_l1.bias_reg_term - 5.465) < 1
+    assert np.abs(model_l2.bias_reg_term - 0.512) < 1
 
 
 def test_save_load():
@@ -253,7 +254,7 @@ def test_dropouts():
                                        hidden_layers=HIDDEN_LAYERS,
                                        loss_weights=(0.0, 1.0),
                                        input_dims=2, output_dims=1)
-    assert len(model.layers) == 6, "dropout layers did not get added!"
+    assert len(model.layers) == 8, "dropout layers did not get added!"
 
     model.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
     y_pred = model.predict(X)
@@ -278,7 +279,7 @@ def test_batch_norm():
                                        loss_weights=(0.0, 1.0),
                                        input_dims=2, output_dims=1)
 
-    assert len(model.layers) == 6, "Batch norm layers did not get added!"
+    assert len(model.layers) == 8, "Batch norm layers did not get added!"
 
     model.fit(X, Y_NOISE, P, n_batch=1, n_epoch=10)
     y_pred = model.predict(X)
