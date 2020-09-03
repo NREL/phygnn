@@ -140,7 +140,7 @@ class PhysicsGuidedNeuralNetwork:
             self._optimizer = optimizers.Adam(learning_rate=learning_rate)
 
         self._layers.append(InputLayer(input_shape=[input_dims]))
-        for hidden_layer in hidden_layers:
+        for hidden_layer in self._hidden_layers:
             self.add_layer(hidden_layer)
         self._layers.append(Dense(
             output_dims, kernel_initializer=self._initializer))
@@ -468,16 +468,17 @@ class PhysicsGuidedNeuralNetwork:
             the layer to the end of the layer list.
         """
 
+        layer_kwargs_cp = copy.deepcopy(layer_kwargs)
         dense_layer = None
         bn_layer = None
         a_layer = None
         d_layer = None
-        activation_arg = layer_kwargs.pop('activation', None)
-        dropout_rate = layer_kwargs.pop('dropout', None)
-        batch_norm_kwargs = layer_kwargs.pop('batch_normalization', None)
+        activation_arg = layer_kwargs_cp.pop('activation', None)
+        dropout_rate = layer_kwargs_cp.pop('dropout', None)
+        batch_norm_kwargs = layer_kwargs_cp.pop('batch_normalization', None)
 
-        if 'units' in layer_kwargs:
-            dense_layer = Dense(**layer_kwargs)
+        if 'units' in layer_kwargs_cp:
+            dense_layer = Dense(**layer_kwargs_cp)
             if insert_index is not None:
                 self._layers.insert(insert_index, dense_layer)
             else:
