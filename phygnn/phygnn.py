@@ -11,7 +11,8 @@ import pandas as pd
 import logging
 import tensorflow as tf
 from tensorflow.keras import optimizers, initializers
-from tensorflow.keras.layers import InputLayer, Dense, Dropout
+from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
+                                     BatchNormalization)
 
 from phygnn.utilities.loss_metrics import METRICS
 
@@ -40,11 +41,15 @@ class PhysicsGuidedNeuralNetwork:
             loss value (output.ndim == 0).
         hidden_layers : list
             List of dictionaries of key word arguments for each hidden
-            layer in the NN. For example:
-                hidden_layers=[{'units': 64, 'activation': 'relu',
-                                'name': 'hidden_layer1', 'dropout': 0.01},
-                               {'units': 64, 'activation': 'relu',
-                                'name': 'hidden_layer2', 'dropout': 0.01}]
+            layer in the NN. Dense linear layers can be input with their
+            activations or separately for more explicit control over the layer
+            ordering. For example, this is a valid input for hidden_layers that
+            will yield 7 hidden layers (9 layers total):
+                [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
+                 {'units': 64},
+                 {'batch_normalization': {'axis': -1}},
+                 {'activation': 'relu'},
+                 {'dropout': 0.01}]
         loss_weights : tuple
             Loss weights for the neural network y_predicted vs. y_true
             and for the p_fun loss, respectively. For example,
@@ -135,7 +140,7 @@ class PhysicsGuidedNeuralNetwork:
             self._optimizer = optimizers.Adam(learning_rate=learning_rate)
 
         self._layers.append(InputLayer(input_shape=[input_dims]))
-        for hidden_layer in hidden_layers:
+        for hidden_layer in self._hidden_layers:
             self.add_layer(hidden_layer)
         self._layers.append(Dense(
             output_dims, kernel_initializer=self._initializer))
@@ -297,7 +302,13 @@ class PhysicsGuidedNeuralNetwork:
         """Get a list of layer weights for gradient calculations."""
         weights = []
         for layer in self._layers:
-            weights += layer.variables
+            if isinstance(layer, Dense):
+                weights += layer.variables
+
+            # Include gamma and beta weights for BatchNormalization
+            # but do not include moving mean/stdev
+            elif isinstance(layer, BatchNormalization):
+                weights += layer.variables[:2]
 
         return weights
 
@@ -445,27 +456,50 @@ class PhysicsGuidedNeuralNetwork:
         Parameters
         ----------
         layer_kwargs : dict
-            Dictionary of key word arguments for list layer. For example:
-            layer_kwargs={'units': 64, 'activation': 'relu',
-                          'name': 'relu1', 'dropout': 0.01}
+            Dictionary of key word arguments for list layer. For example,
+            any of the following are valid inputs:
+                {'units': 64, 'activation': 'relu', 'dropout': 0.05}
+                {'units': 64, 'name': 'relu1'}
+                {'activation': 'relu'}
+                {'batch_normalization': {'axis': -1}}
+                {'dropout': 0.1}
         insert_index : int | None
             Optional index to insert the new layer at. None will append
             the layer to the end of the layer list.
         """
 
-        dropout = layer_kwargs.pop('dropout', None)
-        layer = Dense(**layer_kwargs)
-        if insert_index:
-            self._layers.insert(insert_index, layer)
-        else:
-            self._layers.append(layer)
+        layer_kwargs_cp = copy.deepcopy(layer_kwargs)
+        dense_layer = None
+        bn_layer = None
+        a_layer = None
+        d_layer = None
+        activation_arg = layer_kwargs_cp.pop('activation', None)
+        dropout_rate = layer_kwargs_cp.pop('dropout', None)
+        batch_norm_kwargs = layer_kwargs_cp.pop('batch_normalization', None)
 
-        if dropout is not None:
-            d_layer = Dropout(dropout)
-            if insert_index:
-                self._layers.insert(insert_index + 1, d_layer)
+        if 'units' in layer_kwargs_cp:
+            dense_layer = Dense(**layer_kwargs_cp)
+            if insert_index is not None:
+                self._layers.insert(insert_index, dense_layer)
             else:
-                self._layers.append(d_layer)
+                self._layers.append(dense_layer)
+
+        if batch_norm_kwargs is not None:
+            bn_layer = BatchNormalization(**batch_norm_kwargs)
+        if activation_arg is not None:
+            a_layer = Activation(activation_arg)
+        if dropout_rate is not None:
+            d_layer = Dropout(dropout_rate)
+
+        # This ensures proper default ordering of layers if requested together.
+        for layer in [bn_layer, a_layer, d_layer]:
+            if layer is not None:
+                if insert_index is not None:
+                    if dense_layer is not None:
+                        insert_index += 1
+                    self._layers.insert(insert_index, layer)
+                else:
+                    self._layers.append(layer)
 
     def _get_grad(self, x, y_true, p, p_kwargs):
         """Get the gradient based on a mini-batch of x and y_true data."""
@@ -473,7 +507,7 @@ class PhysicsGuidedNeuralNetwork:
             for layer in self._layers:
                 tape.watch(layer.variables)
 
-            y_predicted = self.predict(x, to_numpy=False)
+            y_predicted = self.predict(x, to_numpy=False, training=True)
             loss = self.loss(y_predicted, y_true, p, p_kwargs)[0]
             grad = tape.gradient(loss, self.weights)
 
@@ -697,7 +731,7 @@ class PhysicsGuidedNeuralNetwork:
         if return_diagnostics:
             return diagnostics
 
-    def predict(self, x, to_numpy=True):
+    def predict(self, x, to_numpy=True, training=False):
         """Run a prediction on input features.
 
         Parameters
@@ -706,6 +740,9 @@ class PhysicsGuidedNeuralNetwork:
             Feature data in a 2D array
         to_numpy : bool
             Flag to convert output from tensor to numpy array
+        training : bool
+            Flag for predict() used in the training routine. This is used
+            to freeze the BatchNormalization layers.
 
         Returns
         -------
@@ -714,9 +751,15 @@ class PhysicsGuidedNeuralNetwork:
         """
 
         x = self.preflight_features(x)
+
+        # run x through the input layer to get y
         y = self._layers[0](x)
+
         for layer in self._layers[1:]:
-            y = layer(y)
+            if isinstance(layer, BatchNormalization):
+                y = layer(y, training=training)
+            else:
+                y = layer(y)
 
         if to_numpy:
             y = y.numpy()
@@ -797,7 +840,14 @@ class PhysicsGuidedNeuralNetwork:
         for i, weights in weight_dict.items():
             if weights:
                 dim = weights[0].shape[0]
-                model._layers[i].build((dim,))
+
+                if isinstance(model._layers[i], BatchNormalization):
+                    # BatchNormalization layers need to be
+                    # built with funky input dims.
+                    model._layers[i].build((None, dim))
+                else:
+                    model._layers[i].build((dim,))
+
                 model._layers[i].set_weights(weights)
 
         return model

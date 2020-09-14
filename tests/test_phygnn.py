@@ -7,6 +7,8 @@ import pytest
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
+                                     BatchNormalization)
 from phygnn import PhysicsGuidedNeuralNetwork, TESTDATADIR
 
 
@@ -85,7 +87,7 @@ def test_nn():
 
     test_mae = np.mean(np.abs(model.predict(X) - Y))
 
-    assert len(model.layers) == 4
+    assert len(model.layers) == 6
     assert len(model.weights) == 6
     assert len(model.history) == 20
     assert model.history.validation_loss.values[-1] < 0.15
@@ -103,9 +105,15 @@ def test_phygnn():
 
     test_mae = np.mean(np.abs(model.predict(X) - Y))
 
-    assert len(model.layers) == 4
+    assert len(model.layers) == 6
     assert len(model.weights) == 6
     assert len(model.history) == 20
+    assert isinstance(model.layers[0], InputLayer)
+    assert isinstance(model.layers[1], Dense)
+    assert isinstance(model.layers[2], Activation)
+    assert isinstance(model.layers[3], Dense)
+    assert isinstance(model.layers[4], Activation)
+    assert isinstance(model.layers[5], Dense)
     assert model.history.validation_loss.values[-1] < 0.015
     assert test_mae < 0.015
 
@@ -169,9 +177,10 @@ def test_kernel_regularization():
 
     assert base.kernel_reg_term > model_l1.kernel_reg_term
     assert model_l1.kernel_reg_term > model_l2.kernel_reg_term
-    assert np.abs(base.kernel_reg_term - 497.95) < 1
-    assert np.abs(model_l1.kernel_reg_term - 84.55) < 1
-    assert np.abs(model_l2.kernel_reg_term - 17.29) < 1
+
+    assert np.abs(base.kernel_reg_term - 498) < 5
+    assert np.abs(model_l1.kernel_reg_term - 84) < 5
+    assert np.abs(model_l2.kernel_reg_term - 17) < 5
 
 
 def test_bias_regularization():
@@ -204,9 +213,9 @@ def test_bias_regularization():
 
     assert base.bias_reg_term > model_l1.bias_reg_term
     assert model_l1.bias_reg_term > model_l2.bias_reg_term
-    assert np.abs(base.bias_reg_term - 5.77) < 1
-    assert np.abs(model_l1.bias_reg_term - 2.37) < 1
-    assert np.abs(model_l2.bias_reg_term - 0.30) < 1
+    assert np.abs(base.bias_reg_term - 5) < 5
+    assert np.abs(model_l1.bias_reg_term - 4) < 5
+    assert np.abs(model_l2.bias_reg_term - 1) < 5
 
 
 def test_save_load():
@@ -247,13 +256,66 @@ def test_bad_pfun():
 def test_dropouts():
     """Test the dropout rate kwargs for adding dropout layers."""
     HIDDEN_LAYERS = [
-        {'units': 64, 'activation': 'relu', 'name': 'relu1', 'dropout': 0.1},
+        {'units': 64}, {'activation': 'relu'}, {'dropout': 0.1},
         {'units': 64, 'activation': 'relu', 'name': 'relu2', 'dropout': 0.1}]
     model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                        hidden_layers=HIDDEN_LAYERS,
                                        loss_weights=(0.0, 1.0),
                                        input_dims=2, output_dims=1)
-    assert len(model.layers) == 6
+
+    assert len(model.layers) == 8, "dropout layers did not get added!"
+    assert isinstance(model.layers[0], InputLayer)
+    assert isinstance(model.layers[1], Dense)
+    assert isinstance(model.layers[2], Activation)
+    assert isinstance(model.layers[3], Dropout)
+    assert isinstance(model.layers[4], Dense)
+    assert isinstance(model.layers[5], Activation)
+    assert isinstance(model.layers[6], Dropout)
+
+    model.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
+    y_pred = model.predict(X)
+
+    model.save(FPATH)
+    loaded = PhysicsGuidedNeuralNetwork.load(FPATH)
+    y_pred_loaded = loaded.predict(X)
+    assert np.allclose(y_pred, y_pred_loaded)
+    assert len(model.layers) == len(loaded.layers)
+    os.remove(FPATH)
+
+
+def test_batch_norm():
+    """Test the addition of BatchNormalization layers"""
+    HIDDEN_LAYERS = [{'units': 64},
+                     {'batch_normalization': {'axis': 1}},
+                     {'activation': 'relu'},
+                     {'units': 64, 'activation': 'relu',
+                      'batch_normalization': {'axis': 1}},
+                     ]
+    model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                       hidden_layers=HIDDEN_LAYERS,
+                                       loss_weights=(0.0, 1.0),
+                                       input_dims=2, output_dims=1)
+
+    assert len(model.layers) == 8, "Batch norm layers did not get added!"
+    assert isinstance(model.layers[0], InputLayer)
+    assert isinstance(model.layers[1], Dense)
+    assert isinstance(model.layers[2], BatchNormalization)
+    assert isinstance(model.layers[3], Activation)
+    assert isinstance(model.layers[4], Dense)
+    assert isinstance(model.layers[5], BatchNormalization)
+    assert isinstance(model.layers[6], Activation)
+
+    model.fit(X, Y_NOISE, P, n_batch=1, n_epoch=10)
+    y_pred = model.predict(X)
+
+    model.save(FPATH)
+    loaded = PhysicsGuidedNeuralNetwork.load(FPATH)
+    y_pred_loaded = loaded.predict(X)
+
+    assert np.allclose(y_pred, y_pred_loaded)
+    assert len(model.layers) == len(loaded.layers)
+
+    os.remove(FPATH)
 
 
 def test_validation_split_shuffle():
