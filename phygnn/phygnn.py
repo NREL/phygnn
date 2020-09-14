@@ -101,6 +101,7 @@ class PhysicsGuidedNeuralNetwork:
         self._p_fun = p_fun
         self._hidden_layers = copy.deepcopy(hidden_layers)
         self._loss_weights = None
+        self._metric = metric
         self._input_dims = input_dims
         self._output_dims = output_dims
         self._layers = []
@@ -116,14 +117,14 @@ class PhysicsGuidedNeuralNetwork:
 
         self.set_loss_weights(loss_weights)
 
-        if metric.lower() not in METRICS:
+        if self._metric.lower() not in METRICS:
             e = ('Could not recognize error metric "{}". The following error '
                  'metrics are available: {}'
-                 .format(metric, list(METRICS.keys())))
+                 .format(self._metric, list(METRICS.keys())))
             logger.error(e)
             raise KeyError(e)
         else:
-            self._metric_fun = METRICS[metric.lower()]
+            self._metric_fun = METRICS[self._metric.lower()]
 
         self._initializer = initializer
         if initializer is None:
@@ -747,6 +748,7 @@ class PhysicsGuidedNeuralNetwork:
         model_params = {'p_fun': self._p_fun,
                         'hidden_layers': self._hidden_layers,
                         'loss_weights': self._loss_weights,
+                        'metric': self._metric,
                         'input_dims': self._input_dims,
                         'output_dims': self._output_dims,
                         'initializer': self._initializer,
