@@ -48,10 +48,10 @@ def test_nn(hidden_layers):
 
 @pytest.mark.parametrize(
     ('normalize', 'loss'),
-    [(True, 0.3),
-     (False, 0.03),
-     ((True, False), 0.03),
-     ((False, True), 0.3)])
+    [(True, 0.35),
+     (False, 0.035),
+     ((True, False), 0.035),
+     ((False, True), 0.35)])
 def test_normalize(normalize, loss):
     """Test TfModel """
     hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
@@ -60,7 +60,7 @@ def test_normalize(normalize, loss):
                           normalize=normalize,
                           hidden_layers=hidden_layers,
                           epochs=10, fit_kwargs={"batch_size": 4},
-                          early_stop=True)
+                          early_stop=False)
 
     test_mae = np.mean(np.abs(model[X].values.ravel() - Y))
     assert model.history['val_loss'].values[-1] < loss
@@ -76,11 +76,11 @@ def test_complex_nn():
                      {'dropout': 0.01}]
     model = TfModel.train(features, labels, hidden_layers=hidden_layers,
                           epochs=10, fit_kwargs={"batch_size": 4},
-                          early_stop=True)
+                          early_stop=False)
 
     test_mae = np.mean(np.abs(model[X].values.ravel() - Y))
 
-    loss = 0.5
+    loss = 0.55
     assert len(model.layers) == 8
     assert len(model.weights) == 10
     assert model.history['val_loss'].values[-1] < loss
