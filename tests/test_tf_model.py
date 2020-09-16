@@ -63,8 +63,6 @@ def test_normalize(normalize, loss):
                           early_stop=True)
 
     test_mae = np.mean(np.abs(model[X].values.ravel() - Y))
-    print(normalize, loss, test_mae)
-    loss = 0.01
     assert model.history['val_loss'].values[-1] < loss
     assert test_mae < loss
 
