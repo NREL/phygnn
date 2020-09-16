@@ -17,12 +17,12 @@ class PhygnnModel(ModelBase):
     Phygnn Model interface
     """
     def __init__(self, model, feature_names=None, label_names=None,
-                 norm_params=None):
+                 norm_params=None, normalize=(True, False)):
         """
         Parameters
         ----------
-        model : tensorflow.keras.models.Sequential
-            Tensorflow Keras Model
+        model : PhysicsGuidedNeuralNetwork
+            PhysicsGuidedNeuralNetwork Model instance
         feature_names : list
             Ordered list of feature names.
         label_names : list
@@ -30,9 +30,17 @@ class PhygnnModel(ModelBase):
         norm_params : dict, optional
             Dictionary mapping feature and label names (keys) to normalization
             parameters (mean, stdev), by default None
+        normalize : bool | tuple, optional
+            Boolean flag(s) as to whether features and labels should be
+            normalized. Possible values:
+            - True means normalize both
+            - False means don't normalize either
+            - Tuple of flags (normalize_feature, normalize_label)
+            by default True
         """
         super().__init__(model, feature_names=feature_names,
-                         label_names=label_names, norm_params=norm_params)
+                         label_names=label_names, norm_params=norm_params,
+                         normalize=normalize)
 
     @property
     def layers(self):
@@ -205,8 +213,8 @@ class PhygnnModel(ModelBase):
 
     def train_model(self, features, labels, p, n_batch=16, n_epoch=10,
                     shuffle=True, validation_split=0.2, run_preflight=True,
-                    return_diagnostics=False, p_kwargs=None, parse_kwargs=None,
-                    norm_labels=False):
+                    return_diagnostics=False, p_kwargs=None,
+                    parse_kwargs=None):
         """
         Train the model with the provided features and label
 
@@ -259,7 +267,7 @@ class PhygnnModel(ModelBase):
             parse_kwargs = {}
 
         x = self._parse_features(features, **parse_kwargs)
-        y = self._parse_labels(labels, normalize=norm_labels)
+        y = self._parse_labels(labels)
 
         diagnostics = self.model.fit(x, y, p,
                                      n_batch=n_batch,
@@ -293,6 +301,8 @@ class PhygnnModel(ModelBase):
         model_params = {'feature_names': self.feature_names,
                         'label_names': self.label_names,
                         'norm_params': self.normalization_parameters,
+                        'normalize': (self.normalize_features,
+                                      self.normalize_labels),
                         'model_params': self.model.model_params}
 
         json_path = path.rstrip('/') + '.json'
@@ -302,9 +312,9 @@ class PhygnnModel(ModelBase):
 
     @classmethod
     def build(cls, p_fun, feature_names, label_names,
-              loss_weights=(0.5, 0.5), hidden_layers=None,
-              metric='mae', initializer=None, optimizer=None,
-              learning_rate=0.01, history=None,
+              normalize=(True, False), loss_weights=(0.5, 0.5),
+              hidden_layers=None, metric='mae', initializer=None,
+              optimizer=None, learning_rate=0.01, history=None,
               kernel_reg_rate=0.0, kernel_reg_power=1,
               bias_reg_rate=0.0, bias_reg_power=1):
         """
@@ -322,6 +332,13 @@ class PhygnnModel(ModelBase):
             Ordered list of feature names.
         label_names : list
             Ordered list of label (output) names.
+        normalize : bool | tuple, optional
+            Boolean flag(s) as to whether features and labels should be
+            normalized. Possible values:
+            - True means normalize both
+            - False means don't normalize either
+            - Tuple of flags (normalize_feature, normalize_label)
+            by default True
         loss_weights : tuple, optional
             Loss weights for the neural network y_predicted vs. y_true
             and for the p_fun loss, respectively. For example,
@@ -373,7 +390,7 @@ class PhygnnModel(ModelBase):
 
         Returns
         -------
-        PhygnnModel
+        model : PhygnnModel
             Initialized PhygnnModel instance
         """
         if isinstance(label_names, str):
@@ -396,10 +413,13 @@ class PhygnnModel(ModelBase):
                                   feature_names=feature_names,
                                   output_names=label_names)
 
-        return cls(model, feature_names=feature_names, label_names=label_names)
+        model = cls(model, feature_names=feature_names,
+                    label_names=label_names, normalize=normalize)
+
+        return model
 
     @classmethod
-    def train(cls, p_fun, features, labels, p,
+    def train(cls, p_fun, features, labels, p, normalize=(True, False),
               loss_weights=(0.5, 0.5), hidden_layers=None,
               metric='mae', initializer=None, optimizer=None,
               learning_rate=0.01, history=None,
@@ -407,7 +427,7 @@ class PhygnnModel(ModelBase):
               bias_reg_rate=0.0, bias_reg_power=1, n_batch=16, n_epoch=10,
               shuffle=True, validation_split=0.2, run_preflight=True,
               return_diagnostics=False, p_kwargs=None, parse_kwargs=None,
-              norm_labels=False, save_path=None):
+              save_path=None):
         """
         Build phygnn model from given features, layers and
         kwargs and then train with given labels and kwargs
@@ -435,6 +455,13 @@ class PhygnnModel(ModelBase):
             or DataFrame. If this is a DataFrame, the index and column labels
             are ignored and the df is converted into a numpy array for batching
             and passing to the training algorithm and physical loss function.
+        normalize : bool | tuple, optional
+            Boolean flag(s) as to whether features and labels should be
+            normalized. Possible values:
+            - True means normalize both
+            - False means don't normalize either
+            - Tuple of flags (normalize_feature, normalize_label)
+            by default True
         loss_weights : tuple, optional
             Loss weights for the neural network y_predicted vs. y_true
             and for the p_fun loss, respectively. For example,
@@ -521,6 +548,7 @@ class PhygnnModel(ModelBase):
         _, label_names = cls._parse_data(labels)
 
         model = cls.build(p_fun, feature_names, label_names,
+                          normalize=normalize,
                           loss_weights=loss_weights,
                           hidden_layers=hidden_layers,
                           metric=metric,
@@ -531,7 +559,7 @@ class PhygnnModel(ModelBase):
                           kernel_reg_rate=kernel_reg_rate,
                           kernel_reg_power=kernel_reg_power,
                           bias_reg_rate=bias_reg_rate,
-                          bias_reg_power=bias_reg_power,)
+                          bias_reg_power=bias_reg_power)
 
         diagnostics = model.train_model(features, labels, p,
                                         n_batch=n_batch,
@@ -541,8 +569,7 @@ class PhygnnModel(ModelBase):
                                         run_preflight=run_preflight,
                                         return_diagnostics=return_diagnostics,
                                         p_kwargs=p_kwargs,
-                                        parse_kwargs=parse_kwargs,
-                                        norm_labels=norm_labels)
+                                        parse_kwargs=parse_kwargs)
 
         if save_path is not None:
             model.save_model(save_path)

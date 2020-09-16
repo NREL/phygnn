@@ -106,3 +106,20 @@ def test_phygnn_model():
     assert isinstance(model.layers[5], Dense)
     assert model.history.validation_loss.values[-1] < loss
     assert test_mae < loss
+
+
+def test_normalize():
+    """Test the operation of the PGNN with weighting pfun."""
+    PhysicsGuidedNeuralNetwork.seed(0)
+    model = PhygnnModel.train(p_fun_pythag, features, labels, P,
+                              normalize=False,
+                              hidden_layers=HIDDEN_LAYERS,
+                              loss_weights=(0.0, 1.0),
+                              n_batch=4,
+                              n_epoch=20)
+
+    test_mae = np.mean(np.abs(model.predict(X, table=False) - Y))
+
+    loss = 0.015
+    assert model.history.validation_loss.values[-1] < loss
+    assert test_mae < loss

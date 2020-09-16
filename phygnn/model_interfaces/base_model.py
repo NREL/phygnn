@@ -19,7 +19,7 @@ class ModelBase(ABC):
     """
 
     def __init__(self, model, feature_names=None, label_names=None,
-                 norm_params=None):
+                 norm_params=None, normalize=True):
         """
         Parameters
         ----------
@@ -32,6 +32,13 @@ class ModelBase(ABC):
         norm_params : dict, optional
             Dictionary mapping feature and label names (keys) to normalization
             parameters (mean, stdev), by default None
+        normalize : bool | tuple, optional
+            Boolean flag(s) as to whether features and labels should be
+            normalized. Possible values:
+            - True means normalize both
+            - False means don't normalize either
+            - Tuple of flags (normalize_feature, normalize_label)
+            by default True
         """
         self._model = model
 
@@ -52,6 +59,7 @@ class ModelBase(ABC):
             norm_params = {}
 
         self._norm_params = norm_params
+        self._normalize = self._parse_normalize(normalize)
 
     def __repr__(self):
         msg = "{}:\n{}".format(self.__class__.__name__, self.model_summary)
@@ -91,6 +99,17 @@ class ModelBase(ABC):
         return summary
 
     @property
+    def normalize_features(self):
+        """
+        Flag to normalize features
+
+        Returns
+        -------
+        bool
+        """
+        return self._normalize[0]
+
+    @property
     def feature_names(self):
         """
         List of the feature variable names.
@@ -114,6 +133,17 @@ class ModelBase(ABC):
                       if self.feature_names is not None else None)
 
         return n_features
+
+    @property
+    def normalize_labels(self):
+        """
+        Flag to normalize labels
+
+        Returns
+        -------
+        bool
+        """
+        return self._normalize[1]
 
     @property
     def label_names(self):
@@ -257,6 +287,42 @@ class ModelBase(ABC):
                 stdevs.append(self.get_stdev(l_n))
 
         return stdevs
+
+    @staticmethod
+    def _parse_normalize(normalize):
+        """
+        Parse normalize flag(s)
+
+        Parameters
+        ----------
+        normalize : bool | tuple
+            Boolean flag(s) as to whether features and labels should be
+            normalized. Possible values:
+            - True means normalize both
+            - False means don't normalize either
+            - Tuple of flags (normalize_feature, normalize_label)
+
+        Returns
+        -------
+        normalize : tuple
+            Boolean flags (normalize_feature, normalize_label)
+        """
+        if isinstance(normalize, bool):
+            normalize = (normalize, normalize)
+        elif isinstance(normalize, tuple):
+            if len(normalize) != 2:
+                msg = ('Expecting only 2 values: '
+                       '(normalize_feature, normalize_label), but {} values '
+                       'were provided!: {}'.format(len(normalize), normalize))
+                raise ValueError(msg)
+        else:
+            msg = ('"normalize" must be a boolean flag or a tuple: '
+                   '(normalize_feature, normalize_label), but {} was '
+                   'provided!: {}'
+                   .format(type(normalize), normalize))
+            raise TypeError(msg)
+
+        return normalize
 
     @staticmethod
     def dict_json_convert(inp):
@@ -567,8 +633,8 @@ class ModelBase(ABC):
                 value = PreProcess.unnormalize(value, norm_params['mean'],
                                                norm_params['stdev'])
             else:
-                msg = ("Normalization Parameters unavailable for {}"
-                       .format(key))
+                msg = ("Normalization Parameters unavailable, {} will not be "
+                       "un-normalized!".format(key))
                 logger.warning(msg)
                 warn(msg)
 
@@ -594,6 +660,11 @@ class ModelBase(ABC):
 
         if means is not None and stdevs is not None:
             df = PreProcess.unnormalize(df.copy(), means, stdevs)
+        else:
+            msg = ("Normalization parameters are unavailable, df will not be "
+                   "un-normalized!")
+            logger.warning(msg)
+            warn(msg)
 
         return df
 
@@ -624,6 +695,11 @@ class ModelBase(ABC):
 
         if means is not None and stdevs is not None:
             arr = PreProcess.unnormalize(arr.copy(), means, stdevs)
+        else:
+            msg = ("Normalization parameters are unavailable, arr will not be "
+                   "un-normalized!")
+            logger.warning(msg)
+            warn(msg)
 
         return arr
 
@@ -732,11 +808,12 @@ class ModelBase(ABC):
                 one_hot_features = [self.feature_names[i] for i in one_hot_ind]
                 self._check_one_hot_norm_params(one_hot_features)
 
-        features = self.normalize(features, names=feature_names)
+        if self.normalize_features:
+            features = self.normalize(features, names=feature_names)
 
         return features
 
-    def _parse_labels(self, labels, names=None, normalize=True):
+    def _parse_labels(self, labels, names=None):
         """
         Parse labels and normalize if desired
 
@@ -746,8 +823,6 @@ class ModelBase(ABC):
             Features to train on or predict from
         names : list, optional
             List of label names, by default None
-        normalize : bool, optional
-            Normalize label array, by default True
 
         Returns
         -------
@@ -772,7 +847,7 @@ class ModelBase(ABC):
             logger.error(msg)
             raise RuntimeError(msg)
 
-        if normalize:
+        if self.normalize_labels:
             labels = self.normalize(labels, names=label_names)
 
         return labels
@@ -810,7 +885,8 @@ class ModelBase(ABC):
             predict_kwargs = {}
 
         prediction = self._model.predict(features, **predict_kwargs)
-        prediction = self.unnormalize(prediction, names=self.label_names)
+        if self.normalize_labels:
+            prediction = self.unnormalize(prediction, names=self.label_names)
 
         if table:
             prediction = pd.DataFrame(prediction, columns=self.label_names)
