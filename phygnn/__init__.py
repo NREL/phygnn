@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """Physics Guided Neural Network python library."""
 import os
-from .model_interfaces import TfModel
+from .model_interfaces import TfModel, PhygnnModel
 from .phygnn import PhysicsGuidedNeuralNetwork
-from .utilities import tf_isin, tf_log10
+from .utilities import tf_isin, tf_log10, Layers
 from phygnn.version import __version__
 
 PHYGNNDIR = os.path.dirname(os.path.realpath(__file__))

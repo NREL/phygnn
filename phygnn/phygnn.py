@@ -4,18 +4,16 @@ Physics Guided Neural Network
 """
 import os
 import pickle
-import copy
 import time
 import numpy as np
 import pandas as pd
 import logging
 import tensorflow as tf
 from tensorflow.keras import optimizers, initializers
-from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
-                                     BatchNormalization)
+from tensorflow.keras.layers import BatchNormalization
 
 from phygnn.utilities.loss_metrics import METRICS
-
+from phygnn.utilities.tf_utilities import Layers
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +21,9 @@ logger = logging.getLogger(__name__)
 class PhysicsGuidedNeuralNetwork:
     """Simple Deep Neural Network with custom physical loss function."""
 
-    def __init__(self, p_fun, hidden_layers, loss_weights=(0.5, 0.5),
-                 input_dims=1, output_dims=1, metric='mae',
-                 initializer=None, optimizer=None,
+    def __init__(self, p_fun, loss_weights=(0.5, 0.5),
+                 n_features=1, n_labels=1, hidden_layers=None,
+                 metric='mae', initializer=None, optimizer=None,
                  learning_rate=0.01, history=None,
                  kernel_reg_rate=0.0, kernel_reg_power=1,
                  bias_reg_rate=0.0, bias_reg_power=1,
@@ -39,7 +37,16 @@ class PhysicsGuidedNeuralNetwork:
             as arguments with datatypes (tf.Tensor, np.ndarray, np.ndarray).
             The function must return a tf.Tensor object with a single numeric
             loss value (output.ndim == 0).
-        hidden_layers : list
+        loss_weights : tuple, optional
+            Loss weights for the neural network y_predicted vs. y_true
+            and for the p_fun loss, respectively. For example,
+            loss_weights=(0.0, 1.0) would simplify the phygnn loss function
+            to just the p_fun output.
+        n_features : int, optional
+            Number of input features.
+        n_labels : int, optional
+            Number of output labels.
+        hidden_layers : list, optional
             List of dictionaries of key word arguments for each hidden
             layer in the NN. Dense linear layers can be input with their
             activations or separately for more explicit control over the layer
@@ -50,66 +57,56 @@ class PhysicsGuidedNeuralNetwork:
                  {'batch_normalization': {'axis': -1}},
                  {'activation': 'relu'},
                  {'dropout': 0.01}]
-        loss_weights : tuple
-            Loss weights for the neural network y_predicted vs. y_true
-            and for the p_fun loss, respectively. For example,
-            loss_weights=(0.0, 1.0) would simplify the phygnn loss function
-            to just the p_fun output.
-        input_dims : int
-            Number of input features.
-        output_dims : int
-            Number of output labels.
-        metric : str
+        metric : str, optional
             Loss metric option for the NN loss function (not the physical
             loss function). Must be a valid key in phygnn.loss_metrics.METRICS
-        initializer : tensorflow.keras.initializers
+        initializer : tensorflow.keras.initializers, optional
             Instantiated initializer object. None defaults to GlorotUniform
-        optimizer : tensorflow.keras.optimizers
+        optimizer : tensorflow.keras.optimizers, optional
             Instantiated neural network optimization object.
             None defaults to Adam.
-        learning_rate : float
+        learning_rate : float, optional
             Optimizer learning rate.
-        history : None | pd.DataFrame
+        history : None | pd.DataFrame, optional
             Learning history if continuing a training session.
-        kernel_reg_rate : float
+        kernel_reg_rate : float, optional
             Kernel regularization rate. Increasing this value above zero will
             add a structural loss term to the loss function that
             disincentivizes large hidden layer weights and should reduce
             model complexity. Setting this to 0.0 will disable kernel
             regularization.
-        kernel_reg_power : int
+        kernel_reg_power : int, optional
             Kernel regularization power. kernel_reg_power=1 is L1
             regularization (lasso regression), and kernel_reg_power=2 is L2
             regularization (ridge regression).
-        bias_reg_rate : float
+        bias_reg_rate : float, optional
             Bias regularization rate. Increasing this value above zero will
             add a structural loss term to the loss function that
             disincentivizes large hidden layer biases and should reduce
             model complexity. Setting this to 0.0 will disable bias
             regularization.
-        bias_reg_power : int
+        bias_reg_power : int, optional
             Bias regularization power. bias_reg_power=1 is L1
             regularization (lasso regression), and bias_reg_power=2 is L2
             regularization (ridge regression).
-        feature_names : list | tuple | None
+        feature_names : list | tuple | None, optional
             Training feature names (strings). Mostly a convenience so that a
             loaded-from-disk model will have declared feature names, making it
             easier to feed in features for prediction. This will also get set
             if phygnn is trained on a DataFrame.
-        output_names : list | tuple | None
+        output_names : list | tuple | None, optional
             Prediction output names (strings). Mostly a convenience so that a
             loaded-from-disk model will have declared output names, making it
             easier to understand prediction output. This will also get set
             if phygnn is trained on a DataFrame.
         """
-
         self._p_fun = p_fun
-        self._hidden_layers = copy.deepcopy(hidden_layers)
         self._loss_weights = None
         self._metric = metric
-        self._input_dims = input_dims
-        self._output_dims = output_dims
-        self._layers = []
+        self._input_dims = n_features
+        self._output_dims = n_labels
+        self._layers = Layers(n_features, n_labels=n_labels,
+                              hidden_layers=hidden_layers)
         self._optimizer = None
         self._history = history
         self._learning_rate = learning_rate
@@ -139,11 +136,128 @@ class PhysicsGuidedNeuralNetwork:
         if optimizer is None:
             self._optimizer = optimizers.Adam(learning_rate=learning_rate)
 
-        self._layers.append(InputLayer(input_shape=[input_dims]))
-        for hidden_layer in self._hidden_layers:
-            self.add_layer(hidden_layer)
-        self._layers.append(Dense(
-            output_dims, kernel_initializer=self._initializer))
+    @property
+    def history(self):
+        """
+        Model training history DataFrame (None if not yet trained)
+
+        Returns
+        -------
+        pandas.DataFrame | None
+        """
+        return self._history
+
+    @property
+    def layers(self):
+        """
+        TensorFlow keras layers
+
+        Returns
+        -------
+        list
+        """
+        return self._layers.layers
+
+    @property
+    def weights(self):
+        """
+        Get a list of layer weights for gradient calculations.
+
+        Returns
+        -------
+        list
+        """
+        return self._layers.weights
+
+    @property
+    def kernel_weights(self):
+        """
+        Get a list of the NN kernel weights (tensors)
+
+        (can be used for kernel regularization).
+
+        Does not include input layer or dropout layers.
+        Does include the output layer.
+
+        Returns
+        -------
+        list
+        """
+        return self._layers.kernel_weights
+
+    @property
+    def bias_weights(self):
+        """
+        Get a list of the NN bias weights (tensors)
+
+        (can be used for bias regularization).
+
+        Does not include input layer or dropout layers.
+        Does include the output layer.
+
+        Returns
+        -------
+        list
+        """
+        return self._layers.bias_weights
+
+    @property
+    def kernel_reg_term(self):
+        """Get the regularization term for the kernel regularization without
+        the regularization rate applied."""
+        loss_k_reg = [tf.math.abs(x) for x in self.kernel_weights]
+        loss_k_reg = [tf.math.pow(x, self.kernel_reg_power)
+                      for x in loss_k_reg]
+        loss_k_reg = tf.math.reduce_sum(
+            [tf.math.reduce_sum(x) for x in loss_k_reg])
+
+        return loss_k_reg
+
+    @property
+    def bias_reg_term(self):
+        """Get the regularization term for the bias regularization without
+        the regularization rate applied."""
+        loss_b_reg = [tf.math.abs(x) for x in self.bias_weights]
+        loss_b_reg = [tf.math.pow(x, self.bias_reg_power)
+                      for x in loss_b_reg]
+        loss_b_reg = tf.math.reduce_sum(
+            [tf.math.reduce_sum(x) for x in loss_b_reg])
+
+        return loss_b_reg
+
+    @property
+    def model_params(self):
+        """
+        Model parameters, used to save model to disc
+
+        Returns
+        -------
+        dict
+        """
+        weight_dict = {}
+        for i, layer in enumerate(self.layers):
+            weight_dict[i] = layer.get_weights()
+
+        model_params = {'p_fun': self._p_fun,
+                        'hidden_layers': self._layers.hidden_layer_kwargs,
+                        'loss_weights': self._loss_weights,
+                        'metric': self._metric,
+                        'n_features': self._input_dims,
+                        'n_labels': self._output_dims,
+                        'initializer': self._initializer,
+                        'optimizer': self._optimizer,
+                        'learning_rate': self._learning_rate,
+                        'weight_dict': weight_dict,
+                        'history': self.history,
+                        'kernel_reg_rate': self.kernel_reg_rate,
+                        'kernel_reg_power': self.kernel_reg_power,
+                        'bias_reg_rate': self.bias_reg_rate,
+                        'bias_reg_power': self.bias_reg_power,
+                        'feature_names': self.feature_names,
+                        'output_names': self.output_names,
+                        }
+
+        return model_params
 
     @staticmethod
     def _check_shapes(x, y):
@@ -151,7 +265,139 @@ class PhysicsGuidedNeuralNetwork:
         assert len(x.shape) == 2, 'Input dimensions must be 2D!'
         assert len(y.shape) == 2, 'Input dimensions must be 2D!'
         assert len(x) == len(y), 'Number of input observations dont match!'
+
         return True
+
+    @staticmethod
+    def seed(s=0):
+        """
+        Set the random seed for reproducable results.
+
+        Parameters
+        ----------
+        s : int
+            Random seed
+        """
+        np.random.seed(s)
+        tf.random.set_seed(s)
+
+    @staticmethod
+    def _get_val_split(x, y, p, shuffle=True, validation_split=0.2):
+        """Get a validation split and remove from from the training data.
+
+        Parameters
+        ----------
+        x : np.ndarray
+            Feature data in a 2D array
+        y : np.ndarray
+            Known output data in a 2D array.
+        p : np.ndarray
+            Supplemental feature data for the physics loss function in 2D array
+        shuffle : bool
+            Flag to randomly subset the validation data from x and y.
+            shuffle=False will take the first entries in x and y.
+        validation_split : float
+            Fraction of x and y to put in the validation set.
+
+        Returns
+        -------
+        x : np.ndarray
+            Feature data for model training as 2D array. Length of this
+            will be the length of the input x multiplied by one minus
+            the split fraction
+        y : np.ndarray
+            Known output data for model training as 2D array. Length of this
+            will be the length of the input y multiplied by one minus
+            the split fraction
+        p : np.ndarray
+            Supplemental feature data for physics loss function to be used
+            in model training as 2D array. Length of this will be the length
+            of the input p multiplied by one minus the split fraction
+        x_val : np.ndarray
+            Feature data for model validation as 2D array. Length of this
+            will be the length of the input x multiplied by the split fraction
+        y_val : np.ndarray
+            Known output data for model validation as 2D array. Length of this
+            will be the length of the input y multiplied by the split fraction
+        p_val : np.ndarray
+            Supplemental feature data for physics loss function to be used in
+            model validation as 2D array. Length of this will be the length of
+            the input p multiplied by the split fraction
+        """
+
+        L = len(x)
+        n = int(L * validation_split)
+
+        if shuffle:
+            i = np.random.choice(L, replace=False, size=(n,))
+        else:
+            i = np.arange(n)
+
+        j = np.array(list(set(range(L)) - set(i)))
+
+        assert len(set(i)) == len(i)
+        assert len(set(list(i) + list(j))) == L
+
+        x_val, y_val, p_val = x[i, :], y[i, :], p[i, :]
+        x, y, p = x[j, :], y[j, :], p[j, :]
+
+        PhysicsGuidedNeuralNetwork._check_shapes(x_val, y_val)
+        PhysicsGuidedNeuralNetwork._check_shapes(x_val, p_val)
+        PhysicsGuidedNeuralNetwork._check_shapes(x, y)
+        PhysicsGuidedNeuralNetwork._check_shapes(x, p)
+
+        logger.debug('Validation data has length {} and training data has '
+                     'length {} (split of {})'
+                     .format(len(x_val), len(x), validation_split))
+
+        return x, y, p, x_val, y_val, p_val
+
+    @staticmethod
+    def _make_batches(x, y, p, n_batch=16, shuffle=True):
+        """Make lists of batches from x and y.
+
+        Parameters
+        ----------
+        x : np.ndarray
+            Feature data for training in a 2D array
+        y : np.ndarray
+            Known output data for training in a 2D array.
+        p : np.ndarray
+            Supplemental feature data for the physics loss function in 2D array
+        n_batch : int
+            Number of times to update the NN weights per epoch. The training
+            data will be split into this many batches and the NN will train on
+            each batch, update weights, then move onto the next batch.
+        shuffle : bool
+            Flag to randomly subset the validation data from x and y.
+
+        Returns
+        -------
+        x_batches : list
+            List of 2D arrays that are split subsets of x.
+            Length of list is n_batch.
+        y_batches : list
+            List of 2D arrays that are split subsets of y.
+            Length of list is n_batch.
+        p_batches : list
+            List of 2D arrays that are split subsets of p.
+            Length of list is n_batch.
+        """
+
+        L = len(x)
+        if shuffle:
+            i = np.random.choice(L, replace=False, size=(L,))
+            assert len(set(i)) == L
+        else:
+            i = np.arange(L)
+
+        batch_indexes = np.array_split(i, n_batch)
+
+        x_batches = [x[j, :] for j in batch_indexes]
+        y_batches = [y[j, :] for j in batch_indexes]
+        p_batches = [p[j, :] for j in batch_indexes]
+
+        return x_batches, y_batches, p_batches
 
     def preflight_p_fun(self, x, y_true, p, p_kwargs):
         """Run a pre-flight check making sure the p_fun is differentiable."""
@@ -281,93 +527,6 @@ class PhysicsGuidedNeuralNetwork:
 
         return x
 
-    @staticmethod
-    def seed(s=0):
-        """Set the random seed for reproducable results."""
-        np.random.seed(s)
-        tf.random.set_seed(s)
-
-    @property
-    def history(self):
-        """Get the training history DataFrame (None if not yet trained)."""
-        return self._history
-
-    @property
-    def layers(self):
-        """Get a list of the NN layers."""
-        return self._layers
-
-    @property
-    def weights(self):
-        """Get a list of layer weights for gradient calculations."""
-        weights = []
-        for layer in self._layers:
-            if isinstance(layer, Dense):
-                weights += layer.variables
-
-            # Include gamma and beta weights for BatchNormalization
-            # but do not include moving mean/stdev
-            elif isinstance(layer, BatchNormalization):
-                weights += layer.variables[:2]
-
-        return weights
-
-    @property
-    def kernel_weights(self):
-        """Get a list of the NN kernel weights (tensors)
-
-        (can be used for kernel regularization).
-
-        Does not include input layer or dropout layers.
-        Does include the output layer.
-        """
-        weights = []
-        for layer in self.layers:
-            if isinstance(layer, Dense):
-                weights.append(layer.variables[0])
-
-        return weights
-
-    @property
-    def bias_weights(self):
-        """Get a list of the NN bias weights (tensors)
-
-        (can be used for bias regularization).
-
-        Does not include input layer or dropout layers.
-        Does include the output layer.
-        """
-        weights = []
-        for layer in self.layers:
-            if isinstance(layer, Dense):
-                weights.append(layer.variables[1])
-
-        return weights
-
-    @property
-    def kernel_reg_term(self):
-        """Get the regularization term for the kernel regularization without
-        the regularization rate applied."""
-        loss_k_reg = [tf.math.abs(x) for x in self.kernel_weights]
-        loss_k_reg = [tf.math.pow(x, self.kernel_reg_power)
-                      for x in loss_k_reg]
-        loss_k_reg = tf.math.reduce_sum(
-            [tf.math.reduce_sum(x) for x in loss_k_reg])
-
-        return loss_k_reg
-
-    @property
-    def bias_reg_term(self):
-        """Get the regularization term for the bias regularization without
-        the regularization rate applied."""
-        loss_b_reg = [tf.math.abs(x) for x in self.bias_weights]
-        loss_b_reg = [tf.math.pow(x, self.bias_reg_power)
-                      for x in loss_b_reg]
-        loss_b_reg = tf.math.reduce_sum(
-            [tf.math.reduce_sum(x) for x in loss_b_reg])
-
-        return loss_b_reg
-
     def reset_history(self):
         """Erase previous training history without resetting trained weights"""
         self._history = None
@@ -450,57 +609,6 @@ class PhysicsGuidedNeuralNetwork:
 
         return loss, nn_loss, p_loss
 
-    def add_layer(self, layer_kwargs, insert_index=None):
-        """Add a hidden layer to the DNN.
-
-        Parameters
-        ----------
-        layer_kwargs : dict
-            Dictionary of key word arguments for list layer. For example,
-            any of the following are valid inputs:
-                {'units': 64, 'activation': 'relu', 'dropout': 0.05}
-                {'units': 64, 'name': 'relu1'}
-                {'activation': 'relu'}
-                {'batch_normalization': {'axis': -1}}
-                {'dropout': 0.1}
-        insert_index : int | None
-            Optional index to insert the new layer at. None will append
-            the layer to the end of the layer list.
-        """
-
-        layer_kwargs_cp = copy.deepcopy(layer_kwargs)
-        dense_layer = None
-        bn_layer = None
-        a_layer = None
-        d_layer = None
-        activation_arg = layer_kwargs_cp.pop('activation', None)
-        dropout_rate = layer_kwargs_cp.pop('dropout', None)
-        batch_norm_kwargs = layer_kwargs_cp.pop('batch_normalization', None)
-
-        if 'units' in layer_kwargs_cp:
-            dense_layer = Dense(**layer_kwargs_cp)
-            if insert_index is not None:
-                self._layers.insert(insert_index, dense_layer)
-            else:
-                self._layers.append(dense_layer)
-
-        if batch_norm_kwargs is not None:
-            bn_layer = BatchNormalization(**batch_norm_kwargs)
-        if activation_arg is not None:
-            a_layer = Activation(activation_arg)
-        if dropout_rate is not None:
-            d_layer = Dropout(dropout_rate)
-
-        # This ensures proper default ordering of layers if requested together.
-        for layer in [bn_layer, a_layer, d_layer]:
-            if layer is not None:
-                if insert_index is not None:
-                    if dense_layer is not None:
-                        insert_index += 1
-                    self._layers.insert(insert_index, layer)
-                else:
-                    self._layers.append(layer)
-
     def _get_grad(self, x, y_true, p, p_kwargs):
         """Get the gradient based on a mini-batch of x and y_true data."""
         with tf.GradientTape() as tape:
@@ -519,124 +627,6 @@ class PhysicsGuidedNeuralNetwork:
         grad, loss = self._get_grad(x, y_true, p, p_kwargs)
         self._optimizer.apply_gradients(zip(grad, self.weights))
         return grad, loss
-
-    @staticmethod
-    def _get_val_split(x, y, p, shuffle=True, validation_split=0.2):
-        """Get a validation split and remove from from the training data.
-
-        Parameters
-        ----------
-        x : np.ndarray
-            Feature data in a 2D array
-        y : np.ndarray
-            Known output data in a 2D array.
-        p : np.ndarray
-            Supplemental feature data for the physics loss function in 2D array
-        shuffle : bool
-            Flag to randomly subset the validation data from x and y.
-            shuffle=False will take the first entries in x and y.
-        validation_split : float
-            Fraction of x and y to put in the validation set.
-
-        Returns
-        -------
-        x : np.ndarray
-            Feature data for model training as 2D array. Length of this
-            will be the length of the input x multiplied by one minus
-            the split fraction
-        y : np.ndarray
-            Known output data for model training as 2D array. Length of this
-            will be the length of the input y multiplied by one minus
-            the split fraction
-        p : np.ndarray
-            Supplemental feature data for physics loss function to be used
-            in model training as 2D array. Length of this will be the length
-            of the input p multiplied by one minus the split fraction
-        x_val : np.ndarray
-            Feature data for model validation as 2D array. Length of this
-            will be the length of the input x multiplied by the split fraction
-        y_val : np.ndarray
-            Known output data for model validation as 2D array. Length of this
-            will be the length of the input y multiplied by the split fraction
-        p_val : np.ndarray
-            Supplemental feature data for physics loss function to be used in
-            model validation as 2D array. Length of this will be the length of
-            the input p multiplied by the split fraction
-        """
-
-        L = len(x)
-        n = int(L * validation_split)
-
-        if shuffle:
-            i = np.random.choice(L, replace=False, size=(n,))
-        else:
-            i = np.arange(n)
-
-        j = np.array(list(set(range(L)) - set(i)))
-
-        assert len(set(i)) == len(i)
-        assert len(set(list(i) + list(j))) == L
-
-        x_val, y_val, p_val = x[i, :], y[i, :], p[i, :]
-        x, y, p = x[j, :], y[j, :], p[j, :]
-
-        PhysicsGuidedNeuralNetwork._check_shapes(x_val, y_val)
-        PhysicsGuidedNeuralNetwork._check_shapes(x_val, p_val)
-        PhysicsGuidedNeuralNetwork._check_shapes(x, y)
-        PhysicsGuidedNeuralNetwork._check_shapes(x, p)
-
-        logger.debug('Validation data has length {} and training data has '
-                     'length {} (split of {})'
-                     .format(len(x_val), len(x), validation_split))
-
-        return x, y, p, x_val, y_val, p_val
-
-    @staticmethod
-    def _make_batches(x, y, p, n_batch=16, shuffle=True):
-        """Make lists of batches from x and y.
-
-        Parameters
-        ----------
-        x : np.ndarray
-            Feature data for training in a 2D array
-        y : np.ndarray
-            Known output data for training in a 2D array.
-        p : np.ndarray
-            Supplemental feature data for the physics loss function in 2D array
-        n_batch : int
-            Number of times to update the NN weights per epoch. The training
-            data will be split into this many batches and the NN will train on
-            each batch, update weights, then move onto the next batch.
-        shuffle : bool
-            Flag to randomly subset the validation data from x and y.
-
-        Returns
-        -------
-        x_batches : list
-            List of 2D arrays that are split subsets of x.
-            Length of list is n_batch.
-        y_batches : list
-            List of 2D arrays that are split subsets of y.
-            Length of list is n_batch.
-        p_batches : list
-            List of 2D arrays that are split subsets of p.
-            Length of list is n_batch.
-        """
-
-        L = len(x)
-        if shuffle:
-            i = np.random.choice(L, replace=False, size=(L,))
-            assert len(set(i)) == L
-        else:
-            i = np.arange(L)
-
-        batch_indexes = np.array_split(i, n_batch)
-
-        x_batches = [x[j, :] for j in batch_indexes]
-        y_batches = [y[j, :] for j in batch_indexes]
-        p_batches = [p[j, :] for j in batch_indexes]
-
-        return x_batches, y_batches, p_batches
 
     def fit(self, x, y, p, n_batch=16, n_epoch=10, shuffle=True,
             validation_split=0.2, p_kwargs=None, run_preflight=True,
@@ -753,9 +743,9 @@ class PhysicsGuidedNeuralNetwork:
         x = self.preflight_features(x)
 
         # run x through the input layer to get y
-        y = self._layers[0](x)
+        y = self.layers[0](x)
 
-        for layer in self._layers[1:]:
+        for layer in self.layers[1:]:
             if isinstance(layer, BatchNormalization):
                 y = layer(y, training=training)
             else:
@@ -784,31 +774,45 @@ class PhysicsGuidedNeuralNetwork:
         if dirname and not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        weight_dict = {}
-        for i, layer in enumerate(self._layers):
-            weight_dict[i] = layer.get_weights()
-
-        model_params = {'p_fun': self._p_fun,
-                        'hidden_layers': self._hidden_layers,
-                        'loss_weights': self._loss_weights,
-                        'metric': self._metric,
-                        'input_dims': self._input_dims,
-                        'output_dims': self._output_dims,
-                        'initializer': self._initializer,
-                        'optimizer': self._optimizer,
-                        'learning_rate': self._learning_rate,
-                        'weight_dict': weight_dict,
-                        'history': self._history,
-                        'kernel_reg_rate': self.kernel_reg_rate,
-                        'kernel_reg_power': self.kernel_reg_power,
-                        'bias_reg_rate': self.bias_reg_rate,
-                        'bias_reg_power': self.bias_reg_power,
-                        'feature_names': self.feature_names,
-                        'output_names': self.output_names,
-                        }
+        model_params = self.model_params
 
         with open(fpath, 'wb') as f:
             pickle.dump(model_params, f)
+
+    @classmethod
+    def set_params(cls, model_params):
+        """
+        Initialize phygnn model from saved model parameters
+
+        Parameters
+        ----------
+        model_params : dict
+            Model parameters
+
+        Returns
+        -------
+        model : PhysicsGuidedNeuralNetwork
+            Instantiated phygnn model
+        """
+        p_fun = model_params.pop('p_fun')
+        weight_dict = model_params.pop('weight_dict')
+
+        model = cls(p_fun, **model_params)
+
+        for i, weights in weight_dict.items():
+            if weights:
+                dim = weights[0].shape[0]
+
+                if isinstance(model.layers[i], BatchNormalization):
+                    # BatchNormalization layers need to be
+                    # built with funky input dims.
+                    model.layers[i].build((None, dim))
+                else:
+                    model.layers[i].build((dim,))
+
+                model.layers[i].set_weights(weights)
+
+        return model
 
     @classmethod
     def load(cls, fpath):
@@ -818,8 +822,12 @@ class PhysicsGuidedNeuralNetwork:
         ----------
         fpath : str
             File path to .pkl file to load model from.
-        """
 
+        Returns
+        -------
+        model : PhysicsGuidedNeuralNetwork
+            Instantiated phygnn model
+        """
         if not os.path.exists(fpath):
             e = 'Could not load file, does not exist: {}'.format(fpath)
             logger.error(e)
@@ -833,21 +841,6 @@ class PhysicsGuidedNeuralNetwork:
         with open(fpath, 'rb') as f:
             model_params = pickle.load(f)
 
-        weight_dict = model_params.pop('weight_dict')
-
-        model = cls(**model_params)
-
-        for i, weights in weight_dict.items():
-            if weights:
-                dim = weights[0].shape[0]
-
-                if isinstance(model._layers[i], BatchNormalization):
-                    # BatchNormalization layers need to be
-                    # built with funky input dims.
-                    model._layers[i].build((None, dim))
-                else:
-                    model._layers[i].build((dim,))
-
-                model._layers[i].set_weights(weights)
+        model = cls.set_params(model_params)
 
         return model

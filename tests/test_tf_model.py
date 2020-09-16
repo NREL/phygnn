@@ -27,10 +27,10 @@ labels = pd.DataFrame(Y_NOISE, columns=['c'])
 @pytest.mark.parametrize(
     'hidden_layers',
     [None,
-     [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
-      {'units': 64, 'activation': 'relu', 'name': 'relu2'}]])
+     [{'units': 64, 'name': 'relu1'},
+      {'units': 64, 'name': 'relu2'}]])
 def test_nn(hidden_layers):
-    """Test the TfModel """
+    """Test TfModel """
     model = TfModel.train(features, labels, hidden_layers=hidden_layers,
                           epochs=10, fit_kwargs={"batch_size": 4},
                           early_stop=False)
@@ -38,7 +38,7 @@ def test_nn(hidden_layers):
     test_mae = np.mean(np.abs(model[X].values.ravel() - Y))
 
     n_layers = len(hidden_layers) + 1 if hidden_layers is not None else 1
-    loss = 0.4 if hidden_layers is not None else 4
+    loss = 4
     assert len(model.layers) == n_layers
     assert len(model.weights) == n_layers * 2
     assert len(model.history) == 10
@@ -46,11 +46,22 @@ def test_nn(hidden_layers):
     assert test_mae < loss
 
 
-def test_dropouts():
-    """Test the dropout rate kwargs for adding dropout layers."""
-    hidden_layers = [
-        {'units': 64, 'activation': 'relu', 'name': 'relu1', 'dropout': 0.1},
-        {'units': 64, 'activation': 'relu', 'name': 'relu2', 'dropout': 0.1}]
-    model = TfModel.build(['a', 'b'], 'c', hidden_layers=hidden_layers)
+def test_complex_nn():
+    """Test complex TfModel """
+    hidden_layers = [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
+                     {'units': 64},
+                     {'batch_normalization': {'axis': -1}},
+                     {'activation': 'relu'},
+                     {'dropout': 0.01}]
+    model = TfModel.train(features, labels, hidden_layers=hidden_layers,
+                          epochs=10, fit_kwargs={"batch_size": 4},
+                          early_stop=False)
 
-    assert len(model.layers) == 5
+    test_mae = np.mean(np.abs(model[X].values.ravel() - Y))
+
+    loss = 0.5
+    assert len(model.layers) == 8
+    assert len(model.weights) == 10
+    assert len(model.history) == 10
+    assert model.history['val_loss'].values[-1] < loss
+    assert test_mae < loss

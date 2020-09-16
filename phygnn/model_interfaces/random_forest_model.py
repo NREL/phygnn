@@ -8,13 +8,14 @@ import os
 from sklearn.ensemble import RandomForestRegressor
 
 from phygnn.model_interfaces.base_model import ModelBase
+from phygnn.utilities.pre_processing import PreProcess
 
 logger = logging.getLogger(__name__)
 
 
 class RandomForestModel(ModelBase):
     """
-    scikit learn Random Forest Regression
+    scikit learn Random Forest Regression model interface
     """
 
     def __init__(self, model, feature_names=None, label_name=None,
@@ -77,7 +78,7 @@ class RandomForestModel(ModelBase):
         means = self.label_means[0]
         if means:
             stdevs = self.label_stdevs[0]
-            prediction = self._unnormalize(prediction, means, stdevs)
+            prediction = PreProcess.unnormalize(prediction, means, stdevs)
 
         return prediction
 

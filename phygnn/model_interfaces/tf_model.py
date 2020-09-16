@@ -9,18 +9,18 @@ import os
 import pandas as pd
 import tensorflow as tf
 from tensorflow import feature_column
-from tensorflow.keras.layers import InputLayer, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 from warnings import warn
 
 from phygnn.model_interfaces.base_model import ModelBase
+from phygnn.utilities.tf_utilities import Layers
 
 logger = logging.getLogger(__name__)
 
 
 class TfModel(ModelBase):
     """
-    TensorFlow Keras Model
+    TensorFlow Keras Model interface
     """
     def __init__(self, model, feature_names=None, label_names=None,
                  norm_params=None):
@@ -111,7 +111,7 @@ class TfModel(ModelBase):
     @property
     def history(self):
         """
-        Model training history
+        Model training history DataFrame (None if not yet trained)
 
         Returns
         -------
@@ -296,19 +296,8 @@ class TfModel(ModelBase):
             Compiled tensorflow Sequential model
         """
         model = tf.keras.models.Sequential()
-        model.add(InputLayer(input_shape=[n_features]))
-        if hidden_layers is None:
-            # Add a single linear layer
-            model.add(Dense(n_labels))
-        else:
-            for layer in hidden_layers:
-                dropout = layer.pop('dropout', None)
-                model.add(Dense(**layer))
-
-                if dropout is not None:
-                    model.add(Dropout(dropout))
-
-            model.add(Dense(n_labels))
+        model = Layers.compile(model, n_features, n_labels=n_labels,
+                               hidden_layers=hidden_layers)
 
         if isinstance(metrics, tuple):
             metrics = list(metrics)
@@ -453,18 +442,18 @@ class TfModel(ModelBase):
         Returns
         -------
         model : TfModel
-            Initialized TfKeraModel obj
+            Initialized TfModel obj
         """
         if isinstance(label_names, str):
             label_names = [label_names]
 
-        model = TfModel.compile_model(len(feature_names),
-                                      n_labels=len(label_names),
-                                      hidden_layers=hidden_layers,
-                                      learning_rate=learning_rate, loss=loss,
-                                      metrics=metrics,
-                                      optimizer_class=optimizer_class,
-                                      **kwargs)
+        model = cls.compile_model(len(feature_names),
+                                  n_labels=len(label_names),
+                                  hidden_layers=hidden_layers,
+                                  learning_rate=learning_rate, loss=loss,
+                                  metrics=metrics,
+                                  optimizer_class=optimizer_class,
+                                  **kwargs)
 
         return cls(model, feature_names=feature_names, label_names=label_names)
 
