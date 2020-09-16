@@ -587,14 +587,15 @@ class ModelBase(ABC):
 
         Returns
         -------
-        native_df : pandas.DataFrame
-            Native features/label array
+        df : pandas.DataFrame
+            Native features/label df if norm params are not None
         """
         means, stdevs = self.get_norm_params(df.columns)
 
-        native_df = PreProcess.unnormalize(df, means, stdevs)
+        if means is not None and stdevs is not None:
+            df = PreProcess.unnormalize(df.copy(), means, stdevs)
 
-        return native_df
+        return df
 
     def _unnormalize_arr(self, arr, names):
         """
@@ -609,8 +610,8 @@ class ModelBase(ABC):
 
         Returns
         -------
-        native_arr : ndarray
-            Native features/label array
+        arr : ndarray
+            Native features/label array if norm params are not None
         """
         n_names = self._get_item_number(arr)
         if len(names) != n_names:
@@ -621,9 +622,10 @@ class ModelBase(ABC):
 
         means, stdevs = self.get_norm_params(names)
 
-        native_arr = PreProcess.unnormalize(arr, means, stdevs)
+        if means is not None and stdevs is not None:
+            arr = PreProcess.unnormalize(arr.copy(), means, stdevs)
 
-        return native_arr
+        return arr
 
     def unnormalize(self, data, names=None):
         """

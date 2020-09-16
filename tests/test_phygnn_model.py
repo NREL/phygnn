@@ -75,7 +75,7 @@ def test_nn():
 
     test_mae = np.mean(np.abs(model.predict(X, table=False) - Y))
 
-    loss = 0.32
+    loss = 0.15
     assert len(model.layers) == 6
     assert len(model.weights) == 6
     assert len(model.history) == 20
