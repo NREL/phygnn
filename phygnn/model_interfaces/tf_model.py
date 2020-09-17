@@ -23,7 +23,7 @@ class TfModel(ModelBase):
     TensorFlow Keras Model interface
     """
     def __init__(self, model, feature_names=None, label_names=None,
-                 norm_params=None, normalize=True):
+                 norm_params=None, normalize=(True, False)):
         """
         Parameters
         ----------
@@ -418,7 +418,7 @@ class TfModel(ModelBase):
             json.dump(model_params, f, indent=2, sort_keys=True)
 
     @classmethod
-    def build(cls, feature_names, label_names, normalize=True,
+    def build(cls, feature_names, label_names, normalize=(True, False),
               hidden_layers=None, learning_rate=0.001,
               loss="mean_squared_error", metrics=('mae', 'mse'),
               optimizer_class=Adam, **kwargs):
@@ -478,7 +478,7 @@ class TfModel(ModelBase):
         return model
 
     @classmethod
-    def train(cls, features, labels, normalize=True,
+    def train(cls, features, labels, normalize=(True, False),
               hidden_layers=None, learning_rate=0.001,
               loss="mean_squared_error", metrics=('mae', 'mse'),
               optimizer_class=Adam, epochs=100, validation_split=0.2,

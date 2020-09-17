@@ -19,39 +19,39 @@ B = np.expand_dims(B.flatten(), axis=1)
 Y = np.sqrt(A ** 2 + B ** 2)
 X = np.hstack((A, B))
 features = pd.DataFrame(X, columns=['a', 'b'])
-
-Y_NOISE = Y * (1 + (np.random.random(Y.shape) - 0.5) * 0.5) + 0.1
-labels = pd.DataFrame(Y_NOISE, columns=['c'])
+labels = pd.DataFrame(Y, columns=['c'])
 
 
 @pytest.mark.parametrize(
-    'hidden_layers',
-    [None,
-     [{'units': 64, 'name': 'relu1'},
-      {'units': 64, 'name': 'relu2'}]])
-def test_nn(hidden_layers):
+    ('hidden_layers', 'loss'),
+    [(None, 0.6),
+     ([{'units': 64, 'activation': 'relu', 'name': 'relu1'},
+       {'units': 64, 'activation': 'relu', 'name': 'relu2'}], 0.008)])
+def test_nn(hidden_layers, loss):
     """Test TfModel """
-    model = TfModel.train(features, labels, hidden_layers=hidden_layers,
-                          epochs=10, fit_kwargs={"batch_size": 4},
+    model = TfModel.train(features, labels,
+                          hidden_layers=hidden_layers,
+                          epochs=10,
+                          fit_kwargs={"batch_size": 16},
                           early_stop=False)
 
-    test_mae = np.mean(np.abs(model[X].values.ravel() - Y))
-
-    n_layers = len(hidden_layers) + 1 if hidden_layers is not None else 1
-    loss = 4
-    assert len(model.layers) == n_layers
-    assert len(model.weights) == n_layers * 2
+    n_l = len(hidden_layers) * 2 + 1 if hidden_layers is not None else 1
+    n_w = (len(hidden_layers) + 1) * 2 if hidden_layers is not None else 2
+    assert len(model.layers) == n_l
+    assert len(model.weights) == n_w
     assert len(model.history) == 10
-    assert model.history['val_loss'].values[-1] < loss
+
+    test_mae = np.mean(np.abs(model[X].values - Y))
+    assert model.history['val_mae'].values[-1] < loss
     assert test_mae < loss
 
 
 @pytest.mark.parametrize(
     ('normalize', 'loss'),
-    [(True, 0.35),
-     (False, 0.035),
-     ((True, False), 0.035),
-     ((False, True), 0.35)])
+    [(True, 0.04),
+     (False, 0.002),
+     ((True, False), 0.002),
+     ((False, True), 0.02)])
 def test_normalize(normalize, loss):
     """Test TfModel """
     hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
@@ -59,11 +59,11 @@ def test_normalize(normalize, loss):
     model = TfModel.train(features, labels,
                           normalize=normalize,
                           hidden_layers=hidden_layers,
-                          epochs=10, fit_kwargs={"batch_size": 4},
+                          epochs=10, fit_kwargs={"batch_size": 16},
                           early_stop=False)
 
-    test_mae = np.mean(np.abs(model[X].values.ravel() - Y))
-    assert model.history['val_loss'].values[-1] < loss
+    test_mae = np.mean(np.abs(model[X].values - Y))
+    assert model.history['val_mae'].values[-1] < loss
     assert test_mae < loss
 
 
@@ -74,14 +74,15 @@ def test_complex_nn():
                      {'batch_normalization': {'axis': -1}},
                      {'activation': 'relu'},
                      {'dropout': 0.01}]
-    model = TfModel.train(features, labels, hidden_layers=hidden_layers,
-                          epochs=10, fit_kwargs={"batch_size": 4},
+    model = TfModel.train(features, labels,
+                          hidden_layers=hidden_layers,
+                          epochs=10, fit_kwargs={"batch_size": 16},
                           early_stop=False)
 
-    test_mae = np.mean(np.abs(model[X].values.ravel() - Y))
-
-    loss = 0.55
     assert len(model.layers) == 8
     assert len(model.weights) == 10
-    assert model.history['val_loss'].values[-1] < loss
+
+    test_mae = np.mean(np.abs(model[X].values - Y))
+    loss = 0.07
+    assert model.history['val_mae'].values[-1] < loss
     assert test_mae < loss

@@ -19,7 +19,7 @@ class ModelBase(ABC):
     """
 
     def __init__(self, model, feature_names=None, label_names=None,
-                 norm_params=None, normalize=True):
+                 norm_params=None, normalize=(True, False)):
         """
         Parameters
         ----------
