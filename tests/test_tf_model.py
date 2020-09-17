@@ -26,7 +26,7 @@ labels = pd.DataFrame(Y, columns=['c'])
     ('hidden_layers', 'loss'),
     [(None, 0.6),
      ([{'units': 64, 'activation': 'relu', 'name': 'relu1'},
-       {'units': 64, 'activation': 'relu', 'name': 'relu2'}], 0.008)])
+       {'units': 64, 'activation': 'relu', 'name': 'relu2'}], 0.03)])
 def test_nn(hidden_layers, loss):
     """Test TfModel """
     model = TfModel.train(features, labels,
@@ -48,10 +48,10 @@ def test_nn(hidden_layers, loss):
 
 @pytest.mark.parametrize(
     ('normalize', 'loss'),
-    [(True, 0.04),
-     (False, 0.002),
-     ((True, False), 0.002),
-     ((False, True), 0.02)])
+    [(True, 0.09),
+     (False, 0.01),
+     ((True, False), 0.01),
+     ((False, True), 0.04)])
 def test_normalize(normalize, loss):
     """Test TfModel """
     hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
@@ -83,6 +83,6 @@ def test_complex_nn():
     assert len(model.weights) == 10
 
     test_mae = np.mean(np.abs(model[X].values - Y))
-    loss = 0.07
+    loss = 0.15
     assert model.history['val_mae'].values[-1] < loss
     assert test_mae < loss
