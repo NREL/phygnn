@@ -5,6 +5,7 @@ Tests for basic phygnn functionality and execution.
 import os
 import numpy as np
 import pandas as pd
+from pandas.testing import assert_frame_equal
 import tensorflow as tf
 from tensorflow.keras.layers import (InputLayer, Dense, Activation)
 
@@ -123,3 +124,23 @@ def test_normalize():
     loss = 0.015
     assert model.history.validation_loss.values[-1] < loss
     assert test_mae < loss
+
+
+def test_save_load():
+    """Test the save/load operations of PhygnnModel"""
+    PhysicsGuidedNeuralNetwork.seed(0)
+    model = PhygnnModel.build_trained(p_fun_pythag, features, labels, P,
+                                      normalize=False,
+                                      hidden_layers=HIDDEN_LAYERS,
+                                      loss_weights=(0.0, 1.0),
+                                      n_batch=4,
+                                      n_epoch=20,
+                                      save_path=FPATH)
+    y_pred = model[X]
+
+    loaded = PhygnnModel.load(FPATH)
+    y_pred_loaded = loaded[X]
+    assert_frame_equal(y_pred, y_pred_loaded)
+    assert loaded.feature_names == ['a', 'b']
+    assert loaded.label_names == ['c']
+    os.remove(FPATH)

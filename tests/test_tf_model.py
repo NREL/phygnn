@@ -3,11 +3,18 @@ Tests for basic phygnn functionality and execution.
 """
 # pylint: disable=W0613
 import numpy as np
+import os
 import pandas as pd
+from pandas.testing import assert_frame_equal
 import pytest
+import shutil
 
+from phygnn import TESTDATADIR
 from phygnn.model_interfaces.tf_model import TfModel
 
+FPATH = os.path.join(TESTDATADIR, '_temp_model')
+if not os.path.exists(FPATH):
+    os.mkdir(FPATH)
 
 N = 100
 A = np.linspace(-1, 1, N)
@@ -86,3 +93,22 @@ def test_complex_nn():
     loss = 0.15
     assert model.history['val_mae'].values[-1] < loss
     assert test_mae < loss
+
+
+def test_save_load():
+    """Test the save/load operations of TfModel"""
+    hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
+                     {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
+    model = TfModel.build_trained(features, labels,
+                                  hidden_layers=hidden_layers,
+                                  epochs=10, fit_kwargs={"batch_size": 16},
+                                  early_stop=False,
+                                  save_path=FPATH)
+    y_pred = model[X]
+
+    loaded = TfModel.load(FPATH)
+    y_pred_loaded = loaded[X]
+    assert_frame_equal(y_pred, y_pred_loaded)
+    assert loaded.feature_names == ['a', 'b']
+    assert loaded.label_names == ['c']
+    shutil.rmtree(FPATH)

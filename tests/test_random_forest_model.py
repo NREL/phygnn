@@ -3,10 +3,14 @@ Tests for basic phygnn functionality and execution.
 """
 # pylint: disable=W0613
 import numpy as np
+import os
 import pandas as pd
+from pandas.testing import assert_frame_equal
 
+from phygnn import TESTDATADIR
 from phygnn.model_interfaces.random_forest_model import RandomForestModel
 
+FPATH = os.path.join(TESTDATADIR, '_temp_model.pkl')
 
 N = 100
 A = np.linspace(-1, 1, N)
@@ -25,7 +29,21 @@ labels = pd.DataFrame(Y_NOISE, columns=['c'])
 
 def test_random_forest():
     """Test the RandomForestModel """
-    model = RandomForestModel.train(features, labels)
+    model = RandomForestModel.build_trained(features, labels)
 
     test_mae = np.mean(np.abs(model[X].values.ravel() - Y))
     assert test_mae < 0.4
+
+
+def test_save_load():
+    """Test the save/load operations of RandomForestModel"""
+    model = RandomForestModel.build_trained(features, labels,
+                                            save_path=FPATH)
+    y_pred = model[X]
+
+    loaded = RandomForestModel.load(FPATH)
+    y_pred_loaded = loaded[X]
+    assert_frame_equal(y_pred, y_pred_loaded)
+    assert loaded.feature_names == ['a', 'b']
+    assert loaded.label_names == ['c']
+    os.remove(FPATH)
