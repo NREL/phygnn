@@ -60,9 +60,9 @@ def test_nn(hidden_layers, loss):
 @pytest.mark.parametrize(
     ('normalize', 'loss'),
     [(True, 0.09),
-     (False, 0.01),
+     (False, 0.015),
      ((True, False), 0.01),
-     ((False, True), 0.04)])
+     ((False, True), 0.065)])
 def test_normalize(normalize, loss):
     """Test TfModel """
     hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
