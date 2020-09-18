@@ -174,8 +174,8 @@ class RandomForestModel(ModelBase):
             json.dump(model_params, f, indent=2, sort_keys=True)
 
     @classmethod
-    def train(cls, features, label, normalize=True, save_path=None,
-              compile_kwargs=None, parse_kwargs=None, fit_kwargs=None):
+    def build_trained(cls, features, label, normalize=True, save_path=None,
+                      compile_kwargs=None, parse_kwargs=None, fit_kwargs=None):
         """
         Build Random Forest Model with given kwargs and then train with
         given features, labels, and kwargs

@@ -419,15 +419,15 @@ class PhygnnModel(ModelBase):
         return model
 
     @classmethod
-    def train(cls, p_fun, features, labels, p, normalize=(True, False),
-              loss_weights=(0.5, 0.5), hidden_layers=None,
-              metric='mae', initializer=None, optimizer=None,
-              learning_rate=0.01, history=None,
-              kernel_reg_rate=0.0, kernel_reg_power=1,
-              bias_reg_rate=0.0, bias_reg_power=1, n_batch=16, n_epoch=10,
-              shuffle=True, validation_split=0.2, run_preflight=True,
-              return_diagnostics=False, p_kwargs=None, parse_kwargs=None,
-              save_path=None):
+    def build_trained(cls, p_fun, features, labels, p, normalize=(True, False),
+                      loss_weights=(0.5, 0.5), hidden_layers=None,
+                      metric='mae', initializer=None, optimizer=None,
+                      learning_rate=0.01, history=None,
+                      kernel_reg_rate=0.0, kernel_reg_power=1,
+                      bias_reg_rate=0.0, bias_reg_power=1, n_batch=16,
+                      n_epoch=10, shuffle=True, validation_split=0.2,
+                      run_preflight=True, return_diagnostics=False,
+                      p_kwargs=None, parse_kwargs=None, save_path=None):
         """
         Build phygnn model from given features, layers and
         kwargs and then train with given labels and kwargs

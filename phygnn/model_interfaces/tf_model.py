@@ -13,7 +13,7 @@ from tensorflow.keras.optimizers import Adam
 from warnings import warn
 
 from phygnn.model_interfaces.base_model import ModelBase
-from phygnn.utilities.tf_utilities import Layers
+from phygnn.utilities.tf_layers import Layers
 
 logger = logging.getLogger(__name__)
 
@@ -478,12 +478,12 @@ class TfModel(ModelBase):
         return model
 
     @classmethod
-    def train(cls, features, labels, normalize=(True, False),
-              hidden_layers=None, learning_rate=0.001,
-              loss="mean_squared_error", metrics=('mae', 'mse'),
-              optimizer_class=Adam, epochs=100, validation_split=0.2,
-              early_stop=True, save_path=None, compile_kwargs=None,
-              parse_kwargs=None, fit_kwargs=None):
+    def build_trained(cls, features, labels, normalize=(True, False),
+                      hidden_layers=None, learning_rate=0.001,
+                      loss="mean_squared_error", metrics=('mae', 'mse'),
+                      optimizer_class=Adam, epochs=100, validation_split=0.2,
+                      early_stop=True, save_path=None, compile_kwargs=None,
+                      parse_kwargs=None, fit_kwargs=None):
         """
         Build tensorflow sequential model from given features, layers and
         kwargs and then train with given label and kwargs

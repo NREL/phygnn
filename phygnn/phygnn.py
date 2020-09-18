@@ -13,7 +13,7 @@ from tensorflow.keras import optimizers, initializers
 from tensorflow.keras.layers import BatchNormalization
 
 from phygnn.utilities.loss_metrics import METRICS
-from phygnn.utilities.tf_utilities import Layers
+from phygnn.utilities.tf_layers import Layers
 
 logger = logging.getLogger(__name__)
 

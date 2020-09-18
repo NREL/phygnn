@@ -314,12 +314,14 @@ class ModelBase(ABC):
                 msg = ('Expecting only 2 values: '
                        '(normalize_feature, normalize_label), but {} values '
                        'were provided!: {}'.format(len(normalize), normalize))
+                logger.error(msg)
                 raise ValueError(msg)
         else:
             msg = ('"normalize" must be a boolean flag or a tuple: '
                    '(normalize_feature, normalize_label), but {} was '
                    'provided!: {}'
                    .format(type(normalize), normalize))
+            logger.error(msg)
             raise TypeError(msg)
 
         return normalize

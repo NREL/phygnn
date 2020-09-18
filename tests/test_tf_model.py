@@ -29,11 +29,11 @@ labels = pd.DataFrame(Y, columns=['c'])
        {'units': 64, 'activation': 'relu', 'name': 'relu2'}], 0.03)])
 def test_nn(hidden_layers, loss):
     """Test TfModel """
-    model = TfModel.train(features, labels,
-                          hidden_layers=hidden_layers,
-                          epochs=10,
-                          fit_kwargs={"batch_size": 16},
-                          early_stop=False)
+    model = TfModel.build_trained(features, labels,
+                                  hidden_layers=hidden_layers,
+                                  epochs=10,
+                                  fit_kwargs={"batch_size": 16},
+                                  early_stop=False)
 
     n_l = len(hidden_layers) * 2 + 1 if hidden_layers is not None else 1
     n_w = (len(hidden_layers) + 1) * 2 if hidden_layers is not None else 2
@@ -56,11 +56,11 @@ def test_normalize(normalize, loss):
     """Test TfModel """
     hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
                      {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
-    model = TfModel.train(features, labels,
-                          normalize=normalize,
-                          hidden_layers=hidden_layers,
-                          epochs=10, fit_kwargs={"batch_size": 16},
-                          early_stop=False)
+    model = TfModel.build_trained(features, labels,
+                                  normalize=normalize,
+                                  hidden_layers=hidden_layers,
+                                  epochs=10, fit_kwargs={"batch_size": 16},
+                                  early_stop=False)
 
     test_mae = np.mean(np.abs(model[X].values - Y))
     assert model.history['val_mae'].values[-1] < loss
@@ -74,10 +74,10 @@ def test_complex_nn():
                      {'batch_normalization': {'axis': -1}},
                      {'activation': 'relu'},
                      {'dropout': 0.01}]
-    model = TfModel.train(features, labels,
-                          hidden_layers=hidden_layers,
-                          epochs=10, fit_kwargs={"batch_size": 16},
-                          early_stop=False)
+    model = TfModel.build_trained(features, labels,
+                                  hidden_layers=hidden_layers,
+                                  epochs=10, fit_kwargs={"batch_size": 16},
+                                  early_stop=False)
 
     assert len(model.layers) == 8
     assert len(model.weights) == 10
