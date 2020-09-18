@@ -5,15 +5,15 @@ Tests for basic phygnn functionality and execution.
 import os
 import numpy as np
 import pandas as pd
-from pandas.testing import assert_frame_equal
 import tensorflow as tf
 from tensorflow.keras.layers import (InputLayer, Dense, Activation)
+import shutil
 
 from phygnn import PhysicsGuidedNeuralNetwork, TESTDATADIR
 from phygnn.model_interfaces.phygnn_model import PhygnnModel
 
 
-FPATH = os.path.join(TESTDATADIR, '_temp_model.pkl')
+FPATH = os.path.join(TESTDATADIR, '_temp_model', '_temp_model.pkl')
 
 N = 100
 A = np.linspace(-1, 1, N)
@@ -140,7 +140,7 @@ def test_save_load():
 
     loaded = PhygnnModel.load(FPATH)
     y_pred_loaded = loaded[X]
-    assert_frame_equal(y_pred, y_pred_loaded)
+    np.allclose(y_pred.values, y_pred_loaded.values)
     assert loaded.feature_names == ['a', 'b']
     assert loaded.label_names == ['c']
-    os.remove(FPATH)
+    shutil.rmtree(os.path.dirname(FPATH))

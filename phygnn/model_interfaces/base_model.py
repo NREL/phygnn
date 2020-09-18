@@ -309,7 +309,7 @@ class ModelBase(ABC):
         """
         if isinstance(normalize, bool):
             normalize = (normalize, normalize)
-        elif isinstance(normalize, tuple):
+        elif isinstance(normalize, (tuple, list)):
             if len(normalize) != 2:
                 msg = ('Expecting only 2 values: '
                        '(normalize_feature, normalize_label), but {} values '
@@ -317,14 +317,14 @@ class ModelBase(ABC):
                 logger.error(msg)
                 raise ValueError(msg)
         else:
-            msg = ('"normalize" must be a boolean flag or a tuple: '
+            msg = ('"normalize" must be a boolean flag or a tuple/list: '
                    '(normalize_feature, normalize_label), but {} was '
                    'provided!: {}'
                    .format(type(normalize), normalize))
             logger.error(msg)
             raise TypeError(msg)
 
-        return normalize
+        return tuple(normalize)
 
     @staticmethod
     def dict_json_convert(inp):

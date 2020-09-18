@@ -5,7 +5,6 @@ Tests for basic phygnn functionality and execution.
 import numpy as np
 import os
 import pandas as pd
-from pandas.testing import assert_frame_equal
 import pytest
 import shutil
 
@@ -108,7 +107,7 @@ def test_save_load():
 
     loaded = TfModel.load(FPATH)
     y_pred_loaded = loaded[X]
-    assert_frame_equal(y_pred, y_pred_loaded)
+    np.allclose(y_pred.values, y_pred_loaded.values)
     assert loaded.feature_names == ['a', 'b']
     assert loaded.label_names == ['c']
     shutil.rmtree(FPATH)

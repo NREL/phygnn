@@ -287,28 +287,31 @@ class PhygnnModel(ModelBase):
         Parameters
         ----------
         path : str
-            Save phygnn model to pickle file.
+            Save phygnn model
         """
-        if path.endswith('.json'):
-            path = path.replace('.json', '/')
+        if path.endswith(('.json', '.pkl')):
+            dir_path = os.path.dirname(path)
+            if path.endswith('.pkl'):
+                path = path.replace('.pkl', '.json')
+        else:
+            dir_path = path
+            path = os.path.join(dir_path, os.path.basename(path) + '.json')
 
-        if not path.endswith('/'):
-            path += '/'
-
-        if not os.path.exists(path):
-            os.makedirs(path)
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
 
         model_params = {'feature_names': self.feature_names,
                         'label_names': self.label_names,
                         'norm_params': self.normalization_parameters,
                         'normalize': (self.normalize_features,
-                                      self.normalize_labels),
-                        'model_params': self.model.model_params}
+                                      self.normalize_labels)}
 
-        json_path = path.rstrip('/') + '.json'
         model_params = self.dict_json_convert(model_params)
-        with open(json_path, 'w') as f:
+        with open(path, 'w') as f:
             json.dump(model_params, f, indent=2, sort_keys=True)
+
+        path = path.replace('.json', '.pkl')
+        self.model.save(path)
 
     @classmethod
     def build(cls, p_fun, feature_names, label_names,
@@ -594,24 +597,28 @@ class PhygnnModel(ModelBase):
         model : PhygnnModel
             Loaded PhygnnModel from disk.
         """
-        if path.endswith('.json'):
-            path = path.replace('.json', '/')
+        if not path.endswith(('.json', '.pkl')):
+            pkl_path = os.path.join(path, os.path.basename(path) + '.pkl')
+        elif path.endswith('.json'):
+            pkl_path = path.replace('.pkl', '.json')
+        elif path.endswith('.pkl'):
+            pkl_path = path
 
-        if not path.endswith('/'):
-            path += '/'
-
-        if not os.path.isdir(path):
-            e = ('Can only load directory path but target is not '
-                 'directory: {}'.format(path))
+        if not os.path.exists(pkl_path):
+            e = ('{} does not exist'.format(pkl_path))
             logger.error(e)
             raise IOError(e)
 
-        json_path = path.rstrip('/') + '.json'
+        loaded = PhysicsGuidedNeuralNetwork.load(pkl_path)
+
+        json_path = path.replace('.pkl', '.json')
+        if not os.path.exists(json_path):
+            e = ('{} does not exist'.format(json_path))
+            logger.error(e)
+            raise IOError(e)
+
         with open(json_path, 'r') as f:
             model_params = json.load(f)
-
-        phygnn_params = model_params.pop('model_params')
-        loaded = PhysicsGuidedNeuralNetwork.set_params(phygnn_params)
 
         model = cls(loaded, **model_params)
 

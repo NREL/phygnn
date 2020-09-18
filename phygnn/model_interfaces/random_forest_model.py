@@ -163,7 +163,7 @@ class RandomForestModel(ModelBase):
             os.makedirs(dir_path)
 
         model_params = {'feature_names': self.feature_names,
-                        'label_names': self.label_names,
+                        'label_name': self.label_names,
                         'norm_params': self.normalization_parameters,
                         'normalize': (self.normalize_features,
                                       self.normalize_labels),
@@ -215,8 +215,8 @@ class RandomForestModel(ModelBase):
         _, feature_names = cls._parse_data(features)
         _, label_name = cls._parse_data(label)
 
-        model = cls(cls.compile_model(**compile_kwargs),
-                    feature_names=feature_names, label_name=label_name,
+        model = cls.compile_model(**compile_kwargs)
+        model = cls(model, feature_names=feature_names, label_name=label_name,
                     normalize=normalize)
 
         model.train_model(features, label, parse_kwargs=parse_kwargs,

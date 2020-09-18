@@ -5,12 +5,12 @@ Tests for basic phygnn functionality and execution.
 import numpy as np
 import os
 import pandas as pd
-from pandas.testing import assert_frame_equal
+import shutil
 
 from phygnn import TESTDATADIR
 from phygnn.model_interfaces.random_forest_model import RandomForestModel
 
-FPATH = os.path.join(TESTDATADIR, '_temp_model.pkl')
+FPATH = os.path.join(TESTDATADIR, '_temp_model', '_temp_model.json')
 
 N = 100
 A = np.linspace(-1, 1, N)
@@ -42,8 +42,9 @@ def test_save_load():
     y_pred = model[X]
 
     loaded = RandomForestModel.load(FPATH)
+    loaded.train_model(features, labels)
     y_pred_loaded = loaded[X]
-    assert_frame_equal(y_pred, y_pred_loaded)
+    np.allclose(y_pred.values, y_pred_loaded.values)
     assert loaded.feature_names == ['a', 'b']
     assert loaded.label_names == ['c']
-    os.remove(FPATH)
+    shutil.rmtree(os.path.dirname(FPATH))
