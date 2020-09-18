@@ -7,6 +7,7 @@ import os
 import pandas as pd
 import pytest
 import shutil
+import tensorflow as tf
 
 from phygnn import TESTDATADIR
 from phygnn.model_interfaces.tf_model import TfModel
@@ -14,6 +15,10 @@ from phygnn.model_interfaces.tf_model import TfModel
 FPATH = os.path.join(TESTDATADIR, '_temp_model')
 if not os.path.exists(FPATH):
     os.mkdir(FPATH)
+
+s = 0
+np.random.seed(s)
+tf.random.set_seed(s)
 
 N = 100
 A = np.linspace(-1, 1, N)
