@@ -3,11 +3,22 @@ Tests for basic phygnn functionality and execution.
 """
 # pylint: disable=W0613
 import numpy as np
+import os
 import pandas as pd
 import pytest
+import shutil
+import tensorflow as tf
 
+from phygnn import TESTDATADIR
 from phygnn.model_interfaces.tf_model import TfModel
 
+FPATH = os.path.join(TESTDATADIR, '_temp_model')
+if not os.path.exists(FPATH):
+    os.mkdir(FPATH)
+
+s = 0
+np.random.seed(s)
+tf.random.set_seed(s)
 
 N = 100
 A = np.linspace(-1, 1, N)
@@ -19,38 +30,89 @@ B = np.expand_dims(B.flatten(), axis=1)
 Y = np.sqrt(A ** 2 + B ** 2)
 X = np.hstack((A, B))
 features = pd.DataFrame(X, columns=['a', 'b'])
-
-Y_NOISE = Y * (1 + (np.random.random(Y.shape) - 0.5) * 0.5) + 0.1
-labels = pd.DataFrame(Y_NOISE, columns=['c'])
+labels = pd.DataFrame(Y, columns=['c'])
 
 
 @pytest.mark.parametrize(
-    'hidden_layers',
-    [None,
-     [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
-      {'units': 64, 'activation': 'relu', 'name': 'relu2'}]])
-def test_nn(hidden_layers):
-    """Test the TfModel """
-    model = TfModel.train(features, labels, hidden_layers=hidden_layers,
-                          epochs=10, fit_kwargs={"batch_size": 4},
-                          early_stop=False)
+    ('hidden_layers', 'loss'),
+    [(None, 0.6),
+     ([{'units': 64, 'activation': 'relu', 'name': 'relu1'},
+       {'units': 64, 'activation': 'relu', 'name': 'relu2'}], 0.03)])
+def test_nn(hidden_layers, loss):
+    """Test TfModel """
+    model = TfModel.build_trained(features, labels,
+                                  hidden_layers=hidden_layers,
+                                  epochs=10,
+                                  fit_kwargs={"batch_size": 16},
+                                  early_stop=False)
 
-    test_mae = np.mean(np.abs(model[X].values.ravel() - Y))
-
-    n_layers = len(hidden_layers) + 1 if hidden_layers is not None else 1
-    loss = 0.4 if hidden_layers is not None else 4
-    assert len(model.layers) == n_layers
-    assert len(model.weights) == n_layers * 2
+    n_l = len(hidden_layers) * 2 + 1 if hidden_layers is not None else 1
+    n_w = (len(hidden_layers) + 1) * 2 if hidden_layers is not None else 2
+    assert len(model.layers) == n_l
+    assert len(model.weights) == n_w
     assert len(model.history) == 10
-    assert model.history['val_loss'].values[-1] < loss
+
+    test_mae = np.mean(np.abs(model[X].values - Y))
+    assert model.history['val_mae'].values[-1] < loss
     assert test_mae < loss
 
 
-def test_dropouts():
-    """Test the dropout rate kwargs for adding dropout layers."""
-    hidden_layers = [
-        {'units': 64, 'activation': 'relu', 'name': 'relu1', 'dropout': 0.1},
-        {'units': 64, 'activation': 'relu', 'name': 'relu2', 'dropout': 0.1}]
-    model = TfModel.build(['a', 'b'], 'c', hidden_layers=hidden_layers)
+@pytest.mark.parametrize(
+    ('normalize', 'loss'),
+    [(True, 0.09),
+     (False, 0.015),
+     ((True, False), 0.01),
+     ((False, True), 0.065)])
+def test_normalize(normalize, loss):
+    """Test TfModel """
+    hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
+                     {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
+    model = TfModel.build_trained(features, labels,
+                                  normalize=normalize,
+                                  hidden_layers=hidden_layers,
+                                  epochs=10, fit_kwargs={"batch_size": 16},
+                                  early_stop=False)
 
-    assert len(model.layers) == 5
+    test_mae = np.mean(np.abs(model[X].values - Y))
+    assert model.history['val_mae'].values[-1] < loss
+    assert test_mae < loss
+
+
+def test_complex_nn():
+    """Test complex TfModel """
+    hidden_layers = [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
+                     {'units': 64},
+                     {'batch_normalization': {'axis': -1}},
+                     {'activation': 'relu'},
+                     {'dropout': 0.01}]
+    model = TfModel.build_trained(features, labels,
+                                  hidden_layers=hidden_layers,
+                                  epochs=10, fit_kwargs={"batch_size": 16},
+                                  early_stop=False)
+
+    assert len(model.layers) == 8
+    assert len(model.weights) == 10
+
+    test_mae = np.mean(np.abs(model[X].values - Y))
+    loss = 0.15
+    assert model.history['val_mae'].values[-1] < loss
+    assert test_mae < loss
+
+
+def test_save_load():
+    """Test the save/load operations of TfModel"""
+    hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
+                     {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
+    model = TfModel.build_trained(features, labels,
+                                  hidden_layers=hidden_layers,
+                                  epochs=10, fit_kwargs={"batch_size": 16},
+                                  early_stop=False,
+                                  save_path=FPATH)
+    y_pred = model[X]
+
+    loaded = TfModel.load(FPATH)
+    y_pred_loaded = loaded[X]
+    np.allclose(y_pred.values, y_pred_loaded.values)
+    assert loaded.feature_names == ['a', 'b']
+    assert loaded.label_names == ['c']
+    shutil.rmtree(FPATH)

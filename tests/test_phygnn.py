@@ -80,7 +80,7 @@ def test_nn():
     model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                        hidden_layers=HIDDEN_LAYERS,
                                        loss_weights=(1.0, 0.0),
-                                       input_dims=2, output_dims=1,
+                                       n_features=2, n_labels=1,
                                        feature_names=['a', 'b'],
                                        output_names=['c'])
     model.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
@@ -100,7 +100,7 @@ def test_phygnn():
     model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                        hidden_layers=HIDDEN_LAYERS,
                                        loss_weights=(0.0, 1.0),
-                                       input_dims=2, output_dims=1)
+                                       n_features=2, n_labels=1)
     model.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
 
     test_mae = np.mean(np.abs(model.predict(X) - Y))
@@ -124,7 +124,7 @@ def test_df_input():
     model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                        hidden_layers=HIDDEN_LAYERS,
                                        loss_weights=(0.0, 1.0),
-                                       input_dims=2, output_dims=1)
+                                       n_features=2, n_labels=1)
     x_df = pd.DataFrame(X, columns=('a', 'b'))
     y_df = pd.DataFrame(Y_NOISE, columns=('c',))
     p_df = pd.DataFrame(P, columns=('a', 'b'))
@@ -152,19 +152,19 @@ def test_kernel_regularization():
     base = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                       hidden_layers=HIDDEN_LAYERS,
                                       loss_weights=(1.0, 0.0),
-                                      input_dims=2, output_dims=1)
+                                      n_features=2, n_labels=1)
 
     model_l1 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                           hidden_layers=HIDDEN_LAYERS,
                                           loss_weights=(1.0, 0.0),
-                                          input_dims=2, output_dims=1,
+                                          n_features=2, n_labels=1,
                                           kernel_reg_rate=0.01,
                                           kernel_reg_power=1)
 
     model_l2 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                           hidden_layers=HIDDEN_LAYERS,
                                           loss_weights=(1.0, 0.0),
-                                          input_dims=2, output_dims=1,
+                                          n_features=2, n_labels=1,
                                           kernel_reg_rate=0.01,
                                           kernel_reg_power=2)
 
@@ -188,19 +188,19 @@ def test_bias_regularization():
     base = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                       hidden_layers=HIDDEN_LAYERS,
                                       loss_weights=(1.0, 0.0),
-                                      input_dims=2, output_dims=1)
+                                      n_features=2, n_labels=1)
 
     model_l1 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                           hidden_layers=HIDDEN_LAYERS,
                                           loss_weights=(1.0, 0.0),
-                                          input_dims=2, output_dims=1,
+                                          n_features=2, n_labels=1,
                                           bias_reg_rate=0.01,
                                           bias_reg_power=1)
 
     model_l2 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                           hidden_layers=HIDDEN_LAYERS,
                                           loss_weights=(1.0, 0.0),
-                                          input_dims=2, output_dims=1,
+                                          n_features=2, n_labels=1,
                                           bias_reg_rate=0.01,
                                           bias_reg_power=2)
 
@@ -224,7 +224,7 @@ def test_save_load():
     model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                        hidden_layers=HIDDEN_LAYERS,
                                        loss_weights=(0.0, 1.0),
-                                       input_dims=2, output_dims=1,
+                                       n_features=2, n_labels=1,
                                        feature_names=['a', 'b'],
                                        output_names=['c'])
 
@@ -246,7 +246,7 @@ def test_bad_pfun():
     model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_bad,
                                        hidden_layers=HIDDEN_LAYERS,
                                        loss_weights=(0.0, 1.0),
-                                       input_dims=2, output_dims=1)
+                                       n_features=2, n_labels=1)
     with pytest.raises(RuntimeError) as e:
         model.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
 
@@ -261,7 +261,7 @@ def test_dropouts():
     model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                        hidden_layers=HIDDEN_LAYERS,
                                        loss_weights=(0.0, 1.0),
-                                       input_dims=2, output_dims=1)
+                                       n_features=2, n_labels=1)
 
     assert len(model.layers) == 8, "dropout layers did not get added!"
     assert isinstance(model.layers[0], InputLayer)
@@ -294,7 +294,7 @@ def test_batch_norm():
     model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
                                        hidden_layers=HIDDEN_LAYERS,
                                        loss_weights=(0.0, 1.0),
-                                       input_dims=2, output_dims=1)
+                                       n_features=2, n_labels=1)
 
     assert len(model.layers) == 8, "Batch norm layers did not get added!"
     assert isinstance(model.layers[0], InputLayer)

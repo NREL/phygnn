@@ -8,17 +8,18 @@ import os
 from sklearn.ensemble import RandomForestRegressor
 
 from phygnn.model_interfaces.base_model import ModelBase
+from phygnn.utilities.pre_processing import PreProcess
 
 logger = logging.getLogger(__name__)
 
 
 class RandomForestModel(ModelBase):
     """
-    scikit learn Random Forest Regression
+    scikit learn Random Forest Regression model interface
     """
 
     def __init__(self, model, feature_names=None, label_name=None,
-                 norm_params=None):
+                 norm_params=None, normalize=True):
         """
         Parameters
         ----------
@@ -31,9 +32,17 @@ class RandomForestModel(ModelBase):
         norm_params : dict, optional
             Dictionary mapping feature and label names (keys) to normalization
             parameters (mean, stdev), by default None
+        normalize : bool | tuple, optional
+            Boolean flag(s) as to whether features and labels should be
+            normalized. Possible values:
+            - True means normalize both
+            - False means don't normalize either
+            - Tuple of flags (normalize_feature, normalize_label)
+            by default True
         """
         super().__init__(model, feature_names=feature_names,
-                         label_names=label_name, norm_params=norm_params)
+                         label_names=label_name, norm_params=norm_params,
+                         normalize=normalize)
 
         if len(self.label_names) > 1:
             msg = ("Only a single label can be supplied to {}, but {} were"
@@ -77,11 +86,11 @@ class RandomForestModel(ModelBase):
         means = self.label_means[0]
         if means:
             stdevs = self.label_stdevs[0]
-            prediction = self._unnormalize(prediction, means, stdevs)
+            prediction = PreProcess.unnormalize(prediction, means, stdevs)
 
         return prediction
 
-    def _parse_labels(self, label, name=None, normalize=True):
+    def _parse_labels(self, label, name=None):
         """
         Parse labels and normalize if desired
 
@@ -91,16 +100,14 @@ class RandomForestModel(ModelBase):
             Features to train on or predict from
         name : list, optional
             List of label names, by default None
-        normalize : bool, optional
-            Normalize label array, by default True
 
         Returns
         -------
         label : ndarray
             Parsed labels array, normalized if desired
         """
-        label = super()._parse_labels(label, names=name,
-                                      normalize=normalize)
+        if self.normalize_labels:
+            label = super()._parse_labels(label, names=name)
 
         if len(self.label_names) > 1:
             msg = ("Only a single label can be supplied to {}, but {} were"
@@ -110,8 +117,7 @@ class RandomForestModel(ModelBase):
 
         return label
 
-    def train_model(self, features, label, norm_label=True, parse_kwargs=None,
-                    fit_kwargs=None):
+    def train_model(self, features, label, parse_kwargs=None, fit_kwargs=None):
         """
         Train the model with the provided features and label
 
@@ -121,8 +127,6 @@ class RandomForestModel(ModelBase):
             Input features to train on
         label : dict | pandas.DataFrame
             label to train on
-        norm_label : bool
-            Flag to normalize label
         parse_kwargs : dict
             kwargs for cls._parse_features
         fit_kwargs : dict
@@ -130,10 +134,9 @@ class RandomForestModel(ModelBase):
         """
         if parse_kwargs is None:
             parse_kwargs = {}
-
         features = self._parse_features(features, **parse_kwargs)
 
-        label = self._parse_labels(label, normalize=norm_label)
+        label = self._parse_labels(label)
 
         if fit_kwargs is None:
             fit_kwargs = {}
@@ -160,8 +163,10 @@ class RandomForestModel(ModelBase):
             os.makedirs(dir_path)
 
         model_params = {'feature_names': self.feature_names,
-                        'label_names': self.label_names,
+                        'label_name': self.label_names,
                         'norm_params': self.normalization_parameters,
+                        'normalize': (self.normalize_features,
+                                      self.normalize_labels),
                         'model_params': self.model.get_params()}
 
         model_params = self.dict_json_convert(model_params)
@@ -169,8 +174,8 @@ class RandomForestModel(ModelBase):
             json.dump(model_params, f, indent=2, sort_keys=True)
 
     @classmethod
-    def train(cls, features, label, norm_label=True, save_path=None,
-              compile_kwargs=None, parse_kwargs=None, fit_kwargs=None):
+    def build_trained(cls, features, label, normalize=True, save_path=None,
+                      compile_kwargs=None, parse_kwargs=None, fit_kwargs=None):
         """
         Build Random Forest Model with given kwargs and then train with
         given features, labels, and kwargs
@@ -181,8 +186,13 @@ class RandomForestModel(ModelBase):
             Model features
         label : pandas.DataFrame
             label to train on
-        norm_label : bool
-            Flag to normalize label
+        normalize : bool | tuple, optional
+            Boolean flag(s) as to whether features and labels should be
+            normalized. Possible values:
+            - True means normalize both
+            - False means don't normalize either
+            - Tuple of flags (normalize_feature, normalize_label)
+            by default True
         save_path : str
             Directory path to save model to. The RandomForest Model will be
             saved to the directory while the framework parameters will be
@@ -205,11 +215,12 @@ class RandomForestModel(ModelBase):
         _, feature_names = cls._parse_data(features)
         _, label_name = cls._parse_data(label)
 
-        model = cls(cls.compile_model(**compile_kwargs),
-                    feature_names=feature_names, label_name=label_name)
+        model = cls.compile_model(**compile_kwargs)
+        model = cls(model, feature_names=feature_names, label_name=label_name,
+                    normalize=normalize)
 
-        model.train_model(features, label, norm_label=norm_label,
-                          parse_kwargs=parse_kwargs, fit_kwargs=fit_kwargs)
+        model.train_model(features, label, parse_kwargs=parse_kwargs,
+                          fit_kwargs=fit_kwargs)
 
         if save_path is not None:
             model.save_model(save_path)
@@ -224,14 +235,12 @@ class RandomForestModel(ModelBase):
         Parameters
         ----------
         path : str
-            Directory path to TfModel to load model from. There should be a
-            tensorflow saved model directory with a parallel pickle file for
-            the TfModel framework.
+            Directory path to RandomForestModel from pickle file.
 
         Returns
         -------
-        model : TfModel
-            Loaded TfModel from disk.
+        model : RandomForestModel
+            Loaded RandomForestModel from disk.
         """
         if not path.endswith('.json'):
             path = os.path.join(path, os.path.basename(path) + '.json')
@@ -245,7 +254,8 @@ class RandomForestModel(ModelBase):
             model_params = json.load(f)
 
         loaded = RandomForestRegressor()
-        loaded = loaded.set_params(**model_params.pop('model_params'))
+        rf_params = model_params.pop('model_params')
+        loaded = loaded.set_params(**rf_params)
 
         model = cls(loaded, **model_params)
 

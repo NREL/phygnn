@@ -2,7 +2,6 @@
 """
 Tensorflow utilities
 """
-
 import tensorflow as tf
 
 

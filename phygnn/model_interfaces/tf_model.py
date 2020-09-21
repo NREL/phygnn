@@ -9,21 +9,21 @@ import os
 import pandas as pd
 import tensorflow as tf
 from tensorflow import feature_column
-from tensorflow.keras.layers import InputLayer, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 from warnings import warn
 
 from phygnn.model_interfaces.base_model import ModelBase
+from phygnn.utilities.tf_layers import Layers
 
 logger = logging.getLogger(__name__)
 
 
 class TfModel(ModelBase):
     """
-    TensorFlow Keras Model
+    TensorFlow Keras Model interface
     """
     def __init__(self, model, feature_names=None, label_names=None,
-                 norm_params=None):
+                 norm_params=None, normalize=(True, False)):
         """
         Parameters
         ----------
@@ -36,9 +36,17 @@ class TfModel(ModelBase):
         norm_params : dict, optional
             Dictionary mapping feature and label names (keys) to normalization
             parameters (mean, stdev), by default None
+        normalize : bool | tuple, optional
+            Boolean flag(s) as to whether features and labels should be
+            normalized. Possible values:
+            - True means normalize both
+            - False means don't normalize either
+            - Tuple of flags (normalize_feature, normalize_label)
+            by default True
         """
         super().__init__(model, feature_names=feature_names,
-                         label_names=label_names, norm_params=norm_params)
+                         label_names=label_names, norm_params=norm_params,
+                         normalize=normalize)
 
         self._history = None
 
@@ -111,7 +119,7 @@ class TfModel(ModelBase):
     @property
     def history(self):
         """
-        Model training history
+        Model training history DataFrame (None if not yet trained)
 
         Returns
         -------
@@ -296,19 +304,8 @@ class TfModel(ModelBase):
             Compiled tensorflow Sequential model
         """
         model = tf.keras.models.Sequential()
-        model.add(InputLayer(input_shape=[n_features]))
-        if hidden_layers is None:
-            # Add a single linear layer
-            model.add(Dense(n_labels))
-        else:
-            for layer in hidden_layers:
-                dropout = layer.pop('dropout', None)
-                model.add(Dense(**layer))
-
-                if dropout is not None:
-                    model.add(Dropout(dropout))
-
-            model.add(Dense(n_labels))
+        model = Layers.compile(model, n_features, n_labels=n_labels,
+                               hidden_layers=hidden_layers)
 
         if isinstance(metrics, tuple):
             metrics = list(metrics)
@@ -322,9 +319,8 @@ class TfModel(ModelBase):
 
         return model
 
-    def train_model(self, features, labels, norm_labels=True, epochs=100,
-                    validation_split=0.2, early_stop=True, parse_kwargs=None,
-                    fit_kwargs=None):
+    def train_model(self, features, labels, epochs=100, validation_split=0.2,
+                    early_stop=True, parse_kwargs=None, fit_kwargs=None):
         """
         Train the model with the provided features and label
 
@@ -352,7 +348,7 @@ class TfModel(ModelBase):
             parse_kwargs = {}
 
         features = self._parse_features(features, **parse_kwargs)
-        labels = self._parse_labels(labels, normalize=norm_labels)
+        labels = self._parse_labels(labels)
 
         if self._history is not None:
             msg = 'Model has already been trained and will be re-fit!'
@@ -412,7 +408,9 @@ class TfModel(ModelBase):
 
         model_params = {'feature_names': self.feature_names,
                         'label_names': self.label_names,
-                        'norm_params': self.normalization_parameters}
+                        'norm_params': self.normalization_parameters,
+                        'normalize': (self.normalize_features,
+                                      self.normalize_labels)}
 
         json_path = path.rstrip('/') + '.json'
         model_params = self.dict_json_convert(model_params)
@@ -420,9 +418,10 @@ class TfModel(ModelBase):
             json.dump(model_params, f, indent=2, sort_keys=True)
 
     @classmethod
-    def build(cls, feature_names, label_names, hidden_layers=None,
-              learning_rate=0.001, loss="mean_squared_error",
-              metrics=('mae', 'mse'), optimizer_class=Adam, **kwargs):
+    def build(cls, feature_names, label_names, normalize=(True, False),
+              hidden_layers=None, learning_rate=0.001,
+              loss="mean_squared_error", metrics=('mae', 'mse'),
+              optimizer_class=Adam, **kwargs):
         """
         Build tensorflow sequential model from given features, layers and
         kwargs
@@ -433,6 +432,13 @@ class TfModel(ModelBase):
             Ordered list of feature names.
         label_names : list
             Ordered list of label (output) names.
+        normalize : bool | tuple, optional
+            Boolean flag(s) as to whether features and labels should be
+            normalized. Possible values:
+            - True means normalize both
+            - False means don't normalize either
+            - Tuple of flags (normalize_feature, normalize_label)
+            by default True
         hidden_layers : list, optional
             List of tensorflow layers.Dense kwargs (dictionaries)
             if None use a single linear layer, by default None
@@ -453,28 +459,31 @@ class TfModel(ModelBase):
         Returns
         -------
         model : TfModel
-            Initialized TfKeraModel obj
+            Initialized TfModel obj
         """
         if isinstance(label_names, str):
             label_names = [label_names]
 
-        model = TfModel.compile_model(len(feature_names),
-                                      n_labels=len(label_names),
-                                      hidden_layers=hidden_layers,
-                                      learning_rate=learning_rate, loss=loss,
-                                      metrics=metrics,
-                                      optimizer_class=optimizer_class,
-                                      **kwargs)
+        model = cls.compile_model(len(feature_names),
+                                  n_labels=len(label_names),
+                                  hidden_layers=hidden_layers,
+                                  learning_rate=learning_rate, loss=loss,
+                                  metrics=metrics,
+                                  optimizer_class=optimizer_class,
+                                  **kwargs)
 
-        return cls(model, feature_names=feature_names, label_names=label_names)
+        model = cls(model, feature_names=feature_names,
+                    label_names=label_names, normalize=normalize)
+
+        return model
 
     @classmethod
-    def train(cls, features, labels, hidden_layers=None,
-              learning_rate=0.001, loss="mean_squared_error",
-              metrics=('mae', 'mse'), optimizer_class=Adam, norm_labels=True,
-              epochs=100, validation_split=0.2, early_stop=True,
-              save_path=None, compile_kwargs=None, parse_kwargs=None,
-              fit_kwargs=None):
+    def build_trained(cls, features, labels, normalize=(True, False),
+                      hidden_layers=None, learning_rate=0.001,
+                      loss="mean_squared_error", metrics=('mae', 'mse'),
+                      optimizer_class=Adam, epochs=100, validation_split=0.2,
+                      early_stop=True, save_path=None, compile_kwargs=None,
+                      parse_kwargs=None, fit_kwargs=None):
         """
         Build tensorflow sequential model from given features, layers and
         kwargs and then train with given label and kwargs
@@ -485,6 +494,13 @@ class TfModel(ModelBase):
             Model features
         labels : dict | pandas.DataFrame
             label to train on
+        normalize : bool | tuple, optional
+            Boolean flag(s) as to whether features and labels should be
+            normalized. Possible values:
+            - True means normalize both
+            - False means don't normalize either
+            - Tuple of flags (normalize_feature, normalize_label)
+            by default True
         hidden_layers : list, optional
             List of tensorflow layers.Dense kwargs (dictionaries)
             if None use a single linear layer, by default None
@@ -499,8 +515,6 @@ class TfModel(ModelBase):
             Optional explicit request of optimizer. This should be a class
             that will be instantated in the TfModel._compile_model() method
             The default is the Adam optimizer
-        norm_label : bool
-            Flag to normalize label
         epochs : int, optional
             Number of epochs to train the model, by default 100
         validation_split : float, optional
@@ -531,14 +545,19 @@ class TfModel(ModelBase):
         _, label_names = cls._parse_data(labels)
 
         model = cls.build(feature_names, label_names,
+                          normalize=normalize,
                           hidden_layers=hidden_layers,
-                          learning_rate=learning_rate, loss=loss,
-                          metrics=metrics, optimizer_class=optimizer_class,
+                          learning_rate=learning_rate,
+                          loss=loss,
+                          metrics=metrics,
+                          optimizer_class=optimizer_class,
                           **compile_kwargs)
 
-        model.train_model(features, labels, norm_labels=norm_labels,
-                          epochs=epochs, validation_split=validation_split,
-                          early_stop=early_stop, parse_kwargs=parse_kwargs,
+        model.train_model(features, labels,
+                          epochs=epochs,
+                          validation_split=validation_split,
+                          early_stop=early_stop,
+                          parse_kwargs=parse_kwargs,
                           fit_kwargs=fit_kwargs)
 
         if save_path is not None:
