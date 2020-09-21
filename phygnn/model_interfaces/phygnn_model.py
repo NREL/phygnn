@@ -107,110 +107,6 @@ class PhygnnModel(ModelBase):
         """
         return self.model.history
 
-    @staticmethod
-    def compile_model(p_fun, loss_weights=(0.5, 0.5),
-                      n_features=1, n_labels=1, hidden_layers=None,
-                      metric='mae', initializer=None, optimizer=None,
-                      learning_rate=0.01, history=None,
-                      kernel_reg_rate=0.0, kernel_reg_power=1,
-                      bias_reg_rate=0.0, bias_reg_power=1,
-                      feature_names=None, output_names=None):
-        """
-        Parameters
-        ----------
-        p_fun : function
-            Physics function to guide the neural network loss function.
-            This function must take (y_predicted, y_true, p, **p_kwargs)
-            as arguments with datatypes (tf.Tensor, np.ndarray, np.ndarray).
-            The function must return a tf.Tensor object with a single numeric
-            loss value (output.ndim == 0).
-        loss_weights : tuple, optional
-            Loss weights for the neural network y_predicted vs. y_true
-            and for the p_fun loss, respectively. For example,
-            loss_weights=(0.0, 1.0) would simplify the phygnn loss function
-            to just the p_fun output.
-        n_features : int, optional
-            Number of input features.
-        n_labels : int, optional
-            Number of output labels.
-        hidden_layers : list, optional
-            List of dictionaries of key word arguments for each hidden
-            layer in the NN. Dense linear layers can be input with their
-            activations or separately for more explicit control over the layer
-            ordering. For example, this is a valid input for hidden_layers that
-            will yield 7 hidden layers (9 layers total):
-                [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
-                 {'units': 64},
-                 {'batch_normalization': {'axis': -1}},
-                 {'activation': 'relu'},
-                 {'dropout': 0.01}]
-        metric : str, optional
-            Loss metric option for the NN loss function (not the physical
-            loss function). Must be a valid key in phygnn.loss_metrics.METRICS
-        initializer : tensorflow.keras.initializers, optional
-            Instantiated initializer object. None defaults to GlorotUniform
-        optimizer : tensorflow.keras.optimizers, optional
-            Instantiated neural network optimization object.
-            None defaults to Adam.
-        learning_rate : float, optional
-            Optimizer learning rate.
-        history : None | pd.DataFrame, optional
-            Learning history if continuing a training session.
-        kernel_reg_rate : float, optional
-            Kernel regularization rate. Increasing this value above zero will
-            add a structural loss term to the loss function that
-            disincentivizes large hidden layer weights and should reduce
-            model complexity. Setting this to 0.0 will disable kernel
-            regularization.
-        kernel_reg_power : int, optional
-            Kernel regularization power. kernel_reg_power=1 is L1
-            regularization (lasso regression), and kernel_reg_power=2 is L2
-            regularization (ridge regression).
-        bias_reg_rate : float, optional
-            Bias regularization rate. Increasing this value above zero will
-            add a structural loss term to the loss function that
-            disincentivizes large hidden layer biases and should reduce
-            model complexity. Setting this to 0.0 will disable bias
-            regularization.
-        bias_reg_power : int, optional
-            Bias regularization power. bias_reg_power=1 is L1
-            regularization (lasso regression), and bias_reg_power=2 is L2
-            regularization (ridge regression).
-        feature_names : list | tuple | None, optional
-            Training feature names (strings). Mostly a convenience so that a
-            loaded-from-disk model will have declared feature names, making it
-            easier to feed in features for prediction. This will also get set
-            if phygnn is trained on a DataFrame.
-        output_names : list | tuple | None, optional
-            Prediction output names (strings). Mostly a convenience so that a
-            loaded-from-disk model will have declared output names, making it
-            easier to understand prediction output. This will also get set
-            if phygnn is trained on a DataFrame.
-
-        Returns
-        -------
-        model : PhysicsGuidedNeuralNetwork
-            Instantiated phygnn model
-        """
-        model = PhysicsGuidedNeuralNetwork(p_fun,
-                                           loss_weights=loss_weights,
-                                           n_features=n_features,
-                                           n_labels=n_labels,
-                                           hidden_layers=hidden_layers,
-                                           metric=metric,
-                                           initializer=initializer,
-                                           optimizer=optimizer,
-                                           learning_rate=learning_rate,
-                                           history=history,
-                                           kernel_reg_rate=kernel_reg_rate,
-                                           kernel_reg_power=kernel_reg_power,
-                                           bias_reg_rate=bias_reg_rate,
-                                           bias_reg_power=bias_reg_power,
-                                           feature_names=feature_names,
-                                           output_names=output_names)
-
-        return model
-
     def train_model(self, features, labels, p, n_batch=16, n_epoch=10,
                     shuffle=True, validation_split=0.2, run_preflight=True,
                     return_diagnostics=False, p_kwargs=None,
@@ -399,22 +295,22 @@ class PhygnnModel(ModelBase):
         if isinstance(label_names, str):
             label_names = [label_names]
 
-        model = cls.compile_model(p_fun,
-                                  loss_weights=loss_weights,
-                                  n_features=len(feature_names),
-                                  n_labels=len(label_names),
-                                  hidden_layers=hidden_layers,
-                                  metric=metric,
-                                  initializer=initializer,
-                                  optimizer=optimizer,
-                                  learning_rate=learning_rate,
-                                  history=history,
-                                  kernel_reg_rate=kernel_reg_rate,
-                                  kernel_reg_power=kernel_reg_power,
-                                  bias_reg_rate=bias_reg_rate,
-                                  bias_reg_power=bias_reg_power,
-                                  feature_names=feature_names,
-                                  output_names=label_names)
+        model = PhysicsGuidedNeuralNetwork(p_fun,
+                                           loss_weights=loss_weights,
+                                           n_features=len(feature_names),
+                                           n_labels=len(label_names),
+                                           hidden_layers=hidden_layers,
+                                           metric=metric,
+                                           initializer=initializer,
+                                           optimizer=optimizer,
+                                           learning_rate=learning_rate,
+                                           history=history,
+                                           kernel_reg_rate=kernel_reg_rate,
+                                           kernel_reg_power=kernel_reg_power,
+                                           bias_reg_rate=bias_reg_rate,
+                                           bias_reg_power=bias_reg_power,
+                                           feature_names=feature_names,
+                                           output_names=label_names)
 
         model = cls(model, feature_names=feature_names,
                     label_names=label_names, normalize=normalize)

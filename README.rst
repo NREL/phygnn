@@ -2,6 +2,27 @@
 phygnn
 ######
 
+.. image:: https://github.com/NREL/phygnn/workflows/Documentation/badge.svg
+    :target: https://nrel.github.io/phygnn/
+
+.. image:: https://github.com/NREL/phygnn/workflows/Pytests/badge.svg
+    :target: https://github.com/NREL/phygnn/actions?query=workflow%3A%22Pytests%22
+
+.. image:: https://github.com/NREL/phygnn/workflows/Lint%20Code%20Base/badge.svg
+    :target: https://github.com/NREL/phygnn/actions?query=workflow%3A%22Lint+Code+Base%22
+
+.. image:: https://img.shields.io/pypi/pyversions/nrel-phygnn.svg
+    :target: https://pypi.org/project/nrel-phygnn/
+
+.. image:: https://badge.fury.io/py/nrel-phygnn.svg
+    :target: https://badge.fury.io/py/nrel-phygnn
+
+.. image:: https://anaconda.org/nrel/nrel-phygnn/badges/version.svg
+    :target: https://anaconda.org/nrel/nrel-phygnn
+
+.. image:: https://anaconda.org/nrel/nrel-phygnn/badges/license.svg
+    :target: https://anaconda.org/nrel/nrel-phygnn
+
 phygnn stands for **physics-guided neural networks**.
 
 This implementation of physics-guided neural networks augments a traditional
@@ -14,7 +35,8 @@ when applying purely data-driven machine learning models to scientific
 applications, such as when machine learning models produce physically
 inconsistent results or have trouble generalizing to out-of-sample scenarios.
 
-For details on the phygnn class framework see `the phygnn module documentation here. <https://nrel.github.io/phygnn/phygnn/phygnn.phygnn.html>`_
+For details on the phygnn class framework see `the phygnn module documentation
+here. <https://nrel.github.io/phygnn/phygnn/phygnn.phygnn.html>`_
 
 At the National Renewable Energy Lab (NREL), we are using the phygnn framework
 to supplement traditional satellite-based cloud property prediction models. We
