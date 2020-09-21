@@ -72,7 +72,7 @@ Installation
 Simple Install
 --------------
 
-1. Use conda (anaconda or miniconda with python 3.7 or 3.8) to create a phygnn environment: ``conda create --name phygnn python=3.8``
+1. Use conda (anaconda or miniconda with python 3.7 or 3.8) to create a phygnn environment: ``conda create --name phygnn python=3.7``
 
     i. Note that phygnn is tested with python 3.7 and 3.8 via pip install. Users have reported issues installing phygnn on python 3.8 using conda install.
     
