@@ -14,8 +14,8 @@ phygnn
 .. image:: https://img.shields.io/pypi/pyversions/nrel-phygnn.svg
     :target: https://pypi.org/project/nrel-phygnn/
 
-.. image:: https://badge.fury.io/py/nrel-phygnn.svg
-    :target: https://badge.fury.io/py/nrel-phygnn
+.. image:: https://badge.fury.io/py/NREL-phygnn.svg
+    :target: https://badge.fury.io/py/NREL-phygnn
 
 .. image:: https://anaconda.org/nrel/nrel-phygnn/badges/version.svg
     :target: https://anaconda.org/nrel/nrel-phygnn
