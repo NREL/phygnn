@@ -14,8 +14,8 @@ phygnn
 .. image:: https://img.shields.io/pypi/pyversions/nrel-phygnn.svg
     :target: https://pypi.org/project/nrel-phygnn/
 
-.. image:: https://badge.fury.io/py/nrel-phygnn.svg
-    :target: https://badge.fury.io/py/nrel-phygnn
+.. image:: https://badge.fury.io/py/NREL-phygnn.svg
+    :target: https://badge.fury.io/py/NREL-phygnn
 
 .. image:: https://anaconda.org/nrel/nrel-phygnn/badges/version.svg
     :target: https://anaconda.org/nrel/nrel-phygnn
@@ -72,7 +72,10 @@ Installation
 Simple Install
 --------------
 
-1. Use conda (anaconda or miniconda with python 3.7 or 3.8) to create a phygnn environment: ``conda create --name phygnn python=3.8``
+1. Use conda (anaconda or miniconda with python 3.7 or 3.8) to create a phygnn environment: ``conda create --name phygnn python=3.7``
+
+    i. Note that phygnn is tested with python 3.7 and 3.8 via pip install. Users have reported issues installing phygnn on python 3.8 using conda install.
+    
 2. Activate your new conda env: ``conda activate phygnn``
 3. Install with pip or conda:
 
@@ -83,7 +86,7 @@ Simple Install
 Developer Install
 -----------------
 
-1. Use conda (anaconda or miniconda with python 3.7) to create a phygnn environment: ``conda create --name phygnn python=3.8``
+1. Use conda (anaconda or miniconda with python 3.7 or 3.8) to create a phygnn environment: ``conda create --name phygnn python=3.7``
 2. Activate your new conda env: ``conda activate phygnn``
 3. Clone the phygnn repository: ``git clone https://github.com/NREL/phygnn.git`` or ``git clone git@github.com:NREL/phygnn.git``
 4. Navigate to the cloned repo and checkout your desired branch: ``git checkout master`` or ``git checkout <branch>``
