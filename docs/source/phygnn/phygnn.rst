@@ -6,14 +6,18 @@ phygnn package
    :undoc-members:
    :show-inheritance:
 
+Subpackages
+-----------
+
+.. toctree::
+
+   phygnn.model_interfaces
+   phygnn.utilities
+
 Submodules
 ----------
 
 .. toctree::
-   :maxdepth: 4
 
-   phygnn.loss_metrics
    phygnn.phygnn
-   phygnn.pre_processing
-   phygnn.tf_utilities
    phygnn.version
