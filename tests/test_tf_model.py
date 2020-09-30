@@ -1,5 +1,5 @@
 """
-Tests for basic phygnn functionality and execution.
+Tests for basic tensorflow model functionality and execution.
 """
 # pylint: disable=W0613
 import numpy as np
@@ -13,6 +13,7 @@ from phygnn import TESTDATADIR
 from phygnn.model_interfaces.tf_model import TfModel
 
 FPATH = os.path.join(TESTDATADIR, '_temp_model')
+FPATH_JSON = os.path.join(TESTDATADIR, '_temp_model.json')
 if not os.path.exists(FPATH):
     os.mkdir(FPATH)
 
@@ -116,3 +117,4 @@ def test_save_load():
     assert loaded.feature_names == ['a', 'b']
     assert loaded.label_names == ['c']
     shutil.rmtree(FPATH)
+    os.remove(FPATH_JSON)

@@ -18,6 +18,38 @@ from phygnn.utilities.tf_layers import Layers
 logger = logging.getLogger(__name__)
 
 
+def p_fun_dummy(model, y_predicted, y_true, p):
+    """Example dummy function for p loss calculation.
+
+    This dummy function does not do a real physics calculation, it just shows
+    the required p_fun interface and calculates a normal MAE loss based on
+    y_predicted and y_true.
+
+    Parameters
+    ----------
+    model : PhysicsGuidedNeuralNetwork
+        Instance of the phygnn model at the current point in training.
+    y_predicted : tf.Tensor
+        Predicted y values in a 2D tensor based on x values in the
+        current batch.
+    y_true : np.ndarray
+        Known y values that were given to the phygnn.fit() method.
+    p : np.ndarray
+        Supplemental physical feature data that can be used to calculate a
+        y_physical value to compare against y_predicted. The rows in this
+        array have been carried through the batching process alongside y_true
+        and the x-features used to create y_predicted and so can be used 1-to-1
+        with the rows in y_predicted and y_true.
+
+    Returns
+    -------
+    p_loss : tf.Tensor
+        A 0D tensor physical loss value.
+    """
+    # pylint: disable=W0613
+    return tf.math.reduce_mean(tf.math.abs(y_predicted - y_true))
+
+
 class PhysicsGuidedNeuralNetwork:
     """Simple Deep Neural Network with custom physical loss function."""
 
@@ -33,10 +65,10 @@ class PhysicsGuidedNeuralNetwork:
         ----------
         p_fun : function
             Physics function to guide the neural network loss function.
-            This function must take (y_predicted, y_true, p, **p_kwargs)
-            as arguments with datatypes (tf.Tensor, np.ndarray, np.ndarray).
-            The function must return a tf.Tensor object with a single numeric
-            loss value (output.ndim == 0).
+            This fun must take (phygnn, y_predicted, y_true, p, **p_kwargs)
+            as arguments with datatypes (PhysicsGuidedNeuralNetwork, tf.Tensor,
+            np.ndarray, np.ndarray). The function must return a tf.Tensor
+            object with a single numeric loss value (output.ndim == 0).
         loss_weights : tuple, optional
             Loss weights for the neural network y_predicted vs. y_true
             and for the p_fun loss, respectively. For example,
@@ -410,7 +442,7 @@ class PhysicsGuidedNeuralNetwork:
                 tape.watch(layer.variables)
 
             y_predicted = self.predict(x, to_numpy=False)
-            p_loss = self._p_fun(y_predicted, y_true, p, **p_kwargs)
+            p_loss = self._p_fun(self, y_predicted, y_true, p, **p_kwargs)
             grad = tape.gradient(p_loss, self.weights)
 
             if not tf.is_tensor(p_loss):
@@ -584,7 +616,7 @@ class PhysicsGuidedNeuralNetwork:
             loss += self._loss_weights[0] * nn_loss
 
         if self._loss_weights[1] != 0:
-            p_loss = self._p_fun(y_predicted, y_true, p, **p_kwargs)
+            p_loss = self._p_fun(self, y_predicted, y_true, p, **p_kwargs)
             loss += self._loss_weights[1] * p_loss
 
         logger.debug('NN Loss: {:.2e}, P Loss: {:.2e}, Total Loss: {:.2e}'

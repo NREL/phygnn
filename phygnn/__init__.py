@@ -2,8 +2,8 @@
 """Physics Guided Neural Network python library."""
 import os
 from .model_interfaces import PhygnnModel, RandomForestModel, TfModel
-from .phygnn import PhysicsGuidedNeuralNetwork
-from .utilities import Layers
+from .phygnn import PhysicsGuidedNeuralNetwork, p_fun_dummy
+from .utilities import Layers, HiddenLayers
 from .utilities import tf_isin, tf_log10
 from phygnn.version import __version__
 

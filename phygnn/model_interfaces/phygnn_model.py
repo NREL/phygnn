@@ -223,10 +223,10 @@ class PhygnnModel(ModelBase):
         ----------
         p_fun : function
             Physics function to guide the neural network loss function.
-            This function must take (y_predicted, y_true, p, **p_kwargs)
-            as arguments with datatypes (tf.Tensor, np.ndarray, np.ndarray).
-            The function must return a tf.Tensor object with a single numeric
-            loss value (output.ndim == 0).
+            This fun must take (phygnn, y_predicted, y_true, p, **p_kwargs)
+            as arguments with datatypes (PhysicsGuidedNeuralNetwork, tf.Tensor,
+            np.ndarray, np.ndarray). The function must return a tf.Tensor
+            object with a single numeric loss value (output.ndim == 0).
         feature_names : list
             Ordered list of feature names.
         label_names : list
@@ -335,10 +335,10 @@ class PhygnnModel(ModelBase):
         ----------
         p_fun : function
             Physics function to guide the neural network loss function.
-            This function must take (y_predicted, y_true, p, **p_kwargs)
-            as arguments with datatypes (tf.Tensor, np.ndarray, np.ndarray).
-            The function must return a tf.Tensor object with a single numeric
-            loss value (output.ndim == 0).
+            This fun must take (phygnn, y_predicted, y_true, p, **p_kwargs)
+            as arguments with datatypes (PhysicsGuidedNeuralNetwork, tf.Tensor,
+            np.ndarray, np.ndarray). The function must return a tf.Tensor
+            object with a single numeric loss value (output.ndim == 0).
         features : np.ndarray | pd.DataFrame
             Feature data in a 2D array or DataFrame. If this is a DataFrame,
             the index is ignored, the columns are used with self.feature_names,

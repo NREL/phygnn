@@ -1,5 +1,5 @@
 """
-Tests for basic phygnn functionality and execution.
+Tests for basic phygnn model interface functionality and execution.
 """
 # pylint: disable=W0613
 import os
@@ -34,11 +34,13 @@ HIDDEN_LAYERS = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
                  {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
 
 
-def p_fun_pythag(y_predicted, y_true, p):
+def p_fun_pythag(model, y_predicted, y_true, p):
     """Example function for loss calculation using physical relationships.
 
     Parameters
     ----------
+    model : PhysicsGuidedNeuralNetwork
+        Instance of the phygnn model at the current point in training.
     y_predicted : tf.Tensor
         Predicted y values in a 2D tensor based on x values in this batch.
     y_true : np.ndarray
