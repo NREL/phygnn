@@ -9,7 +9,7 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
                                      BatchNormalization)
-from phygnn import PhysicsGuidedNeuralNetwork, TESTDATADIR
+from phygnn import PhysicsGuidedNeuralNetwork, p_fun_dummy, TESTDATADIR
 
 
 FPATH = os.path.join(TESTDATADIR, '_temp_model.pkl')
@@ -32,11 +32,13 @@ HIDDEN_LAYERS = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
                  ]
 
 
-def p_fun_pythag(y_predicted, y_true, p):
+def p_fun_pythag(model, y_predicted, y_true, p):
     """Example function for loss calculation using physical relationships.
 
     Parameters
     ----------
+    model : PhysicsGuidedNeuralNetwork
+        Instance of the phygnn model at the current point in training.
     y_predicted : tf.Tensor
         Predicted y values in a 2D tensor based on x values in this batch.
     y_true : np.ndarray
@@ -63,7 +65,7 @@ def p_fun_pythag(y_predicted, y_true, p):
     return p_loss
 
 
-def p_fun_bad(y_predicted, y_true, p):
+def p_fun_bad(model, y_predicted, y_true, p):
     """This is an example of a poorly formulated p_fun() that uses
     numpy operations."""
 
@@ -238,6 +240,27 @@ def test_save_load():
     assert loaded.feature_names == ['a', 'b']
     assert loaded.output_names == ['c']
     os.remove(FPATH)
+
+
+def test_dummy_p_fun():
+    """Test the phygnn model with dummy pfun that is just MAE"""
+    PhysicsGuidedNeuralNetwork.seed(0)
+    model_0 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_dummy,
+                                         hidden_layers=HIDDEN_LAYERS,
+                                         loss_weights=(0.5, 0.5),
+                                         n_features=2, n_labels=1)
+    model_0.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
+
+    PhysicsGuidedNeuralNetwork.seed(0)
+    model_1 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_dummy,
+                                         hidden_layers=HIDDEN_LAYERS,
+                                         loss_weights=(1.0, 0.0),
+                                         metric='mae',
+                                         n_features=2, n_labels=1)
+    model_1.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
+
+    assert np.allclose(model_0.history.training_loss.values.astype(float),
+                       model_1.history.training_loss.values.astype(float))
 
 
 def test_bad_pfun():
