@@ -63,7 +63,7 @@ def test_nn(hidden_layers, loss):
     [(True, 0.09),
      (False, 0.015),
      ((True, False), 0.01),
-     ((False, True), 0.065)])
+     ((False, True), 0.09)])
 def test_normalize(normalize, loss):
     """Test TfModel """
     hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
