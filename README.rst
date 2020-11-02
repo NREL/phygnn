@@ -23,7 +23,10 @@ phygnn
 .. image:: https://anaconda.org/nrel/nrel-phygnn/badges/license.svg
     :target: https://anaconda.org/nrel/nrel-phygnn
 
-phygnn stands for **physics-guided neural networks**.
+**phygnn** (fi-geon | \ ˈfi-jən) noun. 
+
+    1. a physics-guided neural network
+    2. a rare and mythical bird
 
 This implementation of physics-guided neural networks augments a traditional
 neural network loss function with a generic loss term that can be used to
