@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 from warnings import warn
 
+import tensorflow as tf
+
 from phygnn.utilities.pre_processing import PreProcess
 
 logger = logging.getLogger(__name__)
@@ -356,6 +358,18 @@ class ModelBase(ABC):
             out = inp
 
         return out
+
+    @staticmethod
+    def seed(s=0):
+        """
+        Set the random seed for reproducible results.
+        Parameters
+        ----------
+        s : int
+            Random number generator seed
+        """
+        np.random.seed(s)
+        tf.random.set_seed(s)
 
     @staticmethod
     def _parse_data(data, names=None):
