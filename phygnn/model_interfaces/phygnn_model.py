@@ -209,6 +209,19 @@ class PhygnnModel(ModelBase):
         path = path.replace('.json', '.pkl')
         self.model.save(path)
 
+    def set_loss_weights(self, loss_weights):
+        """Set new loss weights
+
+        Parameters
+        ----------
+        loss_weights : tuple
+            Loss weights for the neural network y_predicted vs. y_true
+            and for the p_fun loss, respectively. For example,
+            loss_weights=(0.0, 1.0) would simplify the phygnn loss function
+            to just the p_fun output.
+        """
+        self.model._loss_weights = loss_weights
+
     @classmethod
     def build(cls, p_fun, feature_names, label_names,
               normalize=(True, False), loss_weights=(0.5, 0.5),
