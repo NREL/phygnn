@@ -19,7 +19,7 @@ class RandomForestModel(ModelBase):
     """
 
     def __init__(self, model, feature_names=None, label_name=None,
-                 norm_params=None, normalize=True):
+                 norm_params=None, normalize=True, one_hot_categories=None):
         """
         Parameters
         ----------
@@ -39,10 +39,13 @@ class RandomForestModel(ModelBase):
             - False means don't normalize either
             - Tuple of flags (normalize_feature, normalize_label)
             by default True
+        one_hot_categories : dict, optional
+            Features to one-hot encode using given categories
         """
         super().__init__(model, feature_names=feature_names,
                          label_names=label_name, norm_params=norm_params,
-                         normalize=normalize)
+                         normalize=normalize,
+                         one_hot_categories=one_hot_categories)
 
         if len(self.label_names) > 1:
             msg = ("Only a single label can be supplied to {}, but {} were"
@@ -167,6 +170,7 @@ class RandomForestModel(ModelBase):
                         'norm_params': self.normalization_parameters,
                         'normalize': (self.normalize_features,
                                       self.normalize_labels),
+                        'one_hot_categories': self.one_hot_categories,
                         'model_params': self.model.get_params()}
 
         model_params = self.dict_json_convert(model_params)
@@ -174,7 +178,8 @@ class RandomForestModel(ModelBase):
             json.dump(model_params, f, indent=2, sort_keys=True)
 
     @classmethod
-    def build_trained(cls, features, label, normalize=True, save_path=None,
+    def build_trained(cls, features, label, normalize=True,
+                      one_hot_categories=None, save_path=None,
                       compile_kwargs=None, parse_kwargs=None, fit_kwargs=None):
         """
         Build Random Forest Model with given kwargs and then train with
@@ -193,6 +198,8 @@ class RandomForestModel(ModelBase):
             - False means don't normalize either
             - Tuple of flags (normalize_feature, normalize_label)
             by default True
+        one_hot_categories : dict, optional
+            Features to one-hot encode using given categories
         save_path : str
             Directory path to save model to. The RandomForest Model will be
             saved to the directory while the framework parameters will be
@@ -216,6 +223,9 @@ class RandomForestModel(ModelBase):
         _, label_name = cls._parse_data(label)
 
         model = cls.compile_model(**compile_kwargs)
+        if one_hot_categories is not None:
+            feature_names = cls.make_one_hot_feature_names(feature_names,
+                                                           one_hot_categories)
         model = cls(model, feature_names=feature_names, label_name=label_name,
                     normalize=normalize)
 

@@ -17,7 +17,8 @@ class PhygnnModel(ModelBase):
     Phygnn Model interface
     """
     def __init__(self, model, feature_names=None, label_names=None,
-                 norm_params=None, normalize=(True, False)):
+                 norm_params=None, normalize=(True, False),
+                 one_hot_categories=None):
         """
         Parameters
         ----------
@@ -37,10 +38,13 @@ class PhygnnModel(ModelBase):
             - False means don't normalize either
             - Tuple of flags (normalize_feature, normalize_label)
             by default True
+        one_hot_categories : dict, optional
+            Features to one-hot encode using given categories
         """
         super().__init__(model, feature_names=feature_names,
                          label_names=label_names, norm_params=norm_params,
-                         normalize=normalize)
+                         normalize=normalize,
+                         one_hot_categories=one_hot_categories)
 
     @property
     def layers(self):
@@ -200,7 +204,8 @@ class PhygnnModel(ModelBase):
                         'label_names': self.label_names,
                         'norm_params': self.normalization_parameters,
                         'normalize': (self.normalize_features,
-                                      self.normalize_labels)}
+                                      self.normalize_labels),
+                        'one_hot_categories': self.one_hot_categories}
 
         model_params = self.dict_json_convert(model_params)
         with open(path, 'w') as f:
@@ -224,10 +229,10 @@ class PhygnnModel(ModelBase):
 
     @classmethod
     def build(cls, p_fun, feature_names, label_names,
-              normalize=(True, False), loss_weights=(0.5, 0.5),
-              hidden_layers=None, metric='mae', initializer=None,
-              optimizer=None, learning_rate=0.01, history=None,
-              kernel_reg_rate=0.0, kernel_reg_power=1,
+              normalize=(True, False), one_hot_categories=None,
+              loss_weights=(0.5, 0.5), hidden_layers=None, metric='mae',
+              initializer=None, optimizer=None, learning_rate=0.01,
+              history=None, kernel_reg_rate=0.0, kernel_reg_power=1,
               bias_reg_rate=0.0, bias_reg_power=1):
         """
         Build phygnn model from given features, layers and kwargs
@@ -251,6 +256,8 @@ class PhygnnModel(ModelBase):
             - False means don't normalize either
             - Tuple of flags (normalize_feature, normalize_label)
             by default True
+        one_hot_categories : dict, optional
+            Features to one-hot encode using given categories
         loss_weights : tuple, optional
             Loss weights for the neural network y_predicted vs. y_true
             and for the p_fun loss, respectively. For example,
@@ -305,6 +312,10 @@ class PhygnnModel(ModelBase):
         model : PhygnnModel
             Initialized PhygnnModel instance
         """
+        if one_hot_categories is not None:
+            feature_names = cls.make_one_hot_feature_names(feature_names,
+                                                           one_hot_categories)
+
         if isinstance(label_names, str):
             label_names = [label_names]
 
@@ -326,15 +337,16 @@ class PhygnnModel(ModelBase):
                                            output_names=label_names)
 
         model = cls(model, feature_names=feature_names,
-                    label_names=label_names, normalize=normalize)
+                    label_names=label_names, normalize=normalize,
+                    one_hot_categories=one_hot_categories)
 
         return model
 
     @classmethod
     def build_trained(cls, p_fun, features, labels, p, normalize=(True, False),
-                      loss_weights=(0.5, 0.5), hidden_layers=None,
-                      metric='mae', initializer=None, optimizer=None,
-                      learning_rate=0.01, history=None,
+                      one_hot_categories=None, loss_weights=(0.5, 0.5),
+                      hidden_layers=None, metric='mae', initializer=None,
+                      optimizer=None, learning_rate=0.01, history=None,
                       kernel_reg_rate=0.0, kernel_reg_power=1,
                       bias_reg_rate=0.0, bias_reg_power=1, n_batch=16,
                       n_epoch=10, shuffle=True, validation_split=0.2,
@@ -374,6 +386,8 @@ class PhygnnModel(ModelBase):
             - False means don't normalize either
             - Tuple of flags (normalize_feature, normalize_label)
             by default True
+        one_hot_categories : dict, optional
+            Features to one-hot encode using given categories
         loss_weights : tuple, optional
             Loss weights for the neural network y_predicted vs. y_true
             and for the p_fun loss, respectively. For example,
@@ -461,6 +475,7 @@ class PhygnnModel(ModelBase):
 
         model = cls.build(p_fun, feature_names, label_names,
                           normalize=normalize,
+                          one_hot_categories=one_hot_categories,
                           loss_weights=loss_weights,
                           hidden_layers=hidden_layers,
                           metric=metric,

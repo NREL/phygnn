@@ -19,14 +19,14 @@ class ModelBase(ABC):
     """
     Base Model Interface
     """
-
     def __init__(self, model, feature_names=None, label_names=None,
-                 norm_params=None, normalize=(True, False)):
+                 norm_params=None, normalize=(True, False),
+                 one_hot_categories=None):
         """
         Parameters
         ----------
         model : OBJ
-            Sci-kit learn or tensorflow model
+            Initialized model object
         feature_names : list
             Ordered list of feature names.
         label_names : list
@@ -41,6 +41,8 @@ class ModelBase(ABC):
             - False means don't normalize either
             - Tuple of flags (normalize_feature, normalize_label)
             by default True
+        one_hot_categories : dict, optional
+            Features to one-hot encode using given categories
         """
         self._model = model
 
@@ -62,6 +64,7 @@ class ModelBase(ABC):
 
         self._norm_params = norm_params
         self._normalize = self._parse_normalize(normalize)
+        self._one_hot_categories = one_hot_categories
 
     def __repr__(self):
         msg = "{}:\n{}".format(self.__class__.__name__, self.model_summary)
@@ -290,6 +293,39 @@ class ModelBase(ABC):
 
         return stdevs
 
+    @property
+    def one_hot_input_feature_names(self):
+        """
+        Input feature names to be one-hot encoded
+
+        Return
+        ------
+        list
+        """
+        return list(self._one_hot_categories.keys())
+
+    @property
+    def one_hot_feature_names(self):
+        """
+        One-hot encrypted feature names
+
+        Return
+        ------
+        list
+        """
+        return [i for l in self._one_hot_categories.values() for i in l]
+
+    @property
+    def one_hot_categories(self):
+        """
+        categories to use for one-hot encoding
+
+        Returns
+        -------
+        dict
+        """
+        return self._one_hot_categories
+
     @staticmethod
     def _parse_normalize(normalize):
         """
@@ -426,6 +462,33 @@ class ModelBase(ABC):
             n = arr.shape[1]
 
         return n
+
+    @staticmethod
+    def make_one_hot_feature_names(feature_names, one_hot_categories):
+        """
+        Update feature_names after one-hot encoding
+
+        Parameters
+        ----------
+        feature_names : list
+            Input feature names
+        one_hot_categories : dict
+            Features to one-hot encode using given categories
+
+        Returns
+        -------
+        feature_names : list
+            Updated list of feature names with one_hot categories
+        """
+        for name, categories in one_hot_categories.items():
+            if name in feature_names:
+                feature_names.remove(name)
+
+            for c in categories:
+                if c not in feature_names:
+                    feature_names.append(c)
+
+        return feature_names
 
     def get_norm_params(self, names):
         """
@@ -755,7 +818,34 @@ class ModelBase(ABC):
 
         return data
 
-    def _check_one_hot_norm_params(self, one_hot_features):
+    def _check_one_hot_feature_names(self, feature_names):
+        """
+        Check one_hot_feature_names, update feature_names to remove features
+        that were one-hot encoded and add in new one-hot features if needed
+
+        Parameters
+        ----------
+        feature_names : list
+            Input feature names
+        """
+        one_hot_feature_names = self.make_one_hot_feature_names(
+            feature_names, self.one_hot_categories)
+
+        if one_hot_feature_names != self.feature_names:
+            input_feature_names = (self.feature_names
+                                   + self.one_hot_input_feature_names)
+            check_feature_names = np.isin(feature_names, input_feature_names)
+            if not np.all(check_feature_names):
+                msg = ('Input feature names {} are not valid! Expecting input '
+                       'feature names: {}'
+                       .format(np.array(feature_names)[check_feature_names],
+                               input_feature_names))
+                logger.error(msg)
+                raise RuntimeError(msg)
+
+            self._feature_names = one_hot_feature_names
+
+    def _check_one_hot_norm_params(self):
         """
         Check one hot feature normalization parameters to ensure they are
         {mean: 0, stdev: 1} to prevent normalization
@@ -765,15 +855,14 @@ class ModelBase(ABC):
         one_hot_features : list
             list of one hot features
         """
-        for feature in one_hot_features:
+        for feature in self.one_hot_feature_names:
             mean = self.get_mean(feature)
             stdev = self.get_stdev(feature)
             if mean != 0 and stdev != 1:
                 norm_params = {feature: {'mean': 0, 'stdev': 1}}
                 self._norm_params.update(norm_params)
 
-    def _parse_features(self, features, names=None, process_one_hot=True,
-                        **kwargs):
+    def _parse_features(self, features, names=None, **kwargs):
         """
         Parse features
 
@@ -783,8 +872,6 @@ class ModelBase(ABC):
             Features to train on or predict from
         names : list, optional
             List of feature names, by default None
-        process_one_hot : bool, optional
-            Check for and process one-hot variables, by default True
         kwargs : dict, optional
             kwargs for PreProcess.one_hot
 
@@ -802,30 +889,29 @@ class ModelBase(ABC):
             logger.error(msg)
             raise RuntimeError(msg)
 
-        if self.feature_names is not None:
-            if features.shape[1] != len(self.feature_names):
-                msg = ('data has {} features but expected {}'
-                       .format(features.shape[1], self.feature_dims))
-                logger.error(msg)
-                raise RuntimeError(msg)
-
-        if self._feature_names is None:
+        if self.feature_names is None:
             self._feature_names = feature_names
+
+        if self.one_hot_categories is not None:
+            kwargs.update({'return_ind': True,
+                           'categories': self.one_hot_categories})
+            features, _ = PreProcess.one_hot(features, **kwargs)
+            self._check_one_hot_feature_names(feature_names)
+            self._check_one_hot_norm_params()
         elif self.feature_names != feature_names:
             msg = ('Expecting features with names: {}, but was provided with: '
                    '{}!'.format(feature_names, self.feature_names))
             logger.error(msg)
             raise RuntimeError(msg)
 
-        if process_one_hot:
-            kwargs.update({'return_ind': True})
-            features, one_hot_ind = PreProcess.one_hot(features, **kwargs)
-            if one_hot_ind:
-                one_hot_features = [self.feature_names[i] for i in one_hot_ind]
-                self._check_one_hot_norm_params(one_hot_features)
-
         if self.normalize_features:
-            features = self.normalize(features, names=feature_names)
+            features = self.normalize(features, names=self.feature_names)
+
+        if features.shape[1] != self.feature_dims:
+            msg = ('data has {} features but expected {}'
+                   .format(features.shape[1], self.feature_dims))
+            logger.error(msg)
+            raise RuntimeError(msg)
 
         return features
 
