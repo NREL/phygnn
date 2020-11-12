@@ -66,6 +66,7 @@ helped inspire this work:
     * Xinyue Hu, Haoji Hu, Saurabh Verma, and Zhi-Li Zhang, “Physics-Guided Deep Neural Networks for PowerFlow Analysis”, arXiv:2002.00097v1 (2020).
     * Anuj Karpatne, William Watkins, Jordan Read, and Vipin Kumar, "Physics-guided Neural Networks (PGNN): An Application in Lake Temperature Modeling". arXiv:1710.11431v2 (2018).
     * Anuj Karpatne, Gowtham Atluri, James H Faghmous, Michael Steinbach, Arindam Banerjee, Auroop Ganguly, Shashi Shekhar, Nagiza Samatova, and Vipin Kumar. 2017. Theory-guided data science: A new paradigm for scientific discovery from data. IEEE Transactions on knowledge and data engineering 29, 10 (2017), 2318–2331.
+    * Justin Sirignano, Jonathan F. MacArt, Jonathan B. Freund, "DPM: A deep learning PDE augmentation method with application to large-eddy simulation". Journal of Computational Physics, Volume 423, 2020, ISSN 0021-9991, https://doi.org/10.1016/j.jcp.2020.109811.
 
 
 Installation
