@@ -40,7 +40,8 @@ class RandomForestModel(ModelBase):
             - Tuple of flags (normalize_feature, normalize_label)
             by default True
         one_hot_categories : dict, optional
-            Features to one-hot encode using given categories
+            Features to one-hot encode using given categories, if None do
+            not run one-hot encoding, by default None
         """
         super().__init__(model, feature_names=feature_names,
                          label_names=label_name, norm_params=norm_params,
@@ -199,7 +200,8 @@ class RandomForestModel(ModelBase):
             - Tuple of flags (normalize_feature, normalize_label)
             by default True
         one_hot_categories : dict, optional
-            Features to one-hot encode using given categories
+            Features to one-hot encode using given categories, if None do
+            not run one-hot encoding, by default None
         save_path : str
             Directory path to save model to. The RandomForest Model will be
             saved to the directory while the framework parameters will be

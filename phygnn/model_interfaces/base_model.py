@@ -42,7 +42,8 @@ class ModelBase(ABC):
             - Tuple of flags (normalize_feature, normalize_label)
             by default True
         one_hot_categories : dict, optional
-            Features to one-hot encode using given categories
+            Features to one-hot encode using given categories, if None do
+            not run one-hot encoding, by default None
         """
         self._model = model
 
@@ -833,6 +834,7 @@ class ModelBase(ABC):
         feature_names : list
             Input feature names
         """
+
         one_hot_feature_names = self.make_one_hot_feature_names(
             feature_names, self.one_hot_categories)
 
@@ -887,6 +889,7 @@ class ModelBase(ABC):
             to one hot vectors if desired
         """
         features, feature_names = self._parse_data(features, names=names)
+        print(features.shape)
 
         if len(features.shape) != 2:
             msg = ('{} can only use 2D data as input!'
@@ -903,6 +906,7 @@ class ModelBase(ABC):
             features, _ = PreProcess.one_hot(features, **kwargs)
             self._check_one_hot_feature_names(feature_names)
             self._check_one_hot_norm_params()
+            print(features.shape)
         elif self.feature_names != feature_names:
             msg = ('Expecting features with names: {}, but was provided with: '
                    '{}!'.format(feature_names, self.feature_names))

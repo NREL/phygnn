@@ -39,7 +39,8 @@ class PhygnnModel(ModelBase):
             - Tuple of flags (normalize_feature, normalize_label)
             by default True
         one_hot_categories : dict, optional
-            Features to one-hot encode using given categories
+            Features to one-hot encode using given categories, if None do
+            not run one-hot encoding, by default None
         """
         super().__init__(model, feature_names=feature_names,
                          label_names=label_names, norm_params=norm_params,
@@ -257,7 +258,8 @@ class PhygnnModel(ModelBase):
             - Tuple of flags (normalize_feature, normalize_label)
             by default True
         one_hot_categories : dict, optional
-            Features to one-hot encode using given categories
+            Features to one-hot encode using given categories, if None do
+            not run one-hot encoding, by default None
         loss_weights : tuple, optional
             Loss weights for the neural network y_predicted vs. y_true
             and for the p_fun loss, respectively. For example,
@@ -387,7 +389,8 @@ class PhygnnModel(ModelBase):
             - Tuple of flags (normalize_feature, normalize_label)
             by default True
         one_hot_categories : dict, optional
-            Features to one-hot encode using given categories
+            Features to one-hot encode using given categories, if None do
+            not run one-hot encoding, by default None
         loss_weights : tuple, optional
             Loss weights for the neural network y_predicted vs. y_true
             and for the p_fun loss, respectively. For example,

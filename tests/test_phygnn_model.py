@@ -146,3 +146,28 @@ def test_save_load():
     assert loaded.feature_names == ['a', 'b']
     assert loaded.label_names == ['c']
     shutil.rmtree(os.path.dirname(FPATH))
+
+
+def test_OHE():
+    """
+    Test one-hot encoding
+    """
+    ohe_features = features.copy()
+    categories = list('def')
+    ohe_features['categorical'] = np.random.choice(categories, len(features))
+    one_hot_categories = {'categorical': categories}
+
+    PhysicsGuidedNeuralNetwork.seed(0)
+    model = PhygnnModel.build_trained(p_fun_pythag, ohe_features, labels, P,
+                                      one_hot_categories=one_hot_categories,
+                                      hidden_layers=HIDDEN_LAYERS,
+                                      loss_weights=(0.0, 1.0),
+                                      n_batch=4,
+                                      n_epoch=20)
+
+    x = ohe_features.values
+    test_mae = np.mean(np.abs(model.predict(x, table=False) - Y))
+
+    loss = 0.015
+    assert model.history.validation_loss.values[-1] < loss
+    assert test_mae < loss
