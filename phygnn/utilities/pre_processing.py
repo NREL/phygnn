@@ -178,7 +178,7 @@ class PreProcess:
             raise RuntimeError(msg)
 
         if feature_names is not None:
-            check = np.isin(one_hot_categories.keys(), feature_names)
+            check = np.isin(list(one_hot_categories), feature_names)
             if not all(check):
                 bad_names = list(one_hot_categories)[~check]
                 msg = ('The following one-hot features do not have valid '
@@ -187,7 +187,7 @@ class PreProcess:
                 logger.error(msg)
                 raise RuntimeError(msg)
 
-            final_names = feature_names - list(one_hot_categories)
+            final_names = list(set(feature_names) - set(one_hot_categories))
             check = np.isin(one_hot_features_names, final_names)
             if any(check):
                 msg = ('The following category names: {} conflict with '
