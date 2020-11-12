@@ -64,6 +64,9 @@ class ModelBase(ABC):
 
         self._norm_params = norm_params
         self._normalize = self._parse_normalize(normalize)
+        if one_hot_categories is not None:
+            PreProcess.check_one_hot_categories(one_hot_categories)
+
         self._one_hot_categories = one_hot_categories
 
     def __repr__(self):
@@ -307,7 +310,7 @@ class ModelBase(ABC):
     @property
     def one_hot_feature_names(self):
         """
-        One-hot encrypted feature names
+        One-hot encoded feature names
 
         Return
         ------
@@ -480,6 +483,8 @@ class ModelBase(ABC):
         feature_names : list
             Updated list of feature names with one_hot categories
         """
+        PreProcess.check_one_hot_categories(one_hot_categories,
+                                            feature_names=feature_names)
         for name, categories in one_hot_categories.items():
             if name in feature_names:
                 feature_names.remove(name)
