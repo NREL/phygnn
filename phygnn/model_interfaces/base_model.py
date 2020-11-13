@@ -6,9 +6,8 @@ from abc import ABC
 import logging
 import numpy as np
 import pandas as pd
-from warnings import warn
-
 import tensorflow as tf
+from warnings import warn
 
 from phygnn.utilities.pre_processing import PreProcess
 
@@ -298,6 +297,24 @@ class ModelBase(ABC):
         return stdevs
 
     @property
+    def input_feature_names(self):
+        """
+        Input feature names
+
+        Return
+        ------
+        list
+        """
+        if self._one_hot_categories is None:
+            input_feature_names = self.feature_names
+        else:
+            input_feature_names = list(set(self.feature_names)
+                                       - set(self.one_hot_feature_names)
+                                       | set(self.one_hot_input_feature_names))
+
+        return input_feature_names
+
+    @property
     def one_hot_input_feature_names(self):
         """
         Input feature names to be one-hot encoded
@@ -481,20 +498,19 @@ class ModelBase(ABC):
 
         Returns
         -------
-        feature_names : list
+        one_hot_feature_names : list
             Updated list of feature names with one_hot categories
         """
-        PreProcess.check_one_hot_categories(one_hot_categories,
-                                            feature_names=feature_names)
+        one_hot_feature_names = feature_names.copy()
         for name, categories in one_hot_categories.items():
-            if name in feature_names:
-                feature_names.remove(name)
+            if name in one_hot_feature_names:
+                one_hot_feature_names.remove(name)
 
             for c in categories:
-                if c not in feature_names:
-                    feature_names.append(c)
+                if c not in one_hot_feature_names:
+                    one_hot_feature_names.append(c)
 
-        return feature_names
+        return one_hot_feature_names
 
     def get_norm_params(self, names):
         """
@@ -834,22 +850,15 @@ class ModelBase(ABC):
         feature_names : list
             Input feature names
         """
-
         one_hot_feature_names = self.make_one_hot_feature_names(
             feature_names, self.one_hot_categories)
-
         if one_hot_feature_names != self.feature_names:
-            input_feature_names = (self.feature_names
-                                   + self.one_hot_input_feature_names)
-            check_feature_names = np.isin(feature_names, input_feature_names)
-            if not np.all(check_feature_names):
-                msg = ('Input feature names {} are not valid! Expecting input '
-                       'feature names: {}'
-                       .format(np.array(feature_names)[check_feature_names],
-                               input_feature_names))
-                logger.error(msg)
-                raise RuntimeError(msg)
+            check_names = feature_names
+            if self.label_names is not None:
+                check_names += self.label_names
 
+            PreProcess.check_one_hot_categories(self.one_hot_categories,
+                                                feature_names=check_names)
             self._feature_names = one_hot_feature_names
 
     def _check_one_hot_norm_params(self):
@@ -889,7 +898,6 @@ class ModelBase(ABC):
             to one hot vectors if desired
         """
         features, feature_names = self._parse_data(features, names=names)
-        print(features.shape)
 
         if len(features.shape) != 2:
             msg = ('{} can only use 2D data as input!'
@@ -900,13 +908,14 @@ class ModelBase(ABC):
         if self.feature_names is None:
             self._feature_names = feature_names
 
-        if self.one_hot_categories is not None:
+        check = (self.one_hot_categories is not None
+                 and all(np.isin(feature_names, self.input_feature_names)))
+        if check:
+            self._check_one_hot_feature_names(feature_names)
             kwargs.update({'return_ind': True,
                            'categories': self.one_hot_categories})
             features, _ = PreProcess.one_hot(features, **kwargs)
-            self._check_one_hot_feature_names(feature_names)
             self._check_one_hot_norm_params()
-            print(features.shape)
         elif self.feature_names != feature_names:
             msg = ('Expecting features with names: {}, but was provided with: '
                    '{}!'.format(feature_names, self.feature_names))
@@ -988,7 +997,24 @@ class ModelBase(ABC):
             parse_kwargs = {}
 
         if isinstance(features, np.ndarray):
-            parse_kwargs.update({"names": self.feature_names})
+            n_features = features.shape[1]
+            if n_features == self.feature_dims:
+                kwargs = {"names": self.feature_names}
+                logger.debug('Parsing features with feature_names: {}'
+                             .format(self.feature_names))
+            elif n_features == len(self.input_feature_names):
+                kwargs = {"names": self.input_feature_names}
+                logger.debug('Parsing features with input_feature_names: {}'
+                             .format(self.input_feature_names))
+            else:
+                msg = ('Number of features provided ({}) does not match number'
+                       ' of model features ({}) or number of input features '
+                       '({})'.format(n_features, self.feature_dims,
+                                     len(self.input_feature_names)))
+                logger.error(msg)
+                raise RuntimeError(msg)
+
+            parse_kwargs.update(kwargs)
 
         features = self._parse_features(features, **parse_kwargs)
 

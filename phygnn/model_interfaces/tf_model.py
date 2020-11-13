@@ -14,6 +14,7 @@ from warnings import warn
 
 from phygnn.model_interfaces.base_model import ModelBase
 from phygnn.utilities.tf_layers import Layers
+from phygnn.utilities.pre_processing import PreProcess
 
 logger = logging.getLogger(__name__)
 
@@ -470,11 +471,15 @@ class TfModel(ModelBase):
         model : TfModel
             Initialized TfModel obj
         """
-        if one_hot_categories is not None:
-            feature_names = cls.make_one_hot_feature_names(feature_names,
-                                                           one_hot_categories)
         if isinstance(label_names, str):
             label_names = [label_names]
+
+        if one_hot_categories is not None:
+            check_names = feature_names + label_names
+            PreProcess.check_one_hot_categories(one_hot_categories,
+                                                feature_names=check_names)
+            feature_names = cls.make_one_hot_feature_names(feature_names,
+                                                           one_hot_categories)
 
         model = cls.compile_model(len(feature_names),
                                   n_labels=len(label_names),

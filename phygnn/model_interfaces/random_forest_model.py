@@ -138,6 +138,7 @@ class RandomForestModel(ModelBase):
         """
         if parse_kwargs is None:
             parse_kwargs = {}
+
         features = self._parse_features(features, **parse_kwargs)
 
         label = self._parse_labels(label)
@@ -226,10 +227,14 @@ class RandomForestModel(ModelBase):
 
         model = cls.compile_model(**compile_kwargs)
         if one_hot_categories is not None:
+            check_names = feature_names + label_name
+            PreProcess.check_one_hot_categories(one_hot_categories,
+                                                feature_names=check_names)
             feature_names = cls.make_one_hot_feature_names(feature_names,
                                                            one_hot_categories)
+
         model = cls(model, feature_names=feature_names, label_name=label_name,
-                    normalize=normalize)
+                    normalize=normalize, one_hot_categories=one_hot_categories)
 
         model.train_model(features, label, parse_kwargs=parse_kwargs,
                           fit_kwargs=fit_kwargs)
