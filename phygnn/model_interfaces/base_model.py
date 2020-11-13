@@ -534,10 +534,10 @@ class ModelBase(ABC):
             means.append(self.get_mean(name))
             stdevs.append(self.get_stdev(name))
 
-        if not all(set(means)):
+        if None in means:
             means = None
 
-        if not all(set(stdevs)):
+        if None in stdevs:
             stdevs = None
 
         return means, stdevs
@@ -874,7 +874,7 @@ class ModelBase(ABC):
         for feature in self.one_hot_feature_names:
             mean = self.get_mean(feature)
             stdev = self.get_stdev(feature)
-            if mean != 0 and stdev != 1:
+            if mean != 0 or stdev != 1:
                 norm_params = {feature: {'mean': 0, 'stdev': 1}}
                 self._norm_params.update(norm_params)
 
