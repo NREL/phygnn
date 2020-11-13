@@ -5,6 +5,7 @@ Tests for basic phygnn model interface functionality and execution.
 import os
 import numpy as np
 import pandas as pd
+import pytest
 import tensorflow as tf
 from tensorflow.keras.layers import (InputLayer, Dense, Activation)
 import shutil
@@ -24,10 +25,10 @@ B = np.expand_dims(B.flatten(), axis=1)
 
 Y = np.sqrt(A ** 2 + B ** 2)
 X = np.hstack((A, B))
-features = pd.DataFrame(X, columns=['a', 'b'])
+FEATURES = pd.DataFrame(X, columns=['a', 'b'])
 P = X.copy()
 Y_NOISE = Y * (1 + (np.random.random(Y.shape) - 0.5) * 0.5) + 0.1
-labels = pd.DataFrame(Y_NOISE, columns=['c'])
+LABELS = pd.DataFrame(Y_NOISE, columns=['c'])
 
 
 HIDDEN_LAYERS = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
@@ -49,7 +50,7 @@ def p_fun_pythag(model, y_predicted, y_true, p):
         Supplemental physical feature data that can be used to calculate a
         y_physical value to compare against y_predicted. The rows in this
         array have been carried through the batching process alongside y_true
-        and the features used to create y_predicted and so can be used 1-to-1
+        and the FEATURES used to create y_predicted and so can be used 1-to-1
         with the rows in y_predicted and y_true.
 
     Returns
@@ -70,7 +71,7 @@ def p_fun_pythag(model, y_predicted, y_true, p):
 def test_nn():
     """Test the basic NN operation of the PGNN without weighting pfun."""
     PhysicsGuidedNeuralNetwork.seed(0)
-    model = PhygnnModel.build_trained(p_fun_pythag, features, labels, P,
+    model = PhygnnModel.build_trained(p_fun_pythag, FEATURES, LABELS, P,
                                       hidden_layers=HIDDEN_LAYERS,
                                       loss_weights=(1.0, 0.0),
                                       n_batch=4,
@@ -89,7 +90,7 @@ def test_nn():
 def test_phygnn_model():
     """Test the operation of the PGNN with weighting pfun."""
     PhysicsGuidedNeuralNetwork.seed(0)
-    model = PhygnnModel.build_trained(p_fun_pythag, features, labels, P,
+    model = PhygnnModel.build_trained(p_fun_pythag, FEATURES, LABELS, P,
                                       hidden_layers=HIDDEN_LAYERS,
                                       loss_weights=(0.0, 1.0),
                                       n_batch=4,
@@ -114,7 +115,7 @@ def test_phygnn_model():
 def test_normalize():
     """Test the operation of the PGNN with weighting pfun."""
     PhysicsGuidedNeuralNetwork.seed(0)
-    model = PhygnnModel.build_trained(p_fun_pythag, features, labels, P,
+    model = PhygnnModel.build_trained(p_fun_pythag, FEATURES, LABELS, P,
                                       normalize=False,
                                       hidden_layers=HIDDEN_LAYERS,
                                       loss_weights=(0.0, 1.0),
@@ -131,7 +132,7 @@ def test_normalize():
 def test_save_load():
     """Test the save/load operations of PhygnnModel"""
     PhysicsGuidedNeuralNetwork.seed(0)
-    model = PhygnnModel.build_trained(p_fun_pythag, features, labels, P,
+    model = PhygnnModel.build_trained(p_fun_pythag, FEATURES, LABELS, P,
                                       normalize=False,
                                       hidden_layers=HIDDEN_LAYERS,
                                       loss_weights=(0.0, 1.0),
@@ -146,3 +147,86 @@ def test_save_load():
     assert loaded.feature_names == ['a', 'b']
     assert loaded.label_names == ['c']
     shutil.rmtree(os.path.dirname(FPATH))
+
+
+def test_OHE():
+    """
+    Test one-hot encoding
+    """
+    ohe_features = FEATURES.copy()
+    categories = list('def')
+    ohe_features['categorical'] = np.random.choice(categories, len(FEATURES))
+    one_hot_categories = {'categorical': categories}
+    x = ohe_features.values
+
+    PhysicsGuidedNeuralNetwork.seed(0)
+    model = PhygnnModel.build_trained(p_fun_pythag, ohe_features, LABELS, P,
+                                      one_hot_categories=one_hot_categories,
+                                      hidden_layers=HIDDEN_LAYERS,
+                                      loss_weights=(0.0, 1.0),
+                                      n_batch=4,
+                                      n_epoch=20)
+
+    assert all(np.isin(categories, model.feature_names))
+    assert not any(np.isin(categories, model.input_feature_names))
+    assert 'categorical' not in model.feature_names
+    assert 'categorical' in model.input_feature_names
+
+    out = model.predict(x)
+    assert 'c' in out
+
+
+def test_bad_categories():
+    """
+    Test one-hot encoding
+    """
+    one_hot_categories = {'categorical': list('abc')}
+    feature_names = FEATURES.columns.tolist() + ['categorical']
+    label_names = 'c'
+    with pytest.raises(RuntimeError):
+        PhygnnModel.build(p_fun_pythag, feature_names, label_names,
+                          one_hot_categories=one_hot_categories,
+                          hidden_layers=HIDDEN_LAYERS,
+                          loss_weights=(0.0, 1.0))
+
+    one_hot_categories = {'categorical': list('cdf')}
+    feature_names = FEATURES.columns.tolist() + ['categorical']
+    label_names = 'c'
+    with pytest.raises(RuntimeError):
+        PhygnnModel.build(p_fun_pythag, feature_names, label_names,
+                          one_hot_categories=one_hot_categories,
+                          hidden_layers=HIDDEN_LAYERS,
+                          loss_weights=(0.0, 1.0))
+
+    one_hot_categories = {'categorical': list('def')}
+    feature_names = FEATURES.columns.tolist() + ['categories']
+    label_names = 'c'
+    with pytest.raises(RuntimeError):
+        PhygnnModel.build(p_fun_pythag, feature_names, label_names,
+                          one_hot_categories=one_hot_categories,
+                          hidden_layers=HIDDEN_LAYERS,
+                          loss_weights=(0.0, 1.0))
+
+    one_hot_categories = {'cat1': list('def'), 'cat2': list('fgh')}
+    feature_names = FEATURES.columns.tolist() + ['cat1', 'cat2']
+    label_names = 'c'
+    with pytest.raises(RuntimeError):
+        PhygnnModel.build(p_fun_pythag, feature_names, label_names,
+                          one_hot_categories=one_hot_categories,
+                          hidden_layers=HIDDEN_LAYERS,
+                          loss_weights=(0.0, 1.0))
+
+    ohe_features = FEATURES.copy()
+    categories = list('def')
+    ohe_features['categorical'] = np.random.choice(categories, len(FEATURES))
+    one_hot_categories = {'categorical': categories}
+    x = ohe_features.values[:, 1:]
+    PhysicsGuidedNeuralNetwork.seed(0)
+    model = PhygnnModel.build_trained(p_fun_pythag, ohe_features, LABELS, P,
+                                      one_hot_categories=one_hot_categories,
+                                      hidden_layers=HIDDEN_LAYERS,
+                                      loss_weights=(0.0, 1.0),
+                                      n_batch=4,
+                                      n_epoch=20)
+    with pytest.raises(RuntimeError):
+        model.predict(x)

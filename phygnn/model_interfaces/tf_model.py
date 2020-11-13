@@ -14,6 +14,7 @@ from warnings import warn
 
 from phygnn.model_interfaces.base_model import ModelBase
 from phygnn.utilities.tf_layers import Layers
+from phygnn.utilities.pre_processing import PreProcess
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,8 @@ class TfModel(ModelBase):
     TensorFlow Keras Model interface
     """
     def __init__(self, model, feature_names=None, label_names=None,
-                 norm_params=None, normalize=(True, False)):
+                 norm_params=None, normalize=(True, False),
+                 one_hot_categories=None):
         """
         Parameters
         ----------
@@ -43,10 +45,14 @@ class TfModel(ModelBase):
             - False means don't normalize either
             - Tuple of flags (normalize_feature, normalize_label)
             by default True
+        one_hot_categories : dict, optional
+            Features to one-hot encode using given categories, if None do
+            not run one-hot encoding, by default None
         """
         super().__init__(model, feature_names=feature_names,
                          label_names=label_names, norm_params=norm_params,
-                         normalize=normalize)
+                         normalize=normalize,
+                         one_hot_categories=one_hot_categories)
 
         self._history = None
 
@@ -410,7 +416,8 @@ class TfModel(ModelBase):
                         'label_names': self.label_names,
                         'norm_params': self.normalization_parameters,
                         'normalize': (self.normalize_features,
-                                      self.normalize_labels)}
+                                      self.normalize_labels),
+                        'one_hot_categories': self.one_hot_categories}
 
         json_path = path.rstrip('/') + '.json'
         model_params = self.dict_json_convert(model_params)
@@ -419,7 +426,7 @@ class TfModel(ModelBase):
 
     @classmethod
     def build(cls, feature_names, label_names, normalize=(True, False),
-              hidden_layers=None, learning_rate=0.001,
+              one_hot_categories=None, hidden_layers=None, learning_rate=0.001,
               loss="mean_squared_error", metrics=('mae', 'mse'),
               optimizer_class=Adam, **kwargs):
         """
@@ -439,6 +446,9 @@ class TfModel(ModelBase):
             - False means don't normalize either
             - Tuple of flags (normalize_feature, normalize_label)
             by default True
+        one_hot_categories : dict, optional
+            Features to one-hot encode using given categories, if None do
+            not run one-hot encoding, by default None
         hidden_layers : list, optional
             List of tensorflow layers.Dense kwargs (dictionaries)
             if None use a single linear layer, by default None
@@ -464,6 +474,13 @@ class TfModel(ModelBase):
         if isinstance(label_names, str):
             label_names = [label_names]
 
+        if one_hot_categories is not None:
+            check_names = feature_names + label_names
+            PreProcess.check_one_hot_categories(one_hot_categories,
+                                                feature_names=check_names)
+            feature_names = cls.make_one_hot_feature_names(feature_names,
+                                                           one_hot_categories)
+
         model = cls.compile_model(len(feature_names),
                                   n_labels=len(label_names),
                                   hidden_layers=hidden_layers,
@@ -473,17 +490,18 @@ class TfModel(ModelBase):
                                   **kwargs)
 
         model = cls(model, feature_names=feature_names,
-                    label_names=label_names, normalize=normalize)
+                    label_names=label_names, normalize=normalize,
+                    one_hot_categories=one_hot_categories)
 
         return model
 
     @classmethod
     def build_trained(cls, features, labels, normalize=(True, False),
-                      hidden_layers=None, learning_rate=0.001,
-                      loss="mean_squared_error", metrics=('mae', 'mse'),
-                      optimizer_class=Adam, epochs=100, validation_split=0.2,
-                      early_stop=True, save_path=None, compile_kwargs=None,
-                      parse_kwargs=None, fit_kwargs=None):
+                      one_hot_categories=None, hidden_layers=None,
+                      learning_rate=0.001, loss="mean_squared_error",
+                      metrics=('mae', 'mse'), optimizer_class=Adam, epochs=100,
+                      validation_split=0.2, early_stop=True, save_path=None,
+                      compile_kwargs=None, parse_kwargs=None, fit_kwargs=None):
         """
         Build tensorflow sequential model from given features, layers and
         kwargs and then train with given label and kwargs
@@ -501,6 +519,9 @@ class TfModel(ModelBase):
             - False means don't normalize either
             - Tuple of flags (normalize_feature, normalize_label)
             by default True
+        one_hot_categories : dict, optional
+            Features to one-hot encode using given categories, if None do
+            not run one-hot encoding, by default None
         hidden_layers : list, optional
             List of tensorflow layers.Dense kwargs (dictionaries)
             if None use a single linear layer, by default None
@@ -546,6 +567,7 @@ class TfModel(ModelBase):
 
         model = cls.build(feature_names, label_names,
                           normalize=normalize,
+                          one_hot_categories=one_hot_categories,
                           hidden_layers=hidden_layers,
                           learning_rate=learning_rate,
                           loss=loss,

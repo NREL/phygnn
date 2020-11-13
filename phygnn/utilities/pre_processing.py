@@ -2,9 +2,9 @@
 """
 Data pre-processing module.
 """
-import pandas as pd
-import numpy as np
 import logging
+import numpy as np
+import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
 from warnings import warn
 
@@ -152,6 +152,50 @@ class PreProcess:
             one_hot = True
 
         return one_hot
+
+    @staticmethod
+    def check_one_hot_categories(one_hot_categories, feature_names=None):
+        """
+        Check one hot features and categories for duplicate names and against
+        feature names if provided
+
+        Parameters
+        ----------
+        one_hot_categories : dict, optional
+            Features to one-hot encode using given categories
+        feature_names : [type], optional
+            Feature names, by default None
+        """
+        one_hot_features_names = [i for l in one_hot_categories.values()
+                                  for i in l]
+        names, feature_counts = np.unique(one_hot_features_names,
+                                          return_counts=True)
+        if any(feature_counts > 1):
+            msg = ('one-hot category names have to be unique accross all '
+                   'features. The following category names were duplicated:'
+                   '\n{}'.format(names[feature_counts > 1]))
+            logger.error(msg)
+            raise RuntimeError(msg)
+
+        if feature_names is not None:
+            one_hot_features = np.array(list(one_hot_categories))
+            check = np.isin(one_hot_features, feature_names)
+            if not all(check):
+                bad_names = one_hot_features[~check]
+                msg = ('The following one-hot features do not have valid '
+                       'names!\n{}\nMust be one of the available feature '
+                       'names:\n{}'.format(bad_names, feature_names))
+                logger.error(msg)
+                raise RuntimeError(msg)
+
+            final_names = list(set(feature_names) - set(one_hot_categories))
+            check = np.isin(one_hot_features_names, final_names)
+            if any(check):
+                msg = ('The following category names: {} conflict with '
+                       'existing feature names'
+                       .format(np.array(one_hot_features_names)[check]))
+                logger.error(msg)
+                raise RuntimeError(msg)
 
     def _get_one_hot_data(self, convert_int=False, categories=None):
         """Get one hot data and column indexes.
@@ -329,6 +373,9 @@ class PreProcess:
 
         else:
             if self._pd:
+                self.check_one_hot_categories(
+                    categories,
+                    feature_names=self._features.columns.tolist())
                 num_df = self._features.iloc[:, numerical_ind]
                 col_labels = self._make_df_one_hot_cols_labels(one_hot_ind,
                                                                one_hot_data,
