@@ -48,14 +48,14 @@ class ModelBase(ABC):
 
         if isinstance(feature_names, str):
             feature_names = [feature_names]
-        elif isinstance(feature_names, np.ndarray):
+        elif isinstance(feature_names, (np.ndarray, pd.Index)):
             feature_names = feature_names.tolist()
 
         self._feature_names = feature_names
 
         if isinstance(label_names, str):
             label_names = [label_names]
-        elif isinstance(label_names, np.ndarray):
+        elif isinstance(label_names, (np.ndarray, pd.Index)):
             label_names = label_names.tolist()
 
         self._label_names = label_names
@@ -323,7 +323,7 @@ class ModelBase(ABC):
         ------
         list
         """
-        return list(self._one_hot_categories.keys())
+        return list(self.one_hot_categories.keys())
 
     @property
     def one_hot_feature_names(self):
@@ -334,7 +334,7 @@ class ModelBase(ABC):
         ------
         list
         """
-        return [i for l in self._one_hot_categories.values() for i in l]
+        return [i for l in self.one_hot_categories.values() for i in l]
 
     @property
     def one_hot_categories(self):
@@ -345,7 +345,10 @@ class ModelBase(ABC):
         -------
         dict
         """
-        return self._one_hot_categories
+        if self._one_hot_categories is None:
+            return {}
+        else:
+            return self._one_hot_categories
 
     @staticmethod
     def _parse_normalize(normalize):
@@ -448,7 +451,7 @@ class ModelBase(ABC):
             List of data item names
         """
         if isinstance(data, pd.DataFrame):
-            names = data.columns.values.tolist()
+            names = data.columns.tolist()
             data = data.values
         elif isinstance(data, dict):
             names = list(data.keys())
@@ -598,49 +601,25 @@ class ModelBase(ABC):
         """
         norm_items = {}
         for key, value in items.items():
-            mean = self.get_mean(key)
-            stdev = self.get_stdev(key)
-            update = mean is None or stdev is None
-            try:
-                value, mean, stdev = PreProcess.normalize(value, mean=mean,
-                                                          stdev=stdev)
-                if update:
-                    norm_params = {key: {'mean': mean, 'stdev': stdev}}
-                    self._norm_params.update(norm_params)
-            except Exception as ex:
-                msg = "Could not normalize {}:\n{}".format(key, ex)
-                logger.warning(msg)
-                warn(msg)
+            if key not in self.one_hot_feature_names:
+                mean = self.get_mean(key)
+                stdev = self.get_stdev(key)
+                update = mean is None or stdev is None
+                try:
+                    value, mean, stdev = PreProcess.normalize(value,
+                                                              mean=mean,
+                                                              stdev=stdev)
+                    if update:
+                        norm_params = {key: {'mean': mean, 'stdev': stdev}}
+                        self._norm_params.update(norm_params)
+                except Exception as ex:
+                    msg = "Could not normalize {}:\n{}".format(key, ex)
+                    logger.warning(msg)
+                    warn(msg)
 
             norm_items[key] = value
 
         return norm_items
-
-    def _normalize_df(self, df):
-        """
-        Normalize DataFrame
-
-        Parameters
-        ----------
-        df : pandas.DataFrame
-            DataFrame of features/label to normalize
-
-        Returns
-        -------
-        norm_df : pandas.DataFrame
-            Normalized features/label
-        """
-        means, stdevs = self.get_norm_params(df.columns)
-        update = means is None or stdevs is None
-
-        norm_df, means, stdevs = PreProcess.normalize(df, mean=means,
-                                                      stdev=stdevs)
-        if update:
-            for i, c in enumerate(df.columns):
-                norm_params = {c: {'mean': means[i], 'stdev': stdevs[i]}}
-                self._norm_params.update(norm_params)
-
-        return norm_df
 
     def _normalize_arr(self, arr, names):
         """
@@ -697,7 +676,12 @@ class ModelBase(ABC):
         if isinstance(data, dict):
             data = self._normalize_dict(data)
         elif isinstance(data, pd.DataFrame):
-            data = self._normalize_df(data)
+            if self.one_hot_feature_names:
+                cols = [c for c in data if c not in self.one_hot_feature_names]
+                data.loc[:, cols] = self._normalize_arr(
+                    data.loc[:, cols].values, cols)
+            else:
+                data.loc[:] = self._normalize_arr(data.values, data.columns)
         elif isinstance(data, (list, np.ndarray)):
             if names is None:
                 msg = ('Names of items must be supplied to nomralize data '
@@ -705,7 +689,14 @@ class ModelBase(ABC):
                 logger.error(msg)
                 raise RuntimeError(msg)
             else:
-                data = self._normalize_arr(data, names)
+                if self.one_hot_feature_names:
+                    idx = [i for i, f in enumerate(names)
+                           if f not in self.one_hot_feature_names]
+                    norm_names = np.array(names)[idx]
+                    data[:, idx] = self._normalize_arr(data[:, idx],
+                                                       norm_names)
+                else:
+                    data = self._normalize_arr(data, names)
         else:
             msg = "Cannot normalize data of type: {}".format(type(data))
             logger.error(msg)
@@ -861,23 +852,6 @@ class ModelBase(ABC):
                                                 feature_names=check_names)
             self._feature_names = one_hot_feature_names
 
-    def _check_one_hot_norm_params(self):
-        """
-        Check one hot feature normalization parameters to ensure they are
-        {mean: 0, stdev: 1} to prevent normalization
-
-        Parameters
-        ----------
-        one_hot_features : list
-            list of one hot features
-        """
-        for feature in self.one_hot_feature_names:
-            mean = self.get_mean(feature)
-            stdev = self.get_stdev(feature)
-            if mean != 0 or stdev != 1:
-                norm_params = {feature: {'mean': 0, 'stdev': 1}}
-                self._norm_params.update(norm_params)
-
     def _parse_features(self, features, names=None, **kwargs):
         """
         Parse features
@@ -915,7 +889,6 @@ class ModelBase(ABC):
             kwargs.update({'return_ind': True,
                            'categories': self.one_hot_categories})
             features, _ = PreProcess.one_hot(features, **kwargs)
-            self._check_one_hot_norm_params()
         elif self.feature_names != feature_names:
             msg = ('Expecting features with names: {}, but was provided with: '
                    '{}!'.format(feature_names, self.feature_names))
