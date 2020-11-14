@@ -844,7 +844,7 @@ class ModelBase(ABC):
         one_hot_feature_names = self.make_one_hot_feature_names(
             feature_names, self.one_hot_categories)
         if one_hot_feature_names != self.feature_names:
-            check_names = feature_names
+            check_names = feature_names.copy()
             if self.label_names is not None:
                 check_names += self.label_names
 
@@ -886,9 +886,9 @@ class ModelBase(ABC):
                  and all(np.isin(feature_names, self.input_feature_names)))
         if check:
             self._check_one_hot_feature_names(feature_names)
-            kwargs.update({'return_ind': True,
+            kwargs.update({'feature_names': feature_names,
                            'categories': self.one_hot_categories})
-            features, _ = PreProcess.one_hot(features, **kwargs)
+            features = PreProcess.one_hot(features, **kwargs)
         elif self.feature_names != feature_names:
             msg = ('Expecting features with names: {}, but was provided with: '
                    '{}!'.format(feature_names, self.feature_names))

@@ -75,12 +75,15 @@ def test_OHE():
                       label_names=LABELS.columns, normalize=True,
                       one_hot_categories=one_hot_categories)
 
-    baseline, means, stdevs = PreProcess.normalize(FEATURES.values)
+    baseline, means, stdevs = \
+        PreProcess.normalize(FEATURES.values.astype('float32'))
     test = model._parse_features(ohe_features)
 
     assert np.allclose(baseline, test[:, :2])
-    assert np.allclose(means, np.array(model.feature_means)[:2])
-    assert np.allclose(stdevs, np.array(model.feature_stdevs)[:2])
+    assert np.allclose(means,
+                       np.array(model.feature_means, dtype='float32')[:2])
+    assert np.allclose(stdevs,
+                       np.array(model.feature_stdevs, dtype='float32')[:2])
     for c in categories:
         assert model.get_mean(c) is None
         assert model.get_stdev(c) is None
