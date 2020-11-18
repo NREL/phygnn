@@ -149,7 +149,7 @@ def test_OHE():
 
 def test_bad_categories():
     """
-    Test one-hot encoding
+    Test OHE checks
     """
     hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
                      {'units': 64, 'activation': 'relu', 'name': 'relu2'}]

@@ -14,22 +14,37 @@ logger = logging.getLogger(__name__)
 class PreProcess:
     """Class to handle the pre-processing of feature data."""
 
-    def __init__(self, features):
+    def __init__(self, features, feature_names=None):
         """
         Parameters
         ----------
         features : np.ndarray | pd.DataFrame
             Feature data in a 2D array or DataFrame.
+        feature_names : str, optional
+            Feature names, used if features is an ndarray, by default None
         """
 
         self._features = features
         self._pd = False
         if isinstance(self._features, pd.DataFrame):
             self._pd = True
-
-        if self._pd:
+            self._feature_names = self._features.columns.tolist()
             if not features.index.is_unique:
-                raise AttributeError('DataFrame indices must be unique')
+                msg = 'DataFrame indices must be unique'
+                logger.error(msg)
+                raise AttributeError(msg)
+        else:
+            self._pd = False
+            check = (feature_names is not None
+                     and len(set(feature_names)) != features.shape[1])
+            if check:
+                msg = ('The number of feature names ({}) does not match the '
+                       'number of features ({})!'
+                       .format(len(set(feature_names)), features.shape[1]))
+                logger.error(msg)
+                raise ValueError(msg)
+
+            self._feature_names = feature_names
 
     @staticmethod
     def _check_stdev(stdev):
@@ -237,10 +252,7 @@ class PreProcess:
         numerical_ind = []
 
         for i in range(self._features.shape[1]):
-            if self._pd:
-                col_name = self._features.columns[i]
-            else:
-                col_name = None
+            name = self._feature_names[i] if self._feature_names else None
 
             n = len(self._features)
             if self._pd:
@@ -251,13 +263,13 @@ class PreProcess:
             if not self._is_one_hot(col, convert_int=convert_int):
                 numerical_ind.append(i)
             else:
-                logger.debug('One hot encoding {}'.format(col_name))
+                logger.debug('One hot encoding {}'.format(name))
                 one_hot_ind.append(i)
 
-                if col_name in categories:
-                    cats = [categories[col_name]]
+                if name in categories:
+                    cats = [categories[name]]
                     logger.debug('Using categories {} for column {}'
-                                 ''.format(cats, col_name))
+                                 ''.format(cats, name))
                     oh_obj = OneHotEncoder(sparse=False, categories=cats)
                 else:
                     oh_obj = OneHotEncoder(sparse=False)
@@ -364,18 +376,17 @@ class PreProcess:
 
         if categories is None:
             categories = {}
+        else:
+            self.check_one_hot_categories(categories,
+                                          feature_names=self._feature_names)
 
         one_hot_ind, one_hot_data, numerical_ind = self._get_one_hot_data(
             convert_int=convert_int, categories=categories)
 
         if not one_hot_ind:
             processed = self._features
-
         else:
             if self._pd:
-                self.check_one_hot_categories(
-                    categories,
-                    feature_names=self._features.columns.tolist())
                 num_df = self._features.iloc[:, numerical_ind]
                 col_labels = self._make_df_one_hot_cols_labels(one_hot_ind,
                                                                one_hot_data,
@@ -400,8 +411,8 @@ class PreProcess:
             return processed
 
     @classmethod
-    def one_hot(cls, features, convert_int=False, categories=None,
-                return_ind=False):
+    def one_hot(cls, features, feature_names=None, convert_int=False,
+                categories=None, return_ind=False):
         """
         Process str and int columns in the feature data to one-hot vectors.
 
@@ -409,6 +420,8 @@ class PreProcess:
         ----------
         features : np.ndarray | pd.DataFrame
             Feature data in a 2D array or DataFrame.
+        feature_names : str, optional
+            Feature names, used if features is an ndarray, by default None
         convert_int : bool, optional
             Flag to convert integer data to one-hot vectors, by default False
         categories : dict | None, optional
@@ -438,7 +451,7 @@ class PreProcess:
         """
         logger.debug('Checking for one-hot items and converting them '
                      'to binary values')
-        pp = cls(features)
+        pp = cls(features, feature_names=feature_names)
         out = pp.process_one_hot(convert_int=convert_int,
                                  categories=categories,
                                  return_ind=return_ind)

@@ -76,7 +76,7 @@ def test_OHE():
 
 def test_bad_categories():
     """
-    Test one-hot encoding
+    Test OHE checks
     """
     ohe_features = FEATURES.copy()
     categories = list('abc')

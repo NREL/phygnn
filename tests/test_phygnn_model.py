@@ -72,6 +72,7 @@ def test_nn():
     """Test the basic NN operation of the PGNN without weighting pfun."""
     PhysicsGuidedNeuralNetwork.seed(0)
     model = PhygnnModel.build_trained(p_fun_pythag, FEATURES, LABELS, P,
+                                      normalize=False,
                                       hidden_layers=HIDDEN_LAYERS,
                                       loss_weights=(1.0, 0.0),
                                       n_batch=4,
@@ -91,6 +92,7 @@ def test_phygnn_model():
     """Test the operation of the PGNN with weighting pfun."""
     PhysicsGuidedNeuralNetwork.seed(0)
     model = PhygnnModel.build_trained(p_fun_pythag, FEATURES, LABELS, P,
+                                      normalize=False,
                                       hidden_layers=HIDDEN_LAYERS,
                                       loss_weights=(0.0, 1.0),
                                       n_batch=4,
@@ -178,7 +180,7 @@ def test_OHE():
 
 def test_bad_categories():
     """
-    Test one-hot encoding
+    Test OHE checks
     """
     one_hot_categories = {'categorical': list('abc')}
     feature_names = FEATURES.columns.tolist() + ['categorical']
