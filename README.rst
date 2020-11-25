@@ -23,7 +23,10 @@ phygnn
 .. image:: https://anaconda.org/nrel/nrel-phygnn/badges/license.svg
     :target: https://anaconda.org/nrel/nrel-phygnn
 
-**phygnn** (fi-geon | \ ˈfi-jən) noun. 
+.. image:: https://codecov.io/gh/nrel/phygnn/branch/master/graph/badge.svg?token=ZJFQWAAM1N
+    :target: https://codecov.io/gh/nrel/phygnn
+
+**phygnn** (fi-geon | \ ˈfi-jən) noun.
 
     1. a physics-guided neural network
     2. a rare and mythical bird
@@ -79,7 +82,7 @@ Simple Install
 1. Use conda (anaconda or miniconda with python 3.7 or 3.8) to create a phygnn environment: ``conda create --name phygnn python=3.7``
 
     i. Note that phygnn is tested with python 3.7 and 3.8 via pip install. Users have reported issues installing phygnn on python 3.8 using conda install.
-    
+
 2. Activate your new conda env: ``conda activate phygnn``
 3. Install with pip or conda:
 
