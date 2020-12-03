@@ -891,7 +891,7 @@ class ModelBase(ABC):
             features = PreProcess.one_hot(features, **kwargs)
         elif self.feature_names != feature_names:
             msg = ('Expecting features with names: {}, but was provided with: '
-                   '{}!'.format(feature_names, self.feature_names))
+                   '{}!'.format(self.feature_names, feature_names))
             logger.error(msg)
             raise RuntimeError(msg)
 
