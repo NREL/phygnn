@@ -94,11 +94,12 @@ class PhysicsGuidedNeuralNetwork:
             loss function). Must be a valid key in phygnn.loss_metrics.METRICS
         initializer : tensorflow.keras.initializers, optional
             Instantiated initializer object. None defaults to GlorotUniform
-        optimizer : tensorflow.keras.optimizers, optional
-            Instantiated neural network optimization object.
-            None defaults to Adam.
+        optimizer : tensorflow.keras.optimizers | dict | None
+            Instantiated tf.keras.optimizers object or a dict optimizer config
+            from tf.keras.optimizers.get_config(). None defaults to Adam.
         learning_rate : float, optional
-            Optimizer learning rate.
+            Optimizer learning rate. Not used if optimizer input arg is a
+            pre-initialized object or if optimizer input arg is a config dict.
         history : None | pd.DataFrame, optional
             Learning history if continuing a training session.
         kernel_reg_rate : float, optional
@@ -165,7 +166,11 @@ class PhysicsGuidedNeuralNetwork:
             self._initializer = initializers.GlorotUniform()
 
         self._optimizer = optimizer
-        if optimizer is None:
+        if isinstance(optimizer, dict):
+            class_name = optimizer['name']
+            OptimizerClass = getattr(optimizers, class_name)
+            self._optimizer = OptimizerClass.from_config(optimizer)
+        elif optimizer is None:
             self._optimizer = optimizers.Adam(learning_rate=learning_rate)
 
     @property
@@ -277,7 +282,7 @@ class PhysicsGuidedNeuralNetwork:
                         'n_features': self._input_dims,
                         'n_labels': self._output_dims,
                         'initializer': self._initializer,
-                        'optimizer': self._optimizer,
+                        'optimizer': self._optimizer.get_config(),
                         'learning_rate': self._learning_rate,
                         'weight_dict': weight_dict,
                         'history': self.history,

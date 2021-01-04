@@ -7,6 +7,7 @@ import pytest
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
                                      BatchNormalization)
 from phygnn import PhysicsGuidedNeuralNetwork, p_fun_dummy, TESTDATADIR
@@ -239,6 +240,9 @@ def test_save_load():
     assert np.allclose(y_pred, y_pred_loaded)
     assert loaded.feature_names == ['a', 'b']
     assert loaded.output_names == ['c']
+    assert isinstance(model._optimizer, Adam)
+    assert isinstance(loaded._optimizer, Adam)
+    assert model._optimizer.get_config() == loaded._optimizer.get_config()
     os.remove(FPATH)
 
 
