@@ -282,11 +282,12 @@ class PhygnnModel(ModelBase):
             loss function). Must be a valid key in phygnn.loss_metrics.METRICS
         initializer : tensorflow.keras.initializers, optional
             Instantiated initializer object. None defaults to GlorotUniform
-        optimizer : tensorflow.keras.optimizers, optional
-            Instantiated neural network optimization object.
-            None defaults to Adam.
+        optimizer : tensorflow.keras.optimizers | dict | None
+            Instantiated tf.keras.optimizers object or a dict optimizer config
+            from tf.keras.optimizers.get_config(). None defaults to Adam.
         learning_rate : float, optional
-            Optimizer learning rate.
+            Optimizer learning rate. Not used if optimizer input arg is a
+            pre-initialized object or if optimizer input arg is a config dict.
         history : None | pd.DataFrame, optional
             Learning history if continuing a training session.
         kernel_reg_rate : float, optional
@@ -416,11 +417,12 @@ class PhygnnModel(ModelBase):
             loss function). Must be a valid key in phygnn.loss_metrics.METRICS
         initializer : tensorflow.keras.initializers, optional
             Instantiated initializer object. None defaults to GlorotUniform
-        optimizer : tensorflow.keras.optimizers, optional
-            Instantiated neural network optimization object.
-            None defaults to Adam.
+        optimizer : tensorflow.keras.optimizers | dict | None
+            Instantiated tf.keras.optimizers object or a dict optimizer config
+            from tf.keras.optimizers.get_config(). None defaults to Adam.
         learning_rate : float, optional
-            Optimizer learning rate.
+            Optimizer learning rate. Not used if optimizer input arg is a
+            pre-initialized object or if optimizer input arg is a config dict.
         history : None | pd.DataFrame, optional
             Learning history if continuing a training session.
         kernel_reg_rate : float, optional
