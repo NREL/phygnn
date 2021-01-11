@@ -105,7 +105,7 @@ Developer Install
     
     
 Acknowledgements
-----------------
+================
 This work was authored by the National Renewable Energy Laboratory, operated by Alliance for Sustainable Energy,
 LLC, for the U.S. Department of Energy (DOE) under Contract No. DE-AC36-08GO28308. This material is based upon
 work supported by the U.S. Department of Energy’s Office of Energy Efficiency and Renewable Energy (EERE) under
