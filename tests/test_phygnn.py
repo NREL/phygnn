@@ -282,31 +282,52 @@ def test_bad_pfun():
 
 def test_dropouts():
     """Test the dropout rate kwargs for adding dropout layers."""
-    HIDDEN_LAYERS = [
+    hidden_layers_1 = [
+        {'units': 64}, {'activation': 'relu'},
+        {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
+    hidden_layers_2 = [
         {'units': 64}, {'activation': 'relu'}, {'dropout': 0.1},
         {'units': 64, 'activation': 'relu', 'name': 'relu2', 'dropout': 0.1}]
-    model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
-                                       hidden_layers=HIDDEN_LAYERS,
-                                       loss_weights=(0.0, 1.0),
-                                       n_features=2, n_labels=1)
+    PhysicsGuidedNeuralNetwork.seed()
+    model_1 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                         hidden_layers=hidden_layers_1,
+                                         loss_weights=(0.0, 1.0),
+                                         n_features=2, n_labels=1)
+    PhysicsGuidedNeuralNetwork.seed()
+    model_2 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                         hidden_layers=hidden_layers_2,
+                                         loss_weights=(0.0, 1.0),
+                                         n_features=2, n_labels=1)
 
-    assert len(model.layers) == 8, "dropout layers did not get added!"
-    assert isinstance(model.layers[0], InputLayer)
-    assert isinstance(model.layers[1], Dense)
-    assert isinstance(model.layers[2], Activation)
-    assert isinstance(model.layers[3], Dropout)
-    assert isinstance(model.layers[4], Dense)
-    assert isinstance(model.layers[5], Activation)
-    assert isinstance(model.layers[6], Dropout)
+    assert len(model_1.layers) == 6
+    assert len(model_2.layers) == 8, "dropout layers did not get added!"
+    assert isinstance(model_2.layers[0], InputLayer)
+    assert isinstance(model_2.layers[1], Dense)
+    assert isinstance(model_2.layers[2], Activation)
+    assert isinstance(model_2.layers[3], Dropout)
+    assert isinstance(model_2.layers[4], Dense)
+    assert isinstance(model_2.layers[5], Activation)
+    assert isinstance(model_2.layers[6], Dropout)
 
-    model.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
-    y_pred = model.predict(X)
+    PhysicsGuidedNeuralNetwork.seed()
+    model_1.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
 
-    model.save(FPATH)
+    PhysicsGuidedNeuralNetwork.seed()
+    model_2.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
+
+    y_pred_1 = model_1.predict(X)
+    y_pred_2 = model_2.predict(X)
+
+    # make sure dropouts dont predict the same as non-dropout
+    diff = np.abs(y_pred_1 - y_pred_2)
+    assert not np.allclose(y_pred_1, y_pred_2)
+    assert np.max(diff) > 0.1
+
+    model_2.save(FPATH)
     loaded = PhysicsGuidedNeuralNetwork.load(FPATH)
     y_pred_loaded = loaded.predict(X)
-    assert np.allclose(y_pred, y_pred_loaded)
-    assert len(model.layers) == len(loaded.layers)
+    assert np.allclose(y_pred_2, y_pred_loaded)
+    assert len(model_2.layers) == len(loaded.layers)
     os.remove(FPATH)
 
 

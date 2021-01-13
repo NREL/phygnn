@@ -10,7 +10,7 @@ import pandas as pd
 import logging
 import tensorflow as tf
 from tensorflow.keras import optimizers, initializers
-from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.layers import BatchNormalization, Dropout
 
 from phygnn.utilities.loss_metrics import METRICS
 from phygnn.utilities.tf_layers import Layers
@@ -769,7 +769,7 @@ class PhysicsGuidedNeuralNetwork:
             Flag to convert output from tensor to numpy array
         training : bool
             Flag for predict() used in the training routine. This is used
-            to freeze the BatchNormalization layers.
+            to freeze the BatchNormalization and Dropout layers.
 
         Returns
         -------
@@ -783,7 +783,7 @@ class PhysicsGuidedNeuralNetwork:
         y = self.layers[0](x)
 
         for layer in self.layers[1:]:
-            if isinstance(layer, BatchNormalization):
+            if isinstance(layer, (BatchNormalization, Dropout)):
                 y = layer(y, training=training)
             else:
                 y = layer(y)
