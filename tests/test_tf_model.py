@@ -100,6 +100,30 @@ def test_complex_nn():
     assert test_mae < loss
 
 
+def test_dropout():
+    """Test a model trained with dropout vs. no dropout and make sure the
+    predictions are different."""
+    hidden_layers_1 = [{'units': 64, 'activation': 'relu'},
+                       {'units': 64}, {'activation': 'relu'}]
+    hidden_layers_2 = [{'units': 64, 'activation': 'relu', 'dropout': 0.05},
+                       {'units': 64}, {'activation': 'relu'},
+                       {'dropout': 0.05}]
+    TfModel.seed()
+    model_1 = TfModel.build_trained(FEATURES, LABELS,
+                                    hidden_layers=hidden_layers_1,
+                                    epochs=10, fit_kwargs={"batch_size": 16},
+                                    early_stop=False)
+    TfModel.seed()
+    model_2 = TfModel.build_trained(FEATURES, LABELS,
+                                    hidden_layers=hidden_layers_2,
+                                    epochs=10, fit_kwargs={"batch_size": 16},
+                                    early_stop=False)
+
+    out1 = model_1.history['val_mae'].values[-5:]
+    out2 = model_2.history['val_mae'].values[-5:]
+    assert (out2 > out1).all()
+
+
 def test_save_load():
     """Test the save/load operations of TfModel"""
     hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
