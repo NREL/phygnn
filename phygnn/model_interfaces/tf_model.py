@@ -325,8 +325,9 @@ class TfModel(ModelBase):
 
         return model
 
-    def train_model(self, features, labels, epochs=100, validation_split=0.2,
-                    early_stop=True, parse_kwargs=None, fit_kwargs=None):
+    def train_model(self, features, labels, epochs=100, shuffle=True,
+                    validation_split=0.2, early_stop=True, parse_kwargs=None,
+                    fit_kwargs=None):
         """
         Train the model with the provided features and label
 
@@ -340,6 +341,9 @@ class TfModel(ModelBase):
             Flag to normalize label, by default True
         epochs : int, optional
             Number of epochs to train the model, by default 100
+        shuffle : bool
+            Flag to randomly subset the validation data and batch selection
+            from features and labels.
         validation_split : float, optional
             Fraction of the training data to be used as validation data,
             by default 0.2
@@ -374,6 +378,12 @@ class TfModel(ModelBase):
                 callbacks.append(early_stop)
 
             fit_kwargs['callbacks'] = callbacks
+
+        if shuffle:
+            L = len(features)
+            i = np.random.choice(L, size=L, replace=False)
+            features = features[i]
+            labels = labels[i]
 
         if validation_split > 0:
             split = int(len(features) * validation_split)
@@ -500,8 +510,9 @@ class TfModel(ModelBase):
                       one_hot_categories=None, hidden_layers=None,
                       learning_rate=0.001, loss="mean_squared_error",
                       metrics=('mae', 'mse'), optimizer_class=Adam, epochs=100,
-                      validation_split=0.2, early_stop=True, save_path=None,
-                      compile_kwargs=None, parse_kwargs=None, fit_kwargs=None):
+                      shuffle=True, validation_split=0.2, early_stop=True,
+                      save_path=None, compile_kwargs=None, parse_kwargs=None,
+                      fit_kwargs=None):
         """
         Build tensorflow sequential model from given features, layers and
         kwargs and then train with given label and kwargs
@@ -538,6 +549,9 @@ class TfModel(ModelBase):
             The default is the Adam optimizer
         epochs : int, optional
             Number of epochs to train the model, by default 100
+        shuffle : bool
+            Flag to randomly subset the validation data and batch selection
+            from features and labels.
         validation_split : float, optional
             Fraction of the training data to be used as validation data,
             by default 0.2
@@ -577,6 +591,7 @@ class TfModel(ModelBase):
 
         model.train_model(features, labels,
                           epochs=epochs,
+                          shuffle=shuffle,
                           validation_split=validation_split,
                           early_stop=early_stop,
                           parse_kwargs=parse_kwargs,
