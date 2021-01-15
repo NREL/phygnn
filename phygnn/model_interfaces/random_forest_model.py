@@ -4,6 +4,7 @@ Random Forest Model
 """
 import json
 import logging
+import numpy as np
 import os
 from sklearn.ensemble import RandomForestRegressor
 
@@ -121,7 +122,8 @@ class RandomForestModel(ModelBase):
 
         return label
 
-    def train_model(self, features, label, parse_kwargs=None, fit_kwargs=None):
+    def train_model(self, features, label, shuffle=True, parse_kwargs=None,
+                    fit_kwargs=None):
         """
         Train the model with the provided features and label
 
@@ -131,6 +133,9 @@ class RandomForestModel(ModelBase):
             Input features to train on
         label : dict | pandas.DataFrame
             label to train on
+        shuffle : bool
+            Flag to randomly subset the validation data and batch selection
+            from features and labels.
         parse_kwargs : dict
             kwargs for cls._parse_features
         fit_kwargs : dict
@@ -145,6 +150,12 @@ class RandomForestModel(ModelBase):
 
         if fit_kwargs is None:
             fit_kwargs = {}
+
+        if shuffle:
+            L = len(features)
+            i = np.random.choice(L, size=L, replace=False)
+            features = features[i]
+            label = label[i]
 
         # pylint: disable=no-member
         self._model.fit(features, label.ravel(), **fit_kwargs)
@@ -181,7 +192,7 @@ class RandomForestModel(ModelBase):
 
     @classmethod
     def build_trained(cls, features, label, normalize=True,
-                      one_hot_categories=None, save_path=None,
+                      one_hot_categories=None, shuffle=True, save_path=None,
                       compile_kwargs=None, parse_kwargs=None, fit_kwargs=None):
         """
         Build Random Forest Model with given kwargs and then train with
@@ -203,6 +214,9 @@ class RandomForestModel(ModelBase):
         one_hot_categories : dict, optional
             Features to one-hot encode using given categories, if None do
             not run one-hot encoding, by default None
+        shuffle : bool
+            Flag to randomly subset the validation data and batch selection
+            from features and labels.
         save_path : str
             Directory path to save model to. The RandomForest Model will be
             saved to the directory while the framework parameters will be
@@ -236,8 +250,8 @@ class RandomForestModel(ModelBase):
         model = cls(model, feature_names=feature_names, label_name=label_name,
                     normalize=normalize, one_hot_categories=one_hot_categories)
 
-        model.train_model(features, label, parse_kwargs=parse_kwargs,
-                          fit_kwargs=fit_kwargs)
+        model.train_model(features, label, shuffle=shuffle,
+                          parse_kwargs=parse_kwargs, fit_kwargs=fit_kwargs)
 
         if save_path is not None:
             model.save_model(save_path)
