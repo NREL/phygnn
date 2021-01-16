@@ -55,11 +55,12 @@ class PhysicsGuidedNeuralNetwork:
 
     def __init__(self, p_fun, loss_weights=(0.5, 0.5),
                  n_features=1, n_labels=1, hidden_layers=None,
+                 input_layer=None, output_layer=None,
                  metric='mae', initializer=None, optimizer=None,
                  learning_rate=0.01, history=None,
                  kernel_reg_rate=0.0, kernel_reg_power=1,
                  bias_reg_rate=0.0, bias_reg_power=1,
-                 feature_names=None, output_names=None):
+                 feature_names=None, output_names=None, name=None):
         """
         Parameters
         ----------
@@ -89,6 +90,16 @@ class PhysicsGuidedNeuralNetwork:
                  {'batch_normalization': {'axis': -1}},
                  {'activation': 'relu'},
                  {'dropout': 0.01}]
+        input_layer : None | InputLayer
+            Keras input layer. Will default to an InputLayer with
+            input shape = n_features.
+        output_layer : None | list | dict
+            Output layer specification. Can be a list/dict similar to
+            hidden_layers input specifying a dense layer with activation.
+            For example, for a classfication problem with a single output,
+            output_layer should be {'units': 1, 'activation': 'sigmoid'}
+            This defaults to a single dense layer with no activation
+            (best for regression problems).
         metric : str, optional
             Loss metric option for the NN loss function (not the physical
             loss function). Must be a valid key in phygnn.loss_metrics.METRICS
@@ -132,14 +143,19 @@ class PhysicsGuidedNeuralNetwork:
             loaded-from-disk model will have declared output names, making it
             easier to understand prediction output. This will also get set
             if phygnn is trained on a DataFrame.
+        name : None | str
+            Optional model name for debugging.
         """
+
         self._p_fun = p_fun
         self._loss_weights = None
         self._metric = metric
         self._input_dims = n_features
         self._output_dims = n_labels
         self._layers = Layers(n_features, n_labels=n_labels,
-                              hidden_layers=hidden_layers)
+                              hidden_layers=hidden_layers,
+                              input_layer=input_layer,
+                              output_layer=output_layer)
         self._optimizer = None
         self._history = history
         self._learning_rate = learning_rate
@@ -149,6 +165,7 @@ class PhysicsGuidedNeuralNetwork:
         self.bias_reg_power = bias_reg_power
         self.feature_names = feature_names
         self.output_names = output_names
+        self.name = name if isinstance(name, str) else 'phygnn'
 
         self.set_loss_weights(loss_weights)
 
@@ -742,9 +759,9 @@ class PhysicsGuidedNeuralNetwork:
 
             y_val_pred = self.predict(x_val, to_numpy=False)
             val_loss = self.loss(y_val_pred, y_val, p_val, p_kwargs)[0]
-            logger.info('Epoch {} training loss: {:.2e} '
-                        'validation loss: {:.2e}'
-                        .format(epoch, tr_loss, val_loss))
+            logger.info('Epoch {} train loss: {:.2e} '
+                        'val loss: {:.2e} for "{}"'
+                        .format(epoch, tr_loss, val_loss, self.name))
 
             self._history.at[epoch, 'elapsed_time'] = time.time() - t0
             self._history.at[epoch, 'training_loss'] = tr_loss.numpy()
