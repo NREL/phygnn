@@ -133,13 +133,13 @@ class HiddenLayers:
         """
         weights = []
         for layer in self:
-            if isinstance(layer, Dense):
-                weights += layer.variables
-
             # Include gamma and beta weights for BatchNormalization
             # but do not include moving mean/stdev
-            elif isinstance(layer, BatchNormalization):
+            if isinstance(layer, BatchNormalization):
                 weights += layer.variables[:2]
+
+            elif layer.trainable:
+                weights += layer.trainable_weights
 
         return weights
 
