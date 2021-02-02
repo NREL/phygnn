@@ -42,7 +42,11 @@ applications, such as when machine learning models produce physically
 inconsistent results or have trouble generalizing to out-of-sample scenarios.
 
 For details on the phygnn class framework see `the phygnn module documentation
-here. <https://nrel.github.io/phygnn/phygnn/phygnn.phygnn.html>`_
+here. <https://nrel.github.io/phygnn/phygnn/phygnn.phygnn.html>`_ 
+
+For example notebooks using the phygnn architecture for regression, 
+classification, and even GAN applications, see `the example notebooks here.
+<https://github.com/NREL/phygnn/tree/master/examples>`_
 
 At the National Renewable Energy Lab (NREL), we are using the phygnn framework
 to supplement traditional satellite-based cloud property prediction models. We
@@ -71,6 +75,9 @@ helped inspire this work:
     * Anuj Karpatne, Gowtham Atluri, James H Faghmous, Michael Steinbach, Arindam Banerjee, Auroop Ganguly, Shashi Shekhar, Nagiza Samatova, and Vipin Kumar. 2017. Theory-guided data science: A new paradigm for scientific discovery from data. IEEE Transactions on knowledge and data engineering 29, 10 (2017), 2318–2331.
     * Justin Sirignano, Jonathan F. MacArt, Jonathan B. Freund, "DPM: A deep learning PDE augmentation method with application to large-eddy simulation". Journal of Computational Physics, Volume 423, 2020, ISSN 0021-9991, https://doi.org/10.1016/j.jcp.2020.109811.
 
+Suggested citation if you use the phygnn architecture:
+
+    * Buster G, Rossol M, Bannister M, and Hettinger D, “physics-guided neural networks (phygnn).” GitHub. https://github.com/NREL/phygnn. Version 0.0.7. Accessed 14 January 2021
 
 Installation
 ============
