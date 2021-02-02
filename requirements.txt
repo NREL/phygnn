@@ -4,3 +4,4 @@ pandas>=0.25
 pytest>=5.2
 scikit-learn>=0.22
 tensorflow
+NREL-rex
