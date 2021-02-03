@@ -33,17 +33,17 @@ HIDDEN_LAYERS = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
                  ]
 
 
-def p_fun_pythag(model, y_predicted, y_true, p):
+def p_fun_pythag(model, y_true, y_predicted, p):
     """Example function for loss calculation using physical relationships.
 
     Parameters
     ----------
     model : PhysicsGuidedNeuralNetwork
         Instance of the phygnn model at the current point in training.
-    y_predicted : tf.Tensor
-        Predicted y values in a 2D tensor based on x values in this batch.
     y_true : np.ndarray
         Known y values that were given to the PhyGNN fit method.
+    y_predicted : tf.Tensor
+        Predicted y values in a 2D tensor based on x values in this batch.
     p : np.ndarray
         Supplemental physical feature data that can be used to calculate a
         y_physical value to compare against y_predicted. The rows in this
@@ -66,7 +66,7 @@ def p_fun_pythag(model, y_predicted, y_true, p):
     return p_loss
 
 
-def p_fun_bad(model, y_predicted, y_true, p):
+def p_fun_bad(model, y_true, y_predicted, p):
     """This is an example of a poorly formulated p_fun() that uses
     numpy operations."""
 

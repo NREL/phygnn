@@ -222,7 +222,7 @@ class PhygnnModel(ModelBase):
         Parameters
         ----------
         loss_weights : tuple
-            Loss weights for the neural network y_predicted vs. y_true
+            Loss weights for the neural network y_true vs y_predicted
             and for the p_fun loss, respectively. For example,
             loss_weights=(0.0, 1.0) would simplify the phygnn loss function
             to just the p_fun output.
@@ -243,7 +243,7 @@ class PhygnnModel(ModelBase):
         ----------
         p_fun : function
             Physics function to guide the neural network loss function.
-            This fun must take (phygnn, y_predicted, y_true, p, **p_kwargs)
+            This fun must take (phygnn, y_true, y_predicted, p, **p_kwargs)
             as arguments with datatypes (PhysicsGuidedNeuralNetwork, tf.Tensor,
             np.ndarray, np.ndarray). The function must return a tf.Tensor
             object with a single numeric loss value (output.ndim == 0).
@@ -262,7 +262,7 @@ class PhygnnModel(ModelBase):
             Features to one-hot encode using given categories, if None do
             not run one-hot encoding, by default None
         loss_weights : tuple, optional
-            Loss weights for the neural network y_predicted vs. y_true
+            Loss weights for the neural network y_true vs y_predicted
             and for the p_fun loss, respectively. For example,
             loss_weights=(0.0, 1.0) would simplify the phygnn loss function
             to just the p_fun output.
@@ -367,7 +367,7 @@ class PhygnnModel(ModelBase):
         ----------
         p_fun : function
             Physics function to guide the neural network loss function.
-            This fun must take (phygnn, y_predicted, y_true, p, **p_kwargs)
+            This fun must take (phygnn, y_true, y_predicted, p, **p_kwargs)
             as arguments with datatypes (PhysicsGuidedNeuralNetwork, tf.Tensor,
             np.ndarray, np.ndarray). The function must return a tf.Tensor
             object with a single numeric loss value (output.ndim == 0).
@@ -397,7 +397,7 @@ class PhygnnModel(ModelBase):
             Features to one-hot encode using given categories, if None do
             not run one-hot encoding, by default None
         loss_weights : tuple, optional
-            Loss weights for the neural network y_predicted vs. y_true
+            Loss weights for the neural network y_true vs y_predicted
             and for the p_fun loss, respectively. For example,
             loss_weights=(0.0, 1.0) would simplify the phygnn loss function
             to just the p_fun output.

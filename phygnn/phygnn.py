@@ -18,7 +18,7 @@ from phygnn.utilities.tf_layers import Layers
 logger = logging.getLogger(__name__)
 
 
-def p_fun_dummy(model, y_predicted, y_true, p):
+def p_fun_dummy(model, y_true, y_predicted, p):
     """Example dummy function for p loss calculation.
 
     This dummy function does not do a real physics calculation, it just shows
@@ -29,11 +29,11 @@ def p_fun_dummy(model, y_predicted, y_true, p):
     ----------
     model : PhysicsGuidedNeuralNetwork
         Instance of the phygnn model at the current point in training.
+    y_true : np.ndarray
+        Known y values that were given to the phygnn.fit() method.
     y_predicted : tf.Tensor
         Predicted y values in a 2D tensor based on x values in the
         current batch.
-    y_true : np.ndarray
-        Known y values that were given to the phygnn.fit() method.
     p : np.ndarray
         Supplemental physical feature data that can be used to calculate a
         y_physical value to compare against y_predicted. The rows in this
@@ -55,22 +55,23 @@ class PhysicsGuidedNeuralNetwork:
 
     def __init__(self, p_fun, loss_weights=(0.5, 0.5),
                  n_features=1, n_labels=1, hidden_layers=None,
+                 input_layer=None, output_layer=None,
                  metric='mae', initializer=None, optimizer=None,
                  learning_rate=0.01, history=None,
                  kernel_reg_rate=0.0, kernel_reg_power=1,
                  bias_reg_rate=0.0, bias_reg_power=1,
-                 feature_names=None, output_names=None):
+                 feature_names=None, output_names=None, name=None):
         """
         Parameters
         ----------
         p_fun : function
             Physics function to guide the neural network loss function.
-            This fun must take (phygnn, y_predicted, y_true, p, **p_kwargs)
+            This fun must take (phygnn, y_true, y_predicted, p, **p_kwargs)
             as arguments with datatypes (PhysicsGuidedNeuralNetwork, tf.Tensor,
             np.ndarray, np.ndarray). The function must return a tf.Tensor
             object with a single numeric loss value (output.ndim == 0).
         loss_weights : tuple, optional
-            Loss weights for the neural network y_predicted vs. y_true
+            Loss weights for the neural network y_true vs. y_predicted
             and for the p_fun loss, respectively. For example,
             loss_weights=(0.0, 1.0) would simplify the phygnn loss function
             to just the p_fun output.
@@ -89,9 +90,21 @@ class PhysicsGuidedNeuralNetwork:
                  {'batch_normalization': {'axis': -1}},
                  {'activation': 'relu'},
                  {'dropout': 0.01}]
+        input_layer : None | InputLayer
+            Keras input layer. Will default to an InputLayer with
+            input shape = n_features.
+        output_layer : None | list | dict
+            Output layer specification. Can be a list/dict similar to
+            hidden_layers input specifying a dense layer with activation.
+            For example, for a classfication problem with a single output,
+            output_layer should be {'units': 1, 'activation': 'sigmoid'}
+            This defaults to a single dense layer with no activation
+            (best for regression problems).
         metric : str, optional
             Loss metric option for the NN loss function (not the physical
             loss function). Must be a valid key in phygnn.loss_metrics.METRICS
+            or a method in tensorflow.keras.losses that takes
+            (y_true, y_predicted) as arguments.
         initializer : tensorflow.keras.initializers, optional
             Instantiated initializer object. None defaults to GlorotUniform
         optimizer : tensorflow.keras.optimizers | dict | None
@@ -132,14 +145,19 @@ class PhysicsGuidedNeuralNetwork:
             loaded-from-disk model will have declared output names, making it
             easier to understand prediction output. This will also get set
             if phygnn is trained on a DataFrame.
+        name : None | str
+            Optional model name for debugging.
         """
+
         self._p_fun = p_fun
         self._loss_weights = None
         self._metric = metric
         self._input_dims = n_features
         self._output_dims = n_labels
         self._layers = Layers(n_features, n_labels=n_labels,
-                              hidden_layers=hidden_layers)
+                              hidden_layers=hidden_layers,
+                              input_layer=input_layer,
+                              output_layer=output_layer)
         self._optimizer = None
         self._history = history
         self._learning_rate = learning_rate
@@ -149,17 +167,21 @@ class PhysicsGuidedNeuralNetwork:
         self.bias_reg_power = bias_reg_power
         self.feature_names = feature_names
         self.output_names = output_names
+        self.name = name if isinstance(name, str) else 'phygnn'
 
         self.set_loss_weights(loss_weights)
 
-        if self._metric.lower() not in METRICS:
-            e = ('Could not recognize error metric "{}". The following error '
-                 'metrics are available: {}'
-                 .format(self._metric, list(METRICS.keys())))
-            logger.error(e)
-            raise KeyError(e)
-        else:
+        if self._metric.lower() in METRICS:
             self._metric_fun = METRICS[self._metric.lower()]
+        else:
+            try:
+                self._metric_fun = getattr(tf.keras.losses, self._metric)
+            except Exception:
+                e = ('Could not recognize error metric "{}". The following '
+                     'error metrics are available: {}'
+                     .format(self._metric, list(METRICS.keys())))
+                logger.error(e)
+                raise KeyError(e)
 
         self._initializer = initializer
         if initializer is None:
@@ -447,7 +469,7 @@ class PhysicsGuidedNeuralNetwork:
                 tape.watch(layer.variables)
 
             y_predicted = self.predict(x, to_numpy=False)
-            p_loss = self._p_fun(self, y_predicted, y_true, p, **p_kwargs)
+            p_loss = self._p_fun(self, y_true, y_predicted, p, **p_kwargs)
             grad = tape.gradient(p_loss, self.weights)
 
             if not tf.is_tensor(p_loss):
@@ -574,7 +596,7 @@ class PhysicsGuidedNeuralNetwork:
         Parameters
         ----------
         loss_weights : tuple
-            Loss weights for the neural network y_predicted vs. y_true
+            Loss weights for the neural network y_true vs y_predicted
             and for the p_fun loss, respectively. For example,
             loss_weights=(0.0, 1.0) would simplify the phygnn loss function
             to just the p_fun output.
@@ -583,15 +605,15 @@ class PhysicsGuidedNeuralNetwork:
         assert len(loss_weights) == 2, 'loss_weights can only have two values!'
         self._loss_weights = loss_weights
 
-    def loss(self, y_predicted, y_true, p, p_kwargs):
-        """Calculate the loss function by comparing model-predicted y to y_true
+    def loss(self, y_true, y_predicted, p, p_kwargs):
+        """Calculate the loss function by comparing y_true to model-predicted y
 
         Parameters
         ----------
-        y_predicted : tf.Tensor
-            Model-predicted output data in a 2D tensor.
         y_true : np.ndarray
             Known output data in a 2D array.
+        y_predicted : tf.Tensor
+            Model-predicted output data in a 2D tensor.
         p : np.ndarray
             Supplemental feature data for the physics loss function in 2D array
         p_kwargs : None | dict
@@ -617,11 +639,17 @@ class PhysicsGuidedNeuralNetwork:
         p_loss = tf.constant(0.0, dtype=tf.float32)
 
         if self._loss_weights[0] != 0:
-            nn_loss = self._metric_fun(y_predicted, y_true)
+            nn_loss = self._metric_fun(y_true, y_predicted)
+            msg = ('Bad shape from nn_loss fun! Must be 0D but received: {}'
+                   .format(nn_loss))
+            assert nn_loss.ndim == 0, msg
             loss += self._loss_weights[0] * nn_loss
 
         if self._loss_weights[1] != 0:
-            p_loss = self._p_fun(self, y_predicted, y_true, p, **p_kwargs)
+            p_loss = self._p_fun(self, y_true, y_predicted, p, **p_kwargs)
+            msg = ('Bad shape from p_loss fun! Must be 0D but received: {}'
+                   .format(p_loss))
+            assert p_loss.ndim == 0, msg
             loss += self._loss_weights[1] * p_loss
 
         logger.debug('NN Loss: {:.2e}, P Loss: {:.2e}, Total Loss: {:.2e}'
@@ -653,7 +681,7 @@ class PhysicsGuidedNeuralNetwork:
                 tape.watch(layer.variables)
 
             y_predicted = self.predict(x, to_numpy=False, training=True)
-            loss = self.loss(y_predicted, y_true, p, p_kwargs)[0]
+            loss = self.loss(y_true, y_predicted, p, p_kwargs)[0]
             grad = tape.gradient(loss, self.weights)
 
         return grad, loss
@@ -741,10 +769,10 @@ class PhysicsGuidedNeuralNetwork:
                     x_batch, y_batch, p_batch, p_kwargs)[1]
 
             y_val_pred = self.predict(x_val, to_numpy=False)
-            val_loss = self.loss(y_val_pred, y_val, p_val, p_kwargs)[0]
-            logger.info('Epoch {} training loss: {:.2e} '
-                        'validation loss: {:.2e}'
-                        .format(epoch, tr_loss, val_loss))
+            val_loss = self.loss(y_val, y_val_pred, p_val, p_kwargs)[0]
+            logger.info('Epoch {} train loss: {:.2e} '
+                        'val loss: {:.2e} for "{}"'
+                        .format(epoch, tr_loss, val_loss, self.name))
 
             self._history.at[epoch, 'elapsed_time'] = time.time() - t0
             self._history.at[epoch, 'training_loss'] = tr_loss.numpy()

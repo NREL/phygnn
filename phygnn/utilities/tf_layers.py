@@ -133,13 +133,13 @@ class HiddenLayers:
         """
         weights = []
         for layer in self:
-            if isinstance(layer, Dense):
-                weights += layer.variables
-
             # Include gamma and beta weights for BatchNormalization
             # but do not include moving mean/stdev
-            elif isinstance(layer, BatchNormalization):
+            if isinstance(layer, BatchNormalization):
                 weights += layer.variables[:2]
+
+            elif layer.trainable:
+                weights += layer.trainable_weights
 
         return weights
 
@@ -274,7 +274,8 @@ class Layers(HiddenLayers):
     Class to handle TensorFlow layers
     """
 
-    def __init__(self, n_features, n_labels=1, hidden_layers=None):
+    def __init__(self, n_features, n_labels=1, hidden_layers=None,
+                 input_layer=None, output_layer=None):
         """
         Parameters
         ----------
@@ -294,19 +295,40 @@ class Layers(HiddenLayers):
                  {'activation': 'relu'},
                  {'dropout': 0.01}]
             by default None which will lead to a single linear layer
+        input_layer : None | InputLayer
+            Keras input layer. Will default to an InputLayer with
+            input shape = n_features.
+        output_layer : None | list | dict
+            Output layer specification. Can be a list/dict similar to
+            hidden_layers input specifying a dense layer with activation.
+            For example, for a classfication problem with a single output,
+            output_layer should be [{'units': 1}, {'activation': 'sigmoid'}]
+            This defaults to a single dense layer with no activation
+            (best for regression problems).
         """
-        self._layers = [InputLayer(input_shape=[n_features])]
+
+        self._layers = input_layer
+        if input_layer is None:
+            self._layers = [InputLayer(input_shape=[n_features])]
+
         self._hidden_layers = copy.deepcopy(hidden_layers)
         if hidden_layers:
             for layer in hidden_layers:
                 self.add_layer(layer)
 
-        self._layers.append(Dense(n_labels))
+        if output_layer is None:
+            self._layers.append(Dense(n_labels))
+        else:
+            if not isinstance(output_layer, list):
+                output_layer = [output_layer]
+            for layer in output_layer:
+                self.add_layer(layer)
 
         self._i = 0
 
     @classmethod
-    def compile(cls, model, n_features, n_labels=1, hidden_layers=None):
+    def compile(cls, model, n_features, n_labels=1, hidden_layers=None,
+                input_layer=None, output_layer=None):
         """
         Build all layers needed for model
 
@@ -330,6 +352,16 @@ class Layers(HiddenLayers):
                  {'activation': 'relu'},
                  {'dropout': 0.01}]
             by default None which will lead to a single linear layer
+        input_layer : None | InputLayer
+            Keras input layer. Will default to an InputLayer with
+            input shape = n_features.
+        output_layer : None | list | dict
+            Output layer specification. Can be a list/dict similar to
+            hidden_layers input specifying a dense layer with activation.
+            For example, for a classfication problem with a single output,
+            output_layer should be [{'units': 1}, {'activation': 'sigmoid'}]
+            This defaults to a single dense layer with no activation
+            (best for regression problems).
 
         Returns
         -------
@@ -337,7 +369,9 @@ class Layers(HiddenLayers):
             Model with layers added
         """
         layers = cls(n_features, n_labels=n_labels,
-                     hidden_layers=hidden_layers)
+                     hidden_layers=hidden_layers,
+                     input_layer=input_layer,
+                     output_layer=output_layer)
         for layer in layers:
             model.add(layer)
 
