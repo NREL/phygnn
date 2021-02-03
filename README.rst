@@ -84,7 +84,7 @@ Suggested Citation
 
 Update with current version and DOI:
 
-Buster, Grant, Michael Rossol, Mike Bannister, and Dylan Hettinger. Physics-Guided Neural Networks (Phygnn). https://github.com/NREL/phygnn (version v0.0.9), 2021. https://doi.org/10.5281/zenodo.4498541.
+Grant Buster, Michael Rossol, Mike Bannister, and Dylan Hettinger. Physics-Guided Neural Networks (phygnn). https://github.com/NREL/phygnn (version v0.0.9), 2021. https://doi.org/10.5281/zenodo.4498541.
 
 
 Installation
