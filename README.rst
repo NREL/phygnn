@@ -25,6 +25,9 @@ phygnn
 
 .. image:: https://codecov.io/gh/nrel/phygnn/branch/master/graph/badge.svg?token=ZJFQWAAM1N
     :target: https://codecov.io/gh/nrel/phygnn
+    
+.. image:: https://zenodo.org/badge/276492167.svg
+   :target: https://zenodo.org/badge/latestdoi/276492167
 
 **phygnn** (fi-geon | \ ˈfi-jən) noun.
 
@@ -79,7 +82,9 @@ Suggested Citation
 ==================
 
 
-Buster G, Rossol M, Bannister M, and Hettinger D, “physics-guided neural networks (phygnn).” GitHub. https://github.com/NREL/phygnn. Version 0.0.7. Accessed 14 January 2021
+Update with current version and DOI:
+
+Buster, Grant, Michael Rossol, Mike Bannister, and Dylan Hettinger. Physics-Guided Neural Networks (Phygnn). https://github.com/NREL/phygnn (version v0.0.9), 2021. https://doi.org/10.5281/zenodo.4498541.
 
 
 Installation
