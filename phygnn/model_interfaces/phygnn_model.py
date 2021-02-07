@@ -235,7 +235,7 @@ class PhygnnModel(ModelBase):
               loss_weights=(0.5, 0.5), hidden_layers=None, metric='mae',
               initializer=None, optimizer=None, learning_rate=0.01,
               history=None, kernel_reg_rate=0.0, kernel_reg_power=1,
-              bias_reg_rate=0.0, bias_reg_power=1):
+              bias_reg_rate=0.0, bias_reg_power=1, name=None):
         """
         Build phygnn model from given features, layers and kwargs
 
@@ -310,6 +310,8 @@ class PhygnnModel(ModelBase):
             Bias regularization power. bias_reg_power=1 is L1
             regularization (lasso regression), and bias_reg_power=2 is L2
             regularization (ridge regression).
+        name : None | str
+            Optional model name for debugging.
 
         Returns
         -------
@@ -341,7 +343,8 @@ class PhygnnModel(ModelBase):
                                            bias_reg_rate=bias_reg_rate,
                                            bias_reg_power=bias_reg_power,
                                            feature_names=feature_names,
-                                           output_names=label_names)
+                                           output_names=label_names,
+                                           name=name)
 
         model = cls(model, feature_names=feature_names,
                     label_names=label_names, normalize=normalize,
@@ -358,7 +361,8 @@ class PhygnnModel(ModelBase):
                       bias_reg_rate=0.0, bias_reg_power=1, n_batch=16,
                       n_epoch=10, shuffle=True, validation_split=0.2,
                       run_preflight=True, return_diagnostics=False,
-                      p_kwargs=None, parse_kwargs=None, save_path=None):
+                      p_kwargs=None, parse_kwargs=None, save_path=None,
+                      name=None):
         """
         Build phygnn model from given features, layers and
         kwargs and then train with given labels and kwargs
@@ -471,6 +475,8 @@ class PhygnnModel(ModelBase):
             Directory path to save model to. The tensorflow model will be
             saved to the directory while the framework parameters will be
             saved in json, by default None
+        name : None | str
+            Optional model name for debugging.
 
         Returns
         -------
@@ -495,7 +501,8 @@ class PhygnnModel(ModelBase):
                           kernel_reg_rate=kernel_reg_rate,
                           kernel_reg_power=kernel_reg_power,
                           bias_reg_rate=bias_reg_rate,
-                          bias_reg_power=bias_reg_power)
+                          bias_reg_power=bias_reg_power,
+                          name=name)
 
         diagnostics = model.train_model(features, labels, p,
                                         n_batch=n_batch,

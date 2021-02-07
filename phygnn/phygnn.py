@@ -314,6 +314,7 @@ class PhysicsGuidedNeuralNetwork:
                         'bias_reg_power': self.bias_reg_power,
                         'feature_names': self.feature_names,
                         'output_names': self.output_names,
+                        'name': self.name,
                         }
 
         return model_params
