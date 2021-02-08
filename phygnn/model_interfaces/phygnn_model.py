@@ -191,6 +191,8 @@ class PhygnnModel(ModelBase):
         path : str
             Save phygnn model
         """
+
+        path = os.path.abspath(path)
         if path.endswith(('.json', '.pkl')):
             dir_path = os.path.dirname(path)
             if path.endswith('.pkl'):
