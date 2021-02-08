@@ -314,6 +314,7 @@ class PhysicsGuidedNeuralNetwork:
                         'bias_reg_power': self.bias_reg_power,
                         'feature_names': self.feature_names,
                         'output_names': self.output_names,
+                        'name': self.name,
                         }
 
         return model_params
@@ -605,7 +606,7 @@ class PhysicsGuidedNeuralNetwork:
         assert len(loss_weights) == 2, 'loss_weights can only have two values!'
         self._loss_weights = loss_weights
 
-    def loss(self, y_true, y_predicted, p, p_kwargs):
+    def calc_loss(self, y_true, y_predicted, p, p_kwargs):
         """Calculate the loss function by comparing y_true to model-predicted y
 
         Parameters
@@ -681,17 +682,18 @@ class PhysicsGuidedNeuralNetwork:
                 tape.watch(layer.variables)
 
             y_predicted = self.predict(x, to_numpy=False, training=True)
-            loss = self.loss(y_true, y_predicted, p, p_kwargs)[0]
+            loss, nn_loss, p_loss = self.calc_loss(y_true, y_predicted,
+                                                   p, p_kwargs)
             grad = tape.gradient(loss, self.weights)
 
-        return grad, loss
+        return grad, loss, nn_loss, p_loss
 
     def _run_gradient_descent(self, x, y_true, p, p_kwargs):
         """Run gradient descent for one mini-batch of (x, y_true)
         and adjust NN weights."""
-        grad, loss = self._get_grad(x, y_true, p, p_kwargs)
+        grad, loss, nn_loss, p_loss = self._get_grad(x, y_true, p, p_kwargs)
         self._optimizer.apply_gradients(zip(grad, self.weights))
-        return grad, loss
+        return loss, nn_loss, p_loss
 
     def fit(self, x, y, p, n_batch=16, n_epoch=10, shuffle=True,
             validation_split=0.2, p_kwargs=None, run_preflight=True,
@@ -746,7 +748,14 @@ class PhysicsGuidedNeuralNetwork:
 
         if self._history is None:
             self._history = pd.DataFrame(
-                columns=['elapsed_time', 'training_loss', 'validation_loss'])
+                columns=['elapsed_time',
+                         'training_nn_loss',
+                         'validation_nn_loss',
+                         'training_p_loss',
+                         'validation_p_loss',
+                         'training_loss',
+                         'validation_loss',
+                         ])
             self._history.index.name = 'epoch'
         else:
             epochs += self._history.index.values[-1] + 1
@@ -765,18 +774,23 @@ class PhysicsGuidedNeuralNetwork:
 
             batch_iter = zip(x_batches, y_batches, p_batches)
             for x_batch, y_batch, p_batch in batch_iter:
-                tr_loss = self._run_gradient_descent(
-                    x_batch, y_batch, p_batch, p_kwargs)[1]
+                tr_loss, tr_nn_loss, tr_p_loss = self._run_gradient_descent(
+                    x_batch, y_batch, p_batch, p_kwargs)
 
             y_val_pred = self.predict(x_val, to_numpy=False)
-            val_loss = self.loss(y_val, y_val_pred, p_val, p_kwargs)[0]
+            val_loss, val_nn_loss, val_p_loss = self.calc_loss(
+                y_val, y_val_pred, p_val, p_kwargs)
             logger.info('Epoch {} train loss: {:.2e} '
                         'val loss: {:.2e} for "{}"'
                         .format(epoch, tr_loss, val_loss, self.name))
 
             self._history.at[epoch, 'elapsed_time'] = time.time() - t0
             self._history.at[epoch, 'training_loss'] = tr_loss.numpy()
+            self._history.at[epoch, 'training_nn_loss'] = tr_nn_loss.numpy()
+            self._history.at[epoch, 'training_p_loss'] = tr_p_loss.numpy()
             self._history.at[epoch, 'validation_loss'] = val_loss.numpy()
+            self._history.at[epoch, 'validation_nn_loss'] = val_nn_loss.numpy()
+            self._history.at[epoch, 'validation_p_loss'] = val_p_loss.numpy()
 
         diagnostics = {'x': x, 'y': y, 'p': p,
                        'x_val': x_val, 'y_val': y_val, 'p_val': p_val,
