@@ -297,13 +297,13 @@ class Layers(HiddenLayers):
             layer in the NN. Dense linear layers can be input with their
             activations or separately for more explicit control over the layer
             ordering. For example, this is a valid input for hidden_layers that
-            will yield 7 hidden layers (9 layers total):
+            will yield 8 hidden layers (10 layers including input+output):
                 [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
                  {'units': 64},
                  {'batch_normalization': {'axis': -1}},
                  {'activation': 'relu'},
                  {'dropout': 0.01},
-                 {'class': 'Dense', 'units': 64, 'activation': 'relu'},
+                 {'class': 'Flatten'},
                  ]
             by default None which will lead to a single linear layer
         input_layer : None | dict
@@ -314,7 +314,7 @@ class Layers(HiddenLayers):
             Output layer specification. Can be a list/dict similar to
             hidden_layers input specifying a dense layer with activation.
             For example, for a classfication problem with a single output,
-            output_layer should be [{'units': 1}, {'activation': 'sigmoid'}]
+            output_layer should be [{'units': 1}, {'activation': 'sigmoid'}].
             This defaults to a single dense layer with no activation
             (best for regression problems).
         """
