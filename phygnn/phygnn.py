@@ -152,8 +152,8 @@ class PhysicsGuidedNeuralNetwork:
         self._p_fun = p_fun
         self._loss_weights = None
         self._metric = metric
-        self._input_dims = n_features
-        self._output_dims = n_labels
+        self._n_features = n_features
+        self._n_labels = n_labels
         self._layers = Layers(n_features, n_labels=n_labels,
                               hidden_layers=hidden_layers,
                               input_layer=input_layer,
@@ -301,8 +301,8 @@ class PhysicsGuidedNeuralNetwork:
                         'hidden_layers': self._layers.hidden_layer_kwargs,
                         'loss_weights': self._loss_weights,
                         'metric': self._metric,
-                        'n_features': self._input_dims,
-                        'n_labels': self._output_dims,
+                        'n_features': self._n_features,
+                        'n_labels': self._n_labels,
                         'initializer': self._initializer,
                         'optimizer': self._optimizer.get_config(),
                         'learning_rate': self._learning_rate,
@@ -322,9 +322,10 @@ class PhysicsGuidedNeuralNetwork:
     @staticmethod
     def _check_shapes(x, y):
         """Check the shape of two input arrays for usage in this NN."""
-        assert len(x.shape) == 2, 'Input dimensions must be 2D!'
-        assert len(y.shape) == 2, 'Input dimensions must be 2D!'
-        assert len(x) == len(y), 'Number of input observations dont match!'
+        msg = ('Number of input observations dont match! Received arrays of '
+               'shapes {} and {} where the 0-axis should match and be the '
+               'number of observations'.format(x.shape, y.shape))
+        assert x.shape[0] == y.shape[0], msg
 
         return True
 
@@ -341,8 +342,8 @@ class PhysicsGuidedNeuralNetwork:
         np.random.seed(s)
         tf.random.set_seed(s)
 
-    @staticmethod
-    def _get_val_split(x, y, p, shuffle=True, validation_split=0.2):
+    @classmethod
+    def _get_val_split(cls, x, y, p, shuffle=True, validation_split=0.2):
         """Get a validation split and remove from from the training data.
 
         Parameters
@@ -385,30 +386,32 @@ class PhysicsGuidedNeuralNetwork:
             the input p multiplied by the split fraction
         """
 
-        L = len(x)
+        L = x.shape[0]
         n = int(L * validation_split)
 
+        # get the validation dataset indices, i
         if shuffle:
             i = np.random.choice(L, replace=False, size=(n,))
         else:
             i = np.arange(n)
 
+        # get the training dataset indices, j
         j = np.array(list(set(range(L)) - set(i)))
 
         assert len(set(i)) == len(i)
         assert len(set(list(i) + list(j))) == L
 
-        x_val, y_val, p_val = x[i, :], y[i, :], p[i, :]
-        x, y, p = x[j, :], y[j, :], p[j, :]
+        x_val, y_val, p_val = x[i], y[i], p[i]
+        x, y, p = x[j], y[j], p[j]
 
-        PhysicsGuidedNeuralNetwork._check_shapes(x_val, y_val)
-        PhysicsGuidedNeuralNetwork._check_shapes(x_val, p_val)
-        PhysicsGuidedNeuralNetwork._check_shapes(x, y)
-        PhysicsGuidedNeuralNetwork._check_shapes(x, p)
+        cls._check_shapes(x_val, y_val)
+        cls._check_shapes(x_val, p_val)
+        cls._check_shapes(x, y)
+        cls._check_shapes(x, p)
 
-        logger.debug('Validation data has length {} and training data has '
-                     'length {} (split of {})'
-                     .format(len(x_val), len(x), validation_split))
+        logger.debug('Validation feature data has shape {} and training '
+                     'feature data has shape {} (split of {})'
+                     .format(x_val.shape, x.shape, validation_split))
 
         return x, y, p, x_val, y_val, p_val
 
@@ -444,7 +447,7 @@ class PhysicsGuidedNeuralNetwork:
             Length of list is n_batch.
         """
 
-        L = len(x)
+        L = x.shape[0]
         if shuffle:
             i = np.random.choice(L, replace=False, size=(L,))
             assert len(set(i)) == L
@@ -453,9 +456,9 @@ class PhysicsGuidedNeuralNetwork:
 
         batch_indexes = np.array_split(i, n_batch)
 
-        x_batches = [x[j, :] for j in batch_indexes]
-        y_batches = [y[j, :] for j in batch_indexes]
-        p_batches = [p[j, :] for j in batch_indexes]
+        x_batches = [x[j] for j in batch_indexes]
+        y_batches = [y[j] for j in batch_indexes]
+        p_batches = [p[j] for j in batch_indexes]
 
         return x_batches, y_batches, p_batches
 
@@ -527,12 +530,13 @@ class PhysicsGuidedNeuralNetwork:
 
         self._check_shapes(x, y)
         self._check_shapes(x, p)
+
         x_msg = ('x data has {} features but expected {}'
-                 .format(x.shape[1], self._input_dims))
+                 .format(x.shape[-1], self._n_features))
         y_msg = ('y data has {} features but expected {}'
-                 .format(y.shape[1], self._output_dims))
-        assert x.shape[1] == self._input_dims, x_msg
-        assert y.shape[1] == self._output_dims, y_msg
+                 .format(y.shape[-1], self._n_labels))
+        assert x.shape[-1] == self._n_features, x_msg
+        assert y.shape[-1] == self._n_labels, y_msg
 
         x = self.preflight_features(x)
 
@@ -569,10 +573,9 @@ class PhysicsGuidedNeuralNetwork:
             Feature data in a 2D array
         """
 
-        assert len(x.shape) == 2, 'PhyGNN can only use 2D data as input!'
         x_msg = ('x data has {} features but expected {}'
-                 .format(x.shape[1], self._input_dims))
-        assert x.shape[1] == self._input_dims, x_msg
+                 .format(x.shape[-1], self._n_features))
+        assert x.shape[-1] == self._n_features, x_msg
 
         if isinstance(x, pd.DataFrame):
             x_cols = x.columns.values.tolist()
