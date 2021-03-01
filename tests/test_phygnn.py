@@ -9,7 +9,7 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
-                                     BatchNormalization)
+                                     BatchNormalization, Conv1D, Flatten)
 from phygnn import PhysicsGuidedNeuralNetwork, p_fun_dummy, TESTDATADIR
 
 
@@ -366,10 +366,39 @@ def test_batch_norm():
     os.remove(FPATH)
 
 
+def test_conv1d():
+    """Test a phygnn model with a conv1d layer"""
+    input_layer = {'class': 'Conv1D', 'filters': 12, 'kernel_size': (4,),
+                   'activation': 'relu'}
+    hidden_layers = [{'units': 64, 'activation': 'relu'},
+                     {'class': 'Flatten'}]
+    output_layer = {'units': 24}
+    model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                       hidden_layers=hidden_layers,
+                                       input_layer=input_layer,
+                                       output_layer=output_layer,
+                                       loss_weights=(1.0, 0.0),
+                                       n_features=1, n_labels=24)
+
+    train_x = np.random.uniform(-1, 1, (50, 12, 1))
+    train_y = np.random.uniform(-1, 1, (50, 24))
+
+    assert len(model.layers) == 5, "conv layers did not get added!"
+    assert isinstance(model.layers[0], Conv1D)
+    assert isinstance(model.layers[1], Dense)
+    assert isinstance(model.layers[2], Activation)
+    assert isinstance(model.layers[3], Flatten)
+    assert isinstance(model.layers[4], Dense)
+
+    model.fit(train_x, train_y, train_x, n_batch=1, n_epoch=10)
+    y_pred = model.predict(train_x)
+    assert y_pred.shape == (50, 24)
+
+
 def test_validation_split_shuffle():
     """Test the validation split operation with shuffling"""
-    out = PhysicsGuidedNeuralNetwork._get_val_split(X, Y, P, shuffle=True,
-                                                    validation_split=0.3)
+    out = PhysicsGuidedNeuralNetwork.get_val_split(X, Y, P, shuffle=True,
+                                                   validation_split=0.3)
     x, y, p, x_val, y_val, p_val = out
 
     assert (x_val == p_val).all()
@@ -401,8 +430,8 @@ def test_validation_split_shuffle():
 
 def test_validation_split_no_shuffle():
     """Test the validation split operation without shuffling"""
-    out = PhysicsGuidedNeuralNetwork._get_val_split(X, Y, P, shuffle=False,
-                                                    validation_split=0.3)
+    out = PhysicsGuidedNeuralNetwork.get_val_split(X, Y, P, shuffle=False,
+                                                   validation_split=0.3)
     x, y, p, x_val, y_val, p_val = out
     assert (x_val == p_val).all()
     assert (x == p).all()
@@ -414,7 +443,7 @@ def test_validation_split_no_shuffle():
 
 def test_batching_shuffle():
     """Test the batching operation with shuffling"""
-    x_batches, y_batches, p_batches = PhysicsGuidedNeuralNetwork._make_batches(
+    x_batches, y_batches, p_batches = PhysicsGuidedNeuralNetwork.make_batches(
         X, Y, P, n_batch=4, shuffle=True)
 
     assert len(x_batches) == 4
@@ -434,7 +463,7 @@ def test_batching_shuffle():
 
 def test_batching_no_shuffle():
     """Test the batching operation without shuffling"""
-    x_batches, y_batches, p_batches = PhysicsGuidedNeuralNetwork._make_batches(
+    x_batches, y_batches, p_batches = PhysicsGuidedNeuralNetwork.make_batches(
         X, Y, P, n_batch=6, shuffle=False)
 
     assert len(x_batches) == 6

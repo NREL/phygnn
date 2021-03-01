@@ -106,15 +106,8 @@ class HiddenLayers:
     def hidden_layer_kwargs(self):
         """
         List of dictionaries of key word arguments for each hidden
-        layer in the NN. Dense linear layers can be input with their
-        activations or separately for more explicit control over the layer
-        ordering. For example, this is a valid input for hidden_layers that
-        will yield 7 hidden layers:
-            [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
-                {'units': 64},
-                {'batch_normalization': {'axis': -1}},
-                {'activation': 'relu'},
-                {'dropout': 0.01}]
+        layer in the NN. This is a copy of the hidden_layers input arg
+        that can be used to reconstruct the network.
 
         Returns
         -------
@@ -322,6 +315,8 @@ class Layers(HiddenLayers):
         self._i = 0
         self._layers = []
         self._hidden_layers_kwargs = copy.deepcopy(hidden_layers)
+        self._input_layer_kwargs = copy.deepcopy(input_layer)
+        self._output_layer_kwargs = copy.deepcopy(output_layer)
 
         if input_layer is None:
             self._layers = [InputLayer(input_shape=[n_features])]
@@ -348,6 +343,32 @@ class Layers(HiddenLayers):
                 raise TypeError(msg)
             for layer in output_layer:
                 self.add_layer(layer)
+
+    @property
+    def input_layer_kwargs(self):
+        """
+        Dictionary of key word arguments for the input layer.
+        This is a copy of the input_layer input arg
+        that can be used to reconstruct the network.
+
+        Returns
+        -------
+        list
+        """
+        return self._input_layer_kwargs
+
+    @property
+    def output_layer_kwargs(self):
+        """
+        Dictionary of key word arguments for the output layer.
+        This is a copy of the output_layer input arg
+        that can be used to reconstruct the network.
+
+        Returns
+        -------
+        list
+        """
+        return self._output_layer_kwargs
 
     @classmethod
     def compile(cls, model, n_features, n_labels=1, hidden_layers=None,

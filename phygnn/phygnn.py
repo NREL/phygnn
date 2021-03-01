@@ -304,6 +304,8 @@ class PhysicsGuidedNeuralNetwork:
 
         model_params = {'p_fun': self._p_fun,
                         'hidden_layers': self._layers.hidden_layer_kwargs,
+                        'input_layer': self._layers.input_layer_kwargs,
+                        'output_layer': self._layers.output_layer_kwargs,
                         'loss_weights': self._loss_weights,
                         'metric': self._metric,
                         'n_features': self._n_features,
@@ -896,6 +898,8 @@ class PhysicsGuidedNeuralNetwork:
         weight_dict = model_params.pop('weight_dict')
 
         model = cls(p_fun, **model_params)
+        logger.debug('Initialized phygnn model from disk with {} layers: {}'
+                     .format(len(model.layers), model.layers))
 
         for i, weights in weight_dict.items():
             if weights:
