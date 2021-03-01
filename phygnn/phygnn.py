@@ -10,7 +10,7 @@ import pandas as pd
 import logging
 import tensorflow as tf
 from tensorflow.keras import optimizers, initializers
-from tensorflow.keras.layers import BatchNormalization, Dropout
+from tensorflow.keras.layers import BatchNormalization, Dropout, Conv1D
 
 from phygnn.utilities.loss_metrics import METRICS
 from phygnn.utilities.tf_layers import Layers
@@ -908,10 +908,13 @@ class PhysicsGuidedNeuralNetwork:
                 if isinstance(model.layers[i], BatchNormalization):
                     # BatchNormalization layers need to be
                     # built with funky input dims.
-                    model.layers[i].build((None, dim))
+                    build_shape = (None, dim)
+                elif isinstance(model.layers[i], Conv1D):
+                    build_shape = (dim, model._n_features)
                 else:
-                    model.layers[i].build((dim,))
+                    build_shape = (dim,)
 
+                model.layers[i].build(build_shape)
                 model.layers[i].set_weights(weights)
 
         return model
