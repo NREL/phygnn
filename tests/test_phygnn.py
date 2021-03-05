@@ -10,7 +10,7 @@ import tempfile
 import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
-                                     BatchNormalization, Conv1D, Flatten)
+                                     BatchNormalization, Conv1D, Flatten, LSTM)
 from phygnn import PhysicsGuidedNeuralNetwork, p_fun_dummy
 
 
@@ -421,6 +421,35 @@ def test_conv1d():
 
     assert np.allclose(y_pred, y_pred_loaded)
     assert len(model.layers) == len(loaded.layers)
+
+
+def test_lstm():
+    """Test a phygnn model with a conv1d layer. The data in this test is
+    garbage, just a test on shapes and creation. Save/load doesnt work yet
+    for lstm"""
+
+    input_layer = {'class': 'LSTM', 'units': 24, 'return_sequences': True}
+    hidden_layers = [{'units': 64, 'activation': 'relu'}]
+    output_layer = {'units': 24}
+    model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                       hidden_layers=hidden_layers,
+                                       input_layer=input_layer,
+                                       output_layer=output_layer,
+                                       loss_weights=(1.0, 0.0),
+                                       n_features=2, n_labels=24)
+
+    train_x = np.random.uniform(-1, 1, (50, 12, 2))
+    train_y = np.random.uniform(-1, 1, (50, 12, 24))
+
+    assert len(model.layers) == 4, "lstm layers did not get added!"
+    assert isinstance(model.layers[0], LSTM)
+    assert isinstance(model.layers[1], Dense)
+    assert isinstance(model.layers[2], Activation)
+    assert isinstance(model.layers[3], Dense)
+
+    model.fit(train_x, train_y, train_x, n_batch=1, n_epoch=10)
+    y_pred = model.predict(train_x)
+    assert y_pred.shape == (50, 12, 24)
 
 
 def test_validation_split_shuffle():
