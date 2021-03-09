@@ -3,6 +3,7 @@
 Tensorflow Layers Handlers
 """
 import copy
+import tensorflow
 from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
                                      BatchNormalization)
 
@@ -28,12 +29,11 @@ class HiddenLayers:
                  {'activation': 'relu'},
                  {'dropout': 0.01}]
         """
+        self._i = 0
         self._layers = []
-        self._hidden_layers = copy.deepcopy(hidden_layers)
+        self._hidden_layers_kwargs = copy.deepcopy(hidden_layers)
         for layer in hidden_layers:
             self.add_layer(layer)
-
-        self._i = 0
 
     def __repr__(self):
         msg = "{} with {} hidden layers".format(self.__class__.__name__,
@@ -106,21 +106,14 @@ class HiddenLayers:
     def hidden_layer_kwargs(self):
         """
         List of dictionaries of key word arguments for each hidden
-        layer in the NN. Dense linear layers can be input with their
-        activations or separately for more explicit control over the layer
-        ordering. For example, this is a valid input for hidden_layers that
-        will yield 7 hidden layers:
-            [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
-                {'units': 64},
-                {'batch_normalization': {'axis': -1}},
-                {'activation': 'relu'},
-                {'dropout': 0.01}]
+        layer in the NN. This is a copy of the hidden_layers input arg
+        that can be used to reconstruct the network.
 
         Returns
         -------
         list
         """
-        return self._hidden_layers
+        return self._hidden_layers_kwargs
 
     @property
     def weights(self):
@@ -204,33 +197,42 @@ class HiddenLayers:
         """
 
         layer_kwargs_cp = copy.deepcopy(layer_kwargs)
-        dense_layer = None
-        bn_layer = None
-        a_layer = None
-        d_layer = None
+
+        layer_cls = layer_kwargs_cp.pop('class', None)
+        if layer_cls is not None:
+            msg = ('Need layer "class" definition as string to retrieve '
+                   'from tensorflow.keras.layers but received: {}'
+                   .format(type(layer_cls)))
+            assert isinstance(layer_cls, str), msg
+            layer_cls = getattr(tensorflow.keras.layers, layer_cls)
+            self._layers.append(layer_cls(**layer_kwargs_cp))
+            layer_kwargs_cp = {}
+
         activation_arg = layer_kwargs_cp.pop('activation', None)
         dropout_rate = layer_kwargs_cp.pop('dropout', None)
         batch_norm_kwargs = layer_kwargs_cp.pop('batch_normalization', None)
+        dense_units = layer_kwargs_cp.pop('units', None)
 
-        if 'units' in layer_kwargs_cp:
-            dense_layer = Dense(**layer_kwargs_cp)
-            if insert_index is not None:
-                self._layers.insert(insert_index, dense_layer)
-            else:
-                self._layers.append(dense_layer)
+        dense_layer = None
+        bn_layer = None
+        a_layer = None
+        drop_layer = None
 
+        if dense_units is not None:
+            dense_layer = Dense(dense_units)
         if batch_norm_kwargs is not None:
             bn_layer = BatchNormalization(**batch_norm_kwargs)
         if activation_arg is not None:
             a_layer = Activation(activation_arg)
         if dropout_rate is not None:
-            d_layer = Dropout(dropout_rate)
+            drop_layer = Dropout(dropout_rate)
 
         # This ensures proper default ordering of layers if requested together.
-        for layer in [bn_layer, a_layer, d_layer]:
+        for layer in [dense_layer, bn_layer, a_layer, drop_layer]:
             if layer is not None:
                 if insert_index is not None:
-                    if dense_layer is not None:
+                    if (dense_layer is not None
+                            and not isinstance(layer, Dense)):
                         insert_index += 1
                     self._layers.insert(insert_index, layer)
                 else:
@@ -288,30 +290,44 @@ class Layers(HiddenLayers):
             layer in the NN. Dense linear layers can be input with their
             activations or separately for more explicit control over the layer
             ordering. For example, this is a valid input for hidden_layers that
-            will yield 7 hidden layers (9 layers total):
+            will yield 8 hidden layers (10 layers including input+output):
                 [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
                  {'units': 64},
                  {'batch_normalization': {'axis': -1}},
                  {'activation': 'relu'},
-                 {'dropout': 0.01}]
+                 {'dropout': 0.01},
+                 {'class': 'Flatten'},
+                 ]
             by default None which will lead to a single linear layer
-        input_layer : None | InputLayer
-            Keras input layer. Will default to an InputLayer with
-            input shape = n_features.
+        input_layer : None | dict
+            Input layer. specification. Can be a dictionary similar to
+            hidden_layers specifying a dense / conv / lstm layer.  Will
+            default to a keras InputLayer with input shape = n_features.
         output_layer : None | list | dict
             Output layer specification. Can be a list/dict similar to
             hidden_layers input specifying a dense layer with activation.
             For example, for a classfication problem with a single output,
-            output_layer should be [{'units': 1}, {'activation': 'sigmoid'}]
+            output_layer should be [{'units': 1}, {'activation': 'sigmoid'}].
             This defaults to a single dense layer with no activation
             (best for regression problems).
         """
 
-        self._layers = input_layer
+        self._i = 0
+        self._layers = []
+        self._hidden_layers_kwargs = copy.deepcopy(hidden_layers)
+        self._input_layer_kwargs = copy.deepcopy(input_layer)
+        self._output_layer_kwargs = copy.deepcopy(output_layer)
+
         if input_layer is None:
             self._layers = [InputLayer(input_shape=[n_features])]
+        else:
+            if not isinstance(input_layer, dict):
+                msg = ('Input layer spec needs to be a dict but received: {}'
+                       .format(type(input_layer)))
+                raise TypeError(msg)
+            else:
+                self.add_layer(input_layer)
 
-        self._hidden_layers = copy.deepcopy(hidden_layers)
         if hidden_layers:
             for layer in hidden_layers:
                 self.add_layer(layer)
@@ -319,12 +335,40 @@ class Layers(HiddenLayers):
         if output_layer is None:
             self._layers.append(Dense(n_labels))
         else:
-            if not isinstance(output_layer, list):
+            if isinstance(output_layer, dict):
                 output_layer = [output_layer]
+            if not isinstance(output_layer, list):
+                msg = ('Output layer spec needs to be a dict or list but '
+                       'received: {}'.format(type(output_layer)))
+                raise TypeError(msg)
             for layer in output_layer:
                 self.add_layer(layer)
 
-        self._i = 0
+    @property
+    def input_layer_kwargs(self):
+        """
+        Dictionary of key word arguments for the input layer.
+        This is a copy of the input_layer input arg
+        that can be used to reconstruct the network.
+
+        Returns
+        -------
+        list
+        """
+        return self._input_layer_kwargs
+
+    @property
+    def output_layer_kwargs(self):
+        """
+        Dictionary of key word arguments for the output layer.
+        This is a copy of the output_layer input arg
+        that can be used to reconstruct the network.
+
+        Returns
+        -------
+        list
+        """
+        return self._output_layer_kwargs
 
     @classmethod
     def compile(cls, model, n_features, n_labels=1, hidden_layers=None,
@@ -334,7 +378,7 @@ class Layers(HiddenLayers):
 
         Parameters
         ----------
-        model : tensorflow.keras | PhysicsGuidedNeuralNetwork
+        model : tensorflow.keras.Sequential
             Model to add layers too
         n_features : int
             Number of features (inputs) to train the model on

@@ -55,7 +55,7 @@ class PhysicsGuidedNeuralNetwork:
 
     def __init__(self, p_fun, loss_weights=(0.5, 0.5),
                  n_features=1, n_labels=1, hidden_layers=None,
-                 input_layer=None, output_layer=None,
+                 input_layer=None, output_layer=None, layers_obj=None,
                  metric='mae', initializer=None, optimizer=None,
                  learning_rate=0.01, history=None,
                  kernel_reg_rate=0.0, kernel_reg_power=1,
@@ -76,30 +76,39 @@ class PhysicsGuidedNeuralNetwork:
             loss_weights=(0.0, 1.0) would simplify the phygnn loss function
             to just the p_fun output.
         n_features : int, optional
-            Number of input features.
+            Number of input features. This should match the last dimension
+            of the feature training data.
         n_labels : int, optional
-            Number of output labels.
+            Number of output labels. This should match the last dimension
+            of the label training data.
         hidden_layers : list, optional
             List of dictionaries of key word arguments for each hidden
             layer in the NN. Dense linear layers can be input with their
             activations or separately for more explicit control over the layer
             ordering. For example, this is a valid input for hidden_layers that
-            will yield 7 hidden layers (9 layers total):
+            will yield 8 hidden layers (10 layers including input+output):
                 [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
                  {'units': 64},
                  {'batch_normalization': {'axis': -1}},
                  {'activation': 'relu'},
-                 {'dropout': 0.01}]
-        input_layer : None | InputLayer
-            Keras input layer. Will default to an InputLayer with
-            input shape = n_features.
+                 {'dropout': 0.01},
+                 {'class': 'Flatten'},
+                 ]
+        input_layer : None | dict
+            Input layer. specification. Can be a dictionary similar to
+            hidden_layers specifying a dense / conv / lstm layer.  Will
+            default to a keras InputLayer with input shape = n_features.
         output_layer : None | list | dict
             Output layer specification. Can be a list/dict similar to
             hidden_layers input specifying a dense layer with activation.
             For example, for a classfication problem with a single output,
-            output_layer should be {'units': 1, 'activation': 'sigmoid'}
+            output_layer should be [{'units': 1}, {'activation': 'sigmoid'}].
             This defaults to a single dense layer with no activation
             (best for regression problems).
+        layers_obj : None | phygnn.utilities.tf_layers.Layers
+            Optional initialized Layers object to set as the model layers
+            including pre-set weights. This option will override the
+            hidden_layers, input_layer, and output_layer arguments.
         metric : str, optional
             Loss metric option for the NN loss function (not the physical
             loss function). Must be a valid key in phygnn.loss_metrics.METRICS
@@ -149,15 +158,11 @@ class PhysicsGuidedNeuralNetwork:
             Optional model name for debugging.
         """
 
-        self._p_fun = p_fun
+        self._p_fun = p_fun if p_fun is not None else p_fun_dummy
         self._loss_weights = None
         self._metric = metric
-        self._input_dims = n_features
-        self._output_dims = n_labels
-        self._layers = Layers(n_features, n_labels=n_labels,
-                              hidden_layers=hidden_layers,
-                              input_layer=input_layer,
-                              output_layer=output_layer)
+        self._n_features = n_features
+        self._n_labels = n_labels
         self._optimizer = None
         self._history = history
         self._learning_rate = learning_rate
@@ -168,6 +173,18 @@ class PhysicsGuidedNeuralNetwork:
         self.feature_names = feature_names
         self.output_names = output_names
         self.name = name if isinstance(name, str) else 'phygnn'
+
+        self._layers = layers_obj
+        if layers_obj is None:
+            self._layers = Layers(n_features, n_labels=n_labels,
+                                  hidden_layers=hidden_layers,
+                                  input_layer=input_layer,
+                                  output_layer=output_layer)
+        elif not isinstance(layers_obj, Layers):
+            msg = ('phygnn received layers_obj input of type "{}" but must be '
+                   'a phygnn Layers object'.format(type(layers_obj)))
+            logger.error(msg)
+            raise TypeError(msg)
 
         self.set_loss_weights(loss_weights)
 
@@ -209,13 +226,25 @@ class PhysicsGuidedNeuralNetwork:
     @property
     def layers(self):
         """
-        TensorFlow keras layers
+        Ordered list of TensorFlow keras layers that make up this model
+        including input and output layers
 
         Returns
         -------
         list
         """
         return self._layers.layers
+
+    @property
+    def layers_obj(self):
+        """
+        phygnn layers handler object
+
+        Returns
+        -------
+        phygnn.utilities.tf_layers.Layers
+        """
+        return self._layers
 
     @property
     def weights(self):
@@ -293,20 +322,19 @@ class PhysicsGuidedNeuralNetwork:
         -------
         dict
         """
-        weight_dict = {}
-        for i, layer in enumerate(self.layers):
-            weight_dict[i] = layer.get_weights()
 
         model_params = {'p_fun': self._p_fun,
                         'hidden_layers': self._layers.hidden_layer_kwargs,
+                        'input_layer': self._layers.input_layer_kwargs,
+                        'output_layer': self._layers.output_layer_kwargs,
                         'loss_weights': self._loss_weights,
                         'metric': self._metric,
-                        'n_features': self._input_dims,
-                        'n_labels': self._output_dims,
+                        'n_features': self._n_features,
+                        'n_labels': self._n_labels,
                         'initializer': self._initializer,
                         'optimizer': self._optimizer.get_config(),
                         'learning_rate': self._learning_rate,
-                        'weight_dict': weight_dict,
+                        'layers_obj': self.layers_obj,
                         'history': self.history,
                         'kernel_reg_rate': self.kernel_reg_rate,
                         'kernel_reg_power': self.kernel_reg_power,
@@ -322,9 +350,10 @@ class PhysicsGuidedNeuralNetwork:
     @staticmethod
     def _check_shapes(x, y):
         """Check the shape of two input arrays for usage in this NN."""
-        assert len(x.shape) == 2, 'Input dimensions must be 2D!'
-        assert len(y.shape) == 2, 'Input dimensions must be 2D!'
-        assert len(x) == len(y), 'Number of input observations dont match!'
+        msg = ('Number of input observations dont match! Received arrays of '
+               'shapes {} and {} where the 0-axis should match and be the '
+               'number of observations'.format(x.shape, y.shape))
+        assert x.shape[0] == y.shape[0], msg
 
         return True
 
@@ -341,18 +370,20 @@ class PhysicsGuidedNeuralNetwork:
         np.random.seed(s)
         tf.random.set_seed(s)
 
-    @staticmethod
-    def _get_val_split(x, y, p, shuffle=True, validation_split=0.2):
+    @classmethod
+    def get_val_split(cls, x, y, p, shuffle=True, validation_split=0.2):
         """Get a validation split and remove from from the training data.
+        This applies the split along the 1st data dimension.
 
         Parameters
         ----------
         x : np.ndarray
-            Feature data in a 2D array
+            Feature data in a >=2D array
         y : np.ndarray
-            Known output data in a 2D array.
+            Known output data in a >=2D array.
         p : np.ndarray
-            Supplemental feature data for the physics loss function in 2D array
+            Supplemental feature data for the physics loss function
+            in a >=2D array.
         shuffle : bool
             Flag to randomly subset the validation data from x and y.
             shuffle=False will take the first entries in x and y.
@@ -362,68 +393,72 @@ class PhysicsGuidedNeuralNetwork:
         Returns
         -------
         x : np.ndarray
-            Feature data for model training as 2D array. Length of this
+            Feature data for model training as >=2D array. Length of this
             will be the length of the input x multiplied by one minus
             the split fraction
         y : np.ndarray
-            Known output data for model training as 2D array. Length of this
+            Known output data for model training as >=2D array. Length of this
             will be the length of the input y multiplied by one minus
             the split fraction
         p : np.ndarray
             Supplemental feature data for physics loss function to be used
-            in model training as 2D array. Length of this will be the length
+            in model training as >=2D array. Length of this will be the length
             of the input p multiplied by one minus the split fraction
         x_val : np.ndarray
-            Feature data for model validation as 2D array. Length of this
+            Feature data for model validation as >=2D array. Length of this
             will be the length of the input x multiplied by the split fraction
         y_val : np.ndarray
-            Known output data for model validation as 2D array. Length of this
-            will be the length of the input y multiplied by the split fraction
+            Known output data for model validation as >=2D array. Length of
+            this will be the length of the input y multiplied by the split
+            fraction
         p_val : np.ndarray
             Supplemental feature data for physics loss function to be used in
-            model validation as 2D array. Length of this will be the length of
-            the input p multiplied by the split fraction
+            model validation as >=2D array. Length of this will be the length
+            of the input p multiplied by the split fraction
         """
 
-        L = len(x)
+        L = x.shape[0]
         n = int(L * validation_split)
 
+        # get the validation dataset indices, i
         if shuffle:
             i = np.random.choice(L, replace=False, size=(n,))
         else:
             i = np.arange(n)
 
+        # get the training dataset indices, j
         j = np.array(list(set(range(L)) - set(i)))
 
         assert len(set(i)) == len(i)
         assert len(set(list(i) + list(j))) == L
 
-        x_val, y_val, p_val = x[i, :], y[i, :], p[i, :]
-        x, y, p = x[j, :], y[j, :], p[j, :]
+        x_val, y_val, p_val = x[i], y[i], p[i]
+        x, y, p = x[j], y[j], p[j]
 
-        PhysicsGuidedNeuralNetwork._check_shapes(x_val, y_val)
-        PhysicsGuidedNeuralNetwork._check_shapes(x_val, p_val)
-        PhysicsGuidedNeuralNetwork._check_shapes(x, y)
-        PhysicsGuidedNeuralNetwork._check_shapes(x, p)
+        cls._check_shapes(x_val, y_val)
+        cls._check_shapes(x_val, p_val)
+        cls._check_shapes(x, y)
+        cls._check_shapes(x, p)
 
-        logger.debug('Validation data has length {} and training data has '
-                     'length {} (split of {})'
-                     .format(len(x_val), len(x), validation_split))
+        logger.debug('Validation feature data has shape {} and training '
+                     'feature data has shape {} (split of {})'
+                     .format(x_val.shape, x.shape, validation_split))
 
         return x, y, p, x_val, y_val, p_val
 
     @staticmethod
-    def _make_batches(x, y, p, n_batch=16, shuffle=True):
-        """Make lists of batches from x and y.
+    def make_batches(x, y, p, n_batch=16, shuffle=True):
+        """Make lists of unique data batches by splitting x and y along the
+        1st data dimension.
 
         Parameters
         ----------
         x : np.ndarray
-            Feature data for training in a 2D array
+            Feature data for training
         y : np.ndarray
-            Known output data for training in a 2D array.
+            Known output data for training
         p : np.ndarray
-            Supplemental feature data for the physics loss function in 2D array
+            Supplemental feature data
         n_batch : int
             Number of times to update the NN weights per epoch. The training
             data will be split into this many batches and the NN will train on
@@ -434,17 +469,17 @@ class PhysicsGuidedNeuralNetwork:
         Returns
         -------
         x_batches : list
-            List of 2D arrays that are split subsets of x.
-            Length of list is n_batch.
+            List of ND arrays that are split subsets of x.
+            ND matches input dimension. Length of list is n_batch.
         y_batches : list
-            List of 2D arrays that are split subsets of y.
-            Length of list is n_batch.
+            List of ND arrays that are split subsets of y.
+            ND matches input dimension. Length of list is n_batch.
         p_batches : list
-            List of 2D arrays that are split subsets of p.
-            Length of list is n_batch.
+            List of ND arrays that are split subsets of p.
+            ND matches input dimension. Length of list is n_batch.
         """
 
-        L = len(x)
+        L = x.shape[0]
         if shuffle:
             i = np.random.choice(L, replace=False, size=(L,))
             assert len(set(i)) == L
@@ -453,9 +488,9 @@ class PhysicsGuidedNeuralNetwork:
 
         batch_indexes = np.array_split(i, n_batch)
 
-        x_batches = [x[j, :] for j in batch_indexes]
-        y_batches = [y[j, :] for j in batch_indexes]
-        p_batches = [p[j, :] for j in batch_indexes]
+        x_batches = [x[j] for j in batch_indexes]
+        y_batches = [y[j] for j in batch_indexes]
+        p_batches = [p[j] for j in batch_indexes]
 
         return x_batches, y_batches, p_batches
 
@@ -495,44 +530,44 @@ class PhysicsGuidedNeuralNetwork:
         logger.debug('p_fun passed preflight check.')
 
     def preflight_data(self, x, y, p):
-        """Run simple preflight checks on data shapes.
+        """Run simple preflight checks on data shapes and data types.
 
         Parameters
         ----------
         x : np.ndarray | pd.DataFrame
-            Feature data in a 2D array or DataFrame. If this is a DataFrame,
+            Feature data in a >=2D array or DataFrame. If this is a DataFrame,
             the index is ignored, the columns are used with self.feature_names,
             and the df is converted into a numpy array for batching and passing
-            to the training algorithm.
+            to the training algorithm. A 2D input should have the shape:
+            (n_observations, n_features). A 3D input should have the shape:
+            (n_observations, n_timesteps, n_features). 4D inputs have not been
+            tested and should be used with caution.
         y : np.ndarray | pd.DataFrame
-            Known output data in a 2D array or DataFrame. If this is a
-            DataFrame, the index is ignored, the columns are used with
-            self.output_names, and the df is converted into a numpy array for
-            batching and passing to the training algorithm.
+            Known output data in a 2D array or DataFrame.
+            Same dimension rules as x.
         p : np.ndarray | pd.DataFrame
             Supplemental feature data for the physics loss function in 2D array
-            or DataFrame. If this is a DataFrame, the index and column labels
-            are ignored and the df is converted into a numpy array for batching
-            and passing to the training algorithm and physical loss function.
+            or DataFrame. Same dimension rules as x.
 
         Returns
         ----------
         x : np.ndarray
-            Feature data in a 2D array
+            Feature data
         y : np.ndarray
-            Known output data in a 2D array
+            Known output data
         p : np.ndarray
-            Supplemental feature data for the physics loss function in 2D array
+            Supplemental feature data
         """
 
         self._check_shapes(x, y)
         self._check_shapes(x, p)
+
         x_msg = ('x data has {} features but expected {}'
-                 .format(x.shape[1], self._input_dims))
+                 .format(x.shape[-1], self._n_features))
         y_msg = ('y data has {} features but expected {}'
-                 .format(y.shape[1], self._output_dims))
-        assert x.shape[1] == self._input_dims, x_msg
-        assert y.shape[1] == self._output_dims, y_msg
+                 .format(y.shape[-1], self._n_labels))
+        assert x.shape[-1] == self._n_features, x_msg
+        assert y.shape[-1] == self._n_labels, y_msg
 
         x = self.preflight_features(x)
 
@@ -558,10 +593,13 @@ class PhysicsGuidedNeuralNetwork:
         Parameters
         ----------
         x : np.ndarray | pd.DataFrame
-            Feature data in a 2D array or DataFrame. If this is a DataFrame,
+            Feature data in a >=2D array or DataFrame. If this is a DataFrame,
             the index is ignored, the columns are used with self.feature_names,
             and the df is converted into a numpy array for batching and passing
-            to the training algorithm.
+            to the training algorithm. A 2D input should have the shape:
+            (n_observations, n_features). A 3D input should have the shape:
+            (n_observations, n_timesteps, n_features). 4D inputs have not been
+            tested and should be used with caution.
 
         Returns
         ----------
@@ -569,10 +607,9 @@ class PhysicsGuidedNeuralNetwork:
             Feature data in a 2D array
         """
 
-        assert len(x.shape) == 2, 'PhyGNN can only use 2D data as input!'
         x_msg = ('x data has {} features but expected {}'
-                 .format(x.shape[1], self._input_dims))
-        assert x.shape[1] == self._input_dims, x_msg
+                 .format(x.shape[-1], self._n_features))
+        assert x.shape[-1] == self._n_features, x_msg
 
         if isinstance(x, pd.DataFrame):
             x_cols = x.columns.values.tolist()
@@ -703,20 +740,19 @@ class PhysicsGuidedNeuralNetwork:
         Parameters
         ----------
         x : np.ndarray | pd.DataFrame
-            Feature data in a 2D array or DataFrame. If this is a DataFrame,
+            Feature data in a >=2D array or DataFrame. If this is a DataFrame,
             the index is ignored, the columns are used with self.feature_names,
             and the df is converted into a numpy array for batching and passing
-            to the training algorithm.
+            to the training algorithm. A 2D input should have the shape:
+            (n_observations, n_features). A 3D input should have the shape:
+            (n_observations, n_timesteps, n_features). 4D inputs have not been
+            tested and should be used with caution.
         y : np.ndarray | pd.DataFrame
-            Known output data in a 2D array or DataFrame. If this is a
-            DataFrame, the index is ignored, the columns are used with
-            self.output_names, and the df is converted into a numpy array for
-            batching and passing to the training algorithm.
+            Known output data in a 2D array or DataFrame.
+            Same dimension rules as x.
         p : np.ndarray | pd.DataFrame
             Supplemental feature data for the physics loss function in 2D array
-            or DataFrame. If this is a DataFrame, the index and column labels
-            are ignored and the df is converted into a numpy array for batching
-            and passing to the training algorithm and physical loss function.
+            or DataFrame. Same dimension rules as x.
         n_batch : int
             Number of times to update the NN weights per epoch (number of
             mini-batches). The training data will be split into this many
@@ -726,9 +762,9 @@ class PhysicsGuidedNeuralNetwork:
             Number of times to iterate on the training data.
         shuffle : bool
             Flag to randomly subset the validation data and batch selection
-            from x and y.
+            from x, y, and p.
         validation_split : float
-            Fraction of x and y to use for validation.
+            Fraction of x, y, and p to use for validation.
         p_kwargs : None | dict
             Optional kwargs for the physical loss function self._p_fun.
         run_preflight : bool
@@ -760,7 +796,7 @@ class PhysicsGuidedNeuralNetwork:
         else:
             epochs += self._history.index.values[-1] + 1
 
-        x, y, p, x_val, y_val, p_val = self._get_val_split(
+        x, y, p, x_val, y_val, p_val = self.get_val_split(
             x, y, p, shuffle=shuffle, validation_split=validation_split)
 
         if self._loss_weights[1] > 0 and run_preflight:
@@ -769,7 +805,7 @@ class PhysicsGuidedNeuralNetwork:
         t0 = time.time()
         for epoch in epochs:
 
-            x_batches, y_batches, p_batches = self._make_batches(
+            x_batches, y_batches, p_batches = self.make_batches(
                 x, y, p, n_batch=n_batch, shuffle=shuffle)
 
             batch_iter = zip(x_batches, y_batches, p_batches)
@@ -805,8 +841,14 @@ class PhysicsGuidedNeuralNetwork:
 
         Parameters
         ----------
-        x : np.ndarray
-            Feature data in a 2D array
+        x : np.ndarray | pd.DataFrame
+            Feature data in a >=2D array or DataFrame. If this is a DataFrame,
+            the index is ignored, the columns are used with self.feature_names,
+            and the df is converted into a numpy array for batching and passing
+            to the training algorithm. A 2D input should have the shape:
+            (n_observations, n_features). A 3D input should have the shape:
+            (n_observations, n_timesteps, n_features). 4D inputs have not been
+            tested and should be used with caution.
         to_numpy : bool
             Flag to convert output from tensor to numpy array
         training : bool
@@ -816,7 +858,7 @@ class PhysicsGuidedNeuralNetwork:
         Returns
         -------
         y : tf.Tensor | np.ndarray
-            Predicted output data in a 2D array.
+            Predicted output data.
         """
 
         x = self.preflight_features(x)
@@ -859,41 +901,6 @@ class PhysicsGuidedNeuralNetwork:
             pickle.dump(model_params, f)
 
     @classmethod
-    def set_params(cls, model_params):
-        """
-        Initialize phygnn model from saved model parameters
-
-        Parameters
-        ----------
-        model_params : dict
-            Model parameters
-
-        Returns
-        -------
-        model : PhysicsGuidedNeuralNetwork
-            Instantiated phygnn model
-        """
-        p_fun = model_params.pop('p_fun')
-        weight_dict = model_params.pop('weight_dict')
-
-        model = cls(p_fun, **model_params)
-
-        for i, weights in weight_dict.items():
-            if weights:
-                dim = weights[0].shape[0]
-
-                if isinstance(model.layers[i], BatchNormalization):
-                    # BatchNormalization layers need to be
-                    # built with funky input dims.
-                    model.layers[i].build((None, dim))
-                else:
-                    model.layers[i].build((dim,))
-
-                model.layers[i].set_weights(weights)
-
-        return model
-
-    @classmethod
     def load(cls, fpath):
         """Load a phygnn model that has been saved to a pickle file.
 
@@ -907,6 +914,7 @@ class PhysicsGuidedNeuralNetwork:
         model : PhysicsGuidedNeuralNetwork
             Instantiated phygnn model
         """
+
         if not os.path.exists(fpath):
             e = 'Could not load file, does not exist: {}'.format(fpath)
             logger.error(e)
@@ -920,6 +928,8 @@ class PhysicsGuidedNeuralNetwork:
         with open(fpath, 'rb') as f:
             model_params = pickle.load(f)
 
-        model = cls.set_params(model_params)
+        model = cls(**model_params)
+        logger.debug('Initialized phygnn model from disk with {} layers: {}'
+                     .format(len(model.layers), model.layers))
 
         return model

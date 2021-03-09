@@ -6,14 +6,14 @@ import os
 import pytest
 import numpy as np
 import pandas as pd
+import tempfile
 import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
-                                     BatchNormalization)
-from phygnn import PhysicsGuidedNeuralNetwork, p_fun_dummy, TESTDATADIR
+                                     BatchNormalization, Conv1D, Conv3D,
+                                     Flatten, LSTM)
+from phygnn import PhysicsGuidedNeuralNetwork, p_fun_dummy
 
-
-FPATH = os.path.join(TESTDATADIR, '_temp_model.pkl')
 
 N = 100
 A = np.linspace(-1, 1, N)
@@ -234,8 +234,17 @@ def test_save_load():
     model.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
     y_pred = model.predict(X)
 
-    model.save(FPATH)
-    loaded = PhysicsGuidedNeuralNetwork.load(FPATH)
+    with tempfile.TemporaryDirectory() as td:
+        fpath = os.path.join(td, 'tempfile.pkl')
+        model.save(fpath)
+        loaded = PhysicsGuidedNeuralNetwork.load(fpath)
+
+    assert len(model.layers) == len(loaded.layers)
+    for layer0, layer1 in zip(model.layers, loaded.layers):
+        for i in range(len(layer0.weights)):
+            assert layer0.weights[i].shape == layer1.weights[i].shape
+            assert np.allclose(layer0.weights[i], layer1.weights[i])
+
     y_pred_loaded = loaded.predict(X)
     assert np.allclose(y_pred, y_pred_loaded)
     assert loaded.feature_names == ['a', 'b']
@@ -243,7 +252,6 @@ def test_save_load():
     assert isinstance(model._optimizer, Adam)
     assert isinstance(loaded._optimizer, Adam)
     assert model._optimizer.get_config() == loaded._optimizer.get_config()
-    os.remove(FPATH)
 
 
 def test_dummy_p_fun():
@@ -323,12 +331,14 @@ def test_dropouts():
     assert not np.allclose(y_pred_1, y_pred_2)
     assert np.max(diff) > 0.1
 
-    model_2.save(FPATH)
-    loaded = PhysicsGuidedNeuralNetwork.load(FPATH)
+    with tempfile.TemporaryDirectory() as td:
+        fpath = os.path.join(td, 'tempfile.pkl')
+        model_2.save(fpath)
+        loaded = PhysicsGuidedNeuralNetwork.load(fpath)
+
     y_pred_loaded = loaded.predict(X)
     assert np.allclose(y_pred_2, y_pred_loaded)
     assert len(model_2.layers) == len(loaded.layers)
-    os.remove(FPATH)
 
 
 def test_batch_norm():
@@ -356,20 +366,165 @@ def test_batch_norm():
     model.fit(X, Y_NOISE, P, n_batch=1, n_epoch=10)
     y_pred = model.predict(X)
 
-    model.save(FPATH)
-    loaded = PhysicsGuidedNeuralNetwork.load(FPATH)
+    with tempfile.TemporaryDirectory() as td:
+        fpath = os.path.join(td, 'tempfile.pkl')
+        model.save(fpath)
+        loaded = PhysicsGuidedNeuralNetwork.load(fpath)
+
     y_pred_loaded = loaded.predict(X)
 
     assert np.allclose(y_pred, y_pred_loaded)
     assert len(model.layers) == len(loaded.layers)
 
-    os.remove(FPATH)
+
+def test_conv1d():
+    """Test a phygnn model with a conv1d layer. The data in this test is
+    garbage, just a test on shapes and save/load functionality"""
+
+    input_layer = {'class': 'Conv1D', 'filters': 12, 'kernel_size': (4,),
+                   'activation': 'relu'}
+    hidden_layers = [{'units': 64, 'activation': 'relu'},
+                     {'class': 'Flatten'}]
+    output_layer = {'units': 24}
+    model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                       hidden_layers=hidden_layers,
+                                       input_layer=input_layer,
+                                       output_layer=output_layer,
+                                       loss_weights=(1.0, 0.0),
+                                       n_features=2, n_labels=24)
+
+    train_x = np.random.uniform(-1, 1, (50, 12, 2))
+    train_y = np.random.uniform(-1, 1, (50, 24))
+
+    assert len(model.layers) == 5, "conv layers did not get added!"
+    assert isinstance(model.layers[0], Conv1D)
+    assert isinstance(model.layers[1], Dense)
+    assert isinstance(model.layers[2], Activation)
+    assert isinstance(model.layers[3], Flatten)
+    assert isinstance(model.layers[4], Dense)
+
+    model.fit(train_x, train_y, train_x, n_batch=1, n_epoch=10)
+    y_pred = model.predict(train_x)
+    assert y_pred.shape == (50, 24)
+
+    with tempfile.TemporaryDirectory() as td:
+        fpath = os.path.join(td, 'tempfile.pkl')
+        model.save(fpath)
+        loaded = PhysicsGuidedNeuralNetwork.load(fpath)
+
+    assert len(model.layers) == len(loaded.layers)
+    for layer0, layer1 in zip(model.layers, loaded.layers):
+        for i in range(len(layer0.weights)):
+            assert layer0.weights[i].shape == layer1.weights[i].shape
+            assert np.allclose(layer0.weights[i], layer1.weights[i])
+
+    y_pred_loaded = loaded.predict(train_x)
+
+    assert np.allclose(y_pred, y_pred_loaded)
+    assert len(model.layers) == len(loaded.layers)
+
+
+def test_conv3d():
+    """Test a phygnn model with a conv3d layer. The data in this test is
+    garbage, just a test on shapes and save/load functionality"""
+
+    input_layer = {'class': 'Conv3D', 'filters': 2, 'kernel_size': 3,
+                   'activation': 'relu'}
+    hidden_layers = [{'units': 64, 'activation': 'relu'},
+                     {'class': 'Flatten'}]
+    output_layer = {'units': 24}
+    model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                       hidden_layers=hidden_layers,
+                                       input_layer=input_layer,
+                                       output_layer=output_layer,
+                                       loss_weights=(1.0, 0.0),
+                                       n_features=1, n_labels=24)
+
+    train_x_bad = np.random.uniform(-1, 1, (50, 12, 7, 7, 2))
+    train_x = np.random.uniform(-1, 1, (50, 12, 7, 7, 1))
+    train_y = np.random.uniform(-1, 1, (50, 24))
+
+    assert len(model.layers) == 5, "conv layers did not get added!"
+    assert isinstance(model.layers[0], Conv3D)
+    assert isinstance(model.layers[1], Dense)
+    assert isinstance(model.layers[2], Activation)
+    assert isinstance(model.layers[3], Flatten)
+    assert isinstance(model.layers[4], Dense)
+
+    # test raise on bad feature channel dimension
+    with pytest.raises(AssertionError):
+        model.fit(train_x_bad, train_y, train_x, n_batch=1, n_epoch=10)
+
+    model.fit(train_x, train_y, train_x, n_batch=1, n_epoch=10)
+    y_pred = model.predict(train_x)
+    assert y_pred.shape == (50, 24)
+
+    with tempfile.TemporaryDirectory() as td:
+        fpath = os.path.join(td, 'tempfile.pkl')
+        model.save(fpath)
+        loaded = PhysicsGuidedNeuralNetwork.load(fpath)
+
+    assert len(model.layers) == len(loaded.layers)
+    for layer0, layer1 in zip(model.layers, loaded.layers):
+        for i in range(len(layer0.weights)):
+            assert layer0.weights[i].shape == layer1.weights[i].shape
+            assert np.allclose(layer0.weights[i], layer1.weights[i])
+
+    y_pred_loaded = loaded.predict(train_x)
+
+    assert np.allclose(y_pred, y_pred_loaded)
+    assert len(model.layers) == len(loaded.layers)
+
+
+def test_lstm():
+    """Test a phygnn model with a conv1d layer. The data in this test is
+    garbage, just a test on shapes and creation. Save/load doesnt work yet
+    for lstm"""
+
+    input_layer = {'class': 'LSTM', 'units': 24, 'return_sequences': True}
+    hidden_layers = [{'units': 64, 'activation': 'relu'}]
+    output_layer = {'units': 24}
+    model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_pythag,
+                                       hidden_layers=hidden_layers,
+                                       input_layer=input_layer,
+                                       output_layer=output_layer,
+                                       loss_weights=(1.0, 0.0),
+                                       n_features=2, n_labels=24)
+
+    train_x = np.random.uniform(-1, 1, (50, 12, 2))
+    train_y = np.random.uniform(-1, 1, (50, 12, 24))
+
+    assert len(model.layers) == 4, "lstm layers did not get added!"
+    assert isinstance(model.layers[0], LSTM)
+    assert isinstance(model.layers[1], Dense)
+    assert isinstance(model.layers[2], Activation)
+    assert isinstance(model.layers[3], Dense)
+
+    model.fit(train_x, train_y, train_x, n_batch=1, n_epoch=10)
+    y_pred = model.predict(train_x)
+    assert y_pred.shape == (50, 12, 24)
+
+    with tempfile.TemporaryDirectory() as td:
+        fpath = os.path.join(td, 'tempfile.pkl')
+        model.save(fpath)
+        loaded = PhysicsGuidedNeuralNetwork.load(fpath)
+
+    assert len(model.layers) == len(loaded.layers)
+    for layer0, layer1 in zip(model.layers, loaded.layers):
+        for i in range(len(layer0.weights)):
+            assert layer0.weights[i].shape == layer1.weights[i].shape
+            assert np.allclose(layer0.weights[i], layer1.weights[i])
+
+    y_pred_loaded = loaded.predict(train_x)
+
+    assert np.allclose(y_pred, y_pred_loaded)
+    assert len(model.layers) == len(loaded.layers)
 
 
 def test_validation_split_shuffle():
     """Test the validation split operation with shuffling"""
-    out = PhysicsGuidedNeuralNetwork._get_val_split(X, Y, P, shuffle=True,
-                                                    validation_split=0.3)
+    out = PhysicsGuidedNeuralNetwork.get_val_split(X, Y, P, shuffle=True,
+                                                   validation_split=0.3)
     x, y, p, x_val, y_val, p_val = out
 
     assert (x_val == p_val).all()
@@ -401,8 +556,8 @@ def test_validation_split_shuffle():
 
 def test_validation_split_no_shuffle():
     """Test the validation split operation without shuffling"""
-    out = PhysicsGuidedNeuralNetwork._get_val_split(X, Y, P, shuffle=False,
-                                                    validation_split=0.3)
+    out = PhysicsGuidedNeuralNetwork.get_val_split(X, Y, P, shuffle=False,
+                                                   validation_split=0.3)
     x, y, p, x_val, y_val, p_val = out
     assert (x_val == p_val).all()
     assert (x == p).all()
@@ -412,9 +567,36 @@ def test_validation_split_no_shuffle():
     assert (p_val == P[0:len(p_val)]).all()
 
 
+def test_validation_split_5D():
+    """Test the validation split with high dimensional data (5D)"""
+    x0 = np.random.uniform(0, 1, (50, 4, 4, 4, 2))
+    y0 = np.random.uniform(0, 1, (50, 4, 1, 1, 1))
+    p0 = x0.copy()
+    out = PhysicsGuidedNeuralNetwork.get_val_split(x0, y0, p0, shuffle=False,
+                                                   validation_split=0.3)
+    x, y, p, x_val, y_val, p_val = out
+    assert len(x0.shape) == 5
+    assert len(y0.shape) == 5
+    assert len(p0.shape) == 5
+    assert len(x.shape) == 5
+    assert len(y.shape) == 5
+    assert len(p.shape) == 5
+    assert len(x_val.shape) == 5
+    assert len(y_val.shape) == 5
+    assert len(p_val.shape) == 5
+    assert (x_val == p_val).all()
+    assert (x == p).all()
+    assert (x == x0[-len(x):]).all()
+    assert (y == y0[-len(y):]).all()
+    assert (p == p0[-len(p):]).all()
+    assert (x_val == x0[:len(x_val)]).all()
+    assert (y_val == y0[:len(y_val)]).all()
+    assert (p_val == p0[:len(p_val)]).all()
+
+
 def test_batching_shuffle():
     """Test the batching operation with shuffling"""
-    x_batches, y_batches, p_batches = PhysicsGuidedNeuralNetwork._make_batches(
+    x_batches, y_batches, p_batches = PhysicsGuidedNeuralNetwork.make_batches(
         X, Y, P, n_batch=4, shuffle=True)
 
     assert len(x_batches) == 4
@@ -434,7 +616,7 @@ def test_batching_shuffle():
 
 def test_batching_no_shuffle():
     """Test the batching operation without shuffling"""
-    x_batches, y_batches, p_batches = PhysicsGuidedNeuralNetwork._make_batches(
+    x_batches, y_batches, p_batches = PhysicsGuidedNeuralNetwork.make_batches(
         X, Y, P, n_batch=6, shuffle=False)
 
     assert len(x_batches) == 6
@@ -454,3 +636,31 @@ def test_batching_no_shuffle():
         truth = np.sqrt(x_b[:, 0]**2 + x_b[:, 1]**2).reshape((len(x_b), 1))
         y_check = y_batches[i]
         assert np.allclose(truth, y_check)
+
+
+def test_batching_5D():
+    """Test the batching with high dimensional data (5D)"""
+    x0 = np.random.uniform(0, 1, (50, 4, 4, 4, 2))
+    y0 = np.random.uniform(0, 1, (50, 4, 1, 1, 1))
+    p0 = x0.copy()
+
+    x_batches, y_batches, p_batches = PhysicsGuidedNeuralNetwork.make_batches(
+        x0, y0, p0, n_batch=6, shuffle=False)
+
+    assert len(x_batches) == 6
+    assert len(y_batches) == 6
+    assert len(p_batches) == 6
+    assert len(x0.shape) == 5
+    assert len(y0.shape) == 5
+    assert len(p0.shape) == 5
+    assert len(x_batches[0].shape) == 5
+    assert len(y_batches[0].shape) == 5
+    assert len(p_batches[0].shape) == 5
+
+    assert (x_batches[0] == x0[:len(x_batches[0])]).all()
+    assert (y_batches[0] == y0[:len(y_batches[0])]).all()
+    assert (p_batches[0] == p0[:len(p_batches[0])]).all()
+
+    assert (x_batches[-1] == x0[-(len(x_batches[0]) - 1):]).all()
+    assert (y_batches[-1] == y0[-(len(y_batches[0]) - 1):]).all()
+    assert (p_batches[-1] == p0[-(len(p_batches[0]) - 1):]).all()
