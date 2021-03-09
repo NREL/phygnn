@@ -154,7 +154,7 @@ class PhysicsGuidedNeuralNetwork:
             Optional model name for debugging.
         """
 
-        self._p_fun = p_fun
+        self._p_fun = p_fun if p_fun is not None else p_fun_dummy
         self._loss_weights = None
         self._metric = metric
         self._n_features = n_features
