@@ -10,7 +10,7 @@ import pandas as pd
 import logging
 import tensorflow as tf
 from tensorflow.keras import optimizers, initializers
-from tensorflow.keras.layers import BatchNormalization, Dropout, Conv1D
+from tensorflow.keras.layers import BatchNormalization, Dropout
 
 from phygnn.utilities.loss_metrics import METRICS
 from phygnn.utilities.tf_layers import Layers
@@ -55,7 +55,7 @@ class PhysicsGuidedNeuralNetwork:
 
     def __init__(self, p_fun, loss_weights=(0.5, 0.5),
                  n_features=1, n_labels=1, hidden_layers=None,
-                 input_layer=None, output_layer=None,
+                 input_layer=None, output_layer=None, layers_obj=None,
                  metric='mae', initializer=None, optimizer=None,
                  learning_rate=0.01, history=None,
                  kernel_reg_rate=0.0, kernel_reg_power=1,
@@ -105,6 +105,10 @@ class PhysicsGuidedNeuralNetwork:
             output_layer should be [{'units': 1}, {'activation': 'sigmoid'}].
             This defaults to a single dense layer with no activation
             (best for regression problems).
+        layers_obj : None | phygnn.utilities.tf_layers.Layers
+            Optional initialized Layers object to set as the model layers
+            including pre-set weights. This option will override the
+            hidden_layers, input_layer, and output_layer arguments.
         metric : str, optional
             Loss metric option for the NN loss function (not the physical
             loss function). Must be a valid key in phygnn.loss_metrics.METRICS
@@ -159,10 +163,12 @@ class PhysicsGuidedNeuralNetwork:
         self._metric = metric
         self._n_features = n_features
         self._n_labels = n_labels
-        self._layers = Layers(n_features, n_labels=n_labels,
-                              hidden_layers=hidden_layers,
-                              input_layer=input_layer,
-                              output_layer=output_layer)
+        self._layers = layers_obj
+        if layers_obj is None:
+            self._layers = Layers(n_features, n_labels=n_labels,
+                                  hidden_layers=hidden_layers,
+                                  input_layer=input_layer,
+                                  output_layer=output_layer)
         self._optimizer = None
         self._history = history
         self._learning_rate = learning_rate
@@ -214,13 +220,25 @@ class PhysicsGuidedNeuralNetwork:
     @property
     def layers(self):
         """
-        TensorFlow keras layers
+        Ordered list of TensorFlow keras layers that make up this model
+        including input and output layers
 
         Returns
         -------
         list
         """
         return self._layers.layers
+
+    @property
+    def layers_obj(self):
+        """
+        phygnn layers handler object
+
+        Returns
+        -------
+        phygnn.utilities.tf_layers.Layers
+        """
+        return self._layers
 
     @property
     def weights(self):
@@ -298,9 +316,6 @@ class PhysicsGuidedNeuralNetwork:
         -------
         dict
         """
-        weight_dict = {}
-        for i, layer in enumerate(self.layers):
-            weight_dict[i] = layer.get_weights()
 
         model_params = {'p_fun': self._p_fun,
                         'hidden_layers': self._layers.hidden_layer_kwargs,
@@ -313,7 +328,7 @@ class PhysicsGuidedNeuralNetwork:
                         'initializer': self._initializer,
                         'optimizer': self._optimizer.get_config(),
                         'learning_rate': self._learning_rate,
-                        'weight_dict': weight_dict,
+                        'layers_obj': self.layers_obj,
                         'history': self.history,
                         'kernel_reg_rate': self.kernel_reg_rate,
                         'kernel_reg_power': self.kernel_reg_power,
@@ -880,46 +895,6 @@ class PhysicsGuidedNeuralNetwork:
             pickle.dump(model_params, f)
 
     @classmethod
-    def set_params(cls, model_params):
-        """
-        Initialize phygnn model from saved model parameters
-
-        Parameters
-        ----------
-        model_params : dict
-            Model parameters
-
-        Returns
-        -------
-        model : PhysicsGuidedNeuralNetwork
-            Instantiated phygnn model
-        """
-        p_fun = model_params.pop('p_fun')
-        weight_dict = model_params.pop('weight_dict')
-
-        model = cls(p_fun, **model_params)
-        logger.debug('Initialized phygnn model from disk with {} layers: {}'
-                     .format(len(model.layers), model.layers))
-
-        for i, weights in weight_dict.items():
-            if weights:
-                dim = weights[0].shape[0]
-
-                if isinstance(model.layers[i], BatchNormalization):
-                    # BatchNormalization layers need to be
-                    # built with funky input dims.
-                    build_shape = (None, dim)
-                elif isinstance(model.layers[i], Conv1D):
-                    build_shape = (dim, model._n_features)
-                else:
-                    build_shape = (dim,)
-
-                model.layers[i].build(build_shape)
-                model.layers[i].set_weights(weights)
-
-        return model
-
-    @classmethod
     def load(cls, fpath):
         """Load a phygnn model that has been saved to a pickle file.
 
@@ -933,6 +908,7 @@ class PhysicsGuidedNeuralNetwork:
         model : PhysicsGuidedNeuralNetwork
             Instantiated phygnn model
         """
+
         if not os.path.exists(fpath):
             e = 'Could not load file, does not exist: {}'.format(fpath)
             logger.error(e)
@@ -946,6 +922,8 @@ class PhysicsGuidedNeuralNetwork:
         with open(fpath, 'rb') as f:
             model_params = pickle.load(f)
 
-        model = cls.set_params(model_params)
+        model = cls(**model_params)
+        logger.debug('Initialized phygnn model from disk with {} layers: {}'
+                     .format(len(model.layers), model.layers))
 
         return model

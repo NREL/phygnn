@@ -236,11 +236,23 @@ class PhygnnModel(ModelBase):
 
     @classmethod
     def build(cls, p_fun, feature_names, label_names,
-              normalize=(True, False), one_hot_categories=None,
-              loss_weights=(0.5, 0.5), hidden_layers=None, metric='mae',
-              initializer=None, optimizer=None, learning_rate=0.01,
-              history=None, kernel_reg_rate=0.0, kernel_reg_power=1,
-              bias_reg_rate=0.0, bias_reg_power=1, name=None):
+              normalize=(True, False),
+              one_hot_categories=None,
+              loss_weights=(0.5, 0.5),
+              hidden_layers=None,
+              input_layer=None,
+              output_layer=None,
+              layers_obj=None,
+              metric='mae',
+              initializer=None,
+              optimizer=None,
+              learning_rate=0.01,
+              history=None,
+              kernel_reg_rate=0.0,
+              kernel_reg_power=1,
+              bias_reg_rate=0.0,
+              bias_reg_power=1,
+              name=None):
         """
         Build phygnn model from given features, layers and kwargs
 
@@ -276,12 +288,29 @@ class PhygnnModel(ModelBase):
             layer in the NN. Dense linear layers can be input with their
             activations or separately for more explicit control over the layer
             ordering. For example, this is a valid input for hidden_layers that
-            will yield 7 hidden layers (9 layers total):
+            will yield 8 hidden layers (10 layers including input+output):
                 [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
                  {'units': 64},
                  {'batch_normalization': {'axis': -1}},
                  {'activation': 'relu'},
-                 {'dropout': 0.01}]
+                 {'dropout': 0.01},
+                 {'class': 'Flatten'},
+                 ]
+        input_layer : None | dict
+            Input layer. specification. Can be a dictionary similar to
+            hidden_layers specifying a dense / conv / lstm layer.  Will
+            default to a keras InputLayer with input shape = n_features.
+        output_layer : None | list | dict
+            Output layer specification. Can be a list/dict similar to
+            hidden_layers input specifying a dense layer with activation.
+            For example, for a classfication problem with a single output,
+            output_layer should be [{'units': 1}, {'activation': 'sigmoid'}].
+            This defaults to a single dense layer with no activation
+            (best for regression problems).
+        layers_obj : None | phygnn.utilities.tf_layers.Layers
+            Optional initialized Layers object to set as the model layers
+            including pre-set weights. This option will override the
+            hidden_layers, input_layer, and output_layer arguments.
         metric : str, optional
             Loss metric option for the NN loss function (not the physical
             loss function). Must be a valid key in phygnn.loss_metrics.METRICS
@@ -338,6 +367,9 @@ class PhygnnModel(ModelBase):
                                            n_features=len(feature_names),
                                            n_labels=len(label_names),
                                            hidden_layers=hidden_layers,
+                                           input_layer=input_layer,
+                                           output_layer=output_layer,
+                                           layers_obj=layers_obj,
                                            metric=metric,
                                            initializer=initializer,
                                            optimizer=optimizer,
@@ -365,6 +397,7 @@ class PhygnnModel(ModelBase):
                       hidden_layers=None,
                       input_layer=None,
                       output_layer=None,
+                      layers_obj=None,
                       metric='mae',
                       initializer=None,
                       optimizer=None,
@@ -449,6 +482,10 @@ class PhygnnModel(ModelBase):
             output_layer should be [{'units': 1}, {'activation': 'sigmoid'}].
             This defaults to a single dense layer with no activation
             (best for regression problems).
+        layers_obj : None | phygnn.utilities.tf_layers.Layers
+            Optional initialized Layers object to set as the model layers
+            including pre-set weights. This option will override the
+            hidden_layers, input_layer, and output_layer arguments.
         metric : str, optional
             Loss metric option for the NN loss function (not the physical
             loss function). Must be a valid key in phygnn.loss_metrics.METRICS
@@ -528,6 +565,7 @@ class PhygnnModel(ModelBase):
                           hidden_layers=hidden_layers,
                           input_layer=input_layer,
                           output_layer=output_layer,
+                          layers_obj=layers_obj,
                           metric=metric,
                           initializer=initializer,
                           optimizer=optimizer,
