@@ -498,6 +498,33 @@ def test_validation_split_no_shuffle():
     assert (p_val == P[0:len(p_val)]).all()
 
 
+def test_validation_split_5D():
+    """Test the validation split with high dimensional data (5D)"""
+    x0 = np.random.uniform(0, 1, (50, 4, 4, 4, 2))
+    y0 = np.random.uniform(0, 1, (50, 4, 1, 1, 1))
+    p0 = x0.copy()
+    out = PhysicsGuidedNeuralNetwork.get_val_split(x0, y0, p0, shuffle=False,
+                                                   validation_split=0.3)
+    x, y, p, x_val, y_val, p_val = out
+    assert len(x0.shape) == 5
+    assert len(y0.shape) == 5
+    assert len(p0.shape) == 5
+    assert len(x.shape) == 5
+    assert len(y.shape) == 5
+    assert len(p.shape) == 5
+    assert len(x_val.shape) == 5
+    assert len(y_val.shape) == 5
+    assert len(p_val.shape) == 5
+    assert (x_val == p_val).all()
+    assert (x == p).all()
+    assert (x == x0[-len(x):]).all()
+    assert (y == y0[-len(y):]).all()
+    assert (p == p0[-len(p):]).all()
+    assert (x_val == x0[:len(x_val)]).all()
+    assert (y_val == y0[:len(y_val)]).all()
+    assert (p_val == p0[:len(p_val)]).all()
+
+
 def test_batching_shuffle():
     """Test the batching operation with shuffling"""
     x_batches, y_batches, p_batches = PhysicsGuidedNeuralNetwork.make_batches(
@@ -540,3 +567,31 @@ def test_batching_no_shuffle():
         truth = np.sqrt(x_b[:, 0]**2 + x_b[:, 1]**2).reshape((len(x_b), 1))
         y_check = y_batches[i]
         assert np.allclose(truth, y_check)
+
+
+def test_batching_5D():
+    """Test the batching with high dimensional data (5D)"""
+    x0 = np.random.uniform(0, 1, (50, 4, 4, 4, 2))
+    y0 = np.random.uniform(0, 1, (50, 4, 1, 1, 1))
+    p0 = x0.copy()
+
+    x_batches, y_batches, p_batches = PhysicsGuidedNeuralNetwork.make_batches(
+        x0, y0, p0, n_batch=6, shuffle=False)
+
+    assert len(x_batches) == 6
+    assert len(y_batches) == 6
+    assert len(p_batches) == 6
+    assert len(x0.shape) == 5
+    assert len(y0.shape) == 5
+    assert len(p0.shape) == 5
+    assert len(x_batches[0].shape) == 5
+    assert len(y_batches[0].shape) == 5
+    assert len(p_batches[0].shape) == 5
+
+    assert (x_batches[0] == x0[:len(x_batches[0])]).all()
+    assert (y_batches[0] == y0[:len(y_batches[0])]).all()
+    assert (p_batches[0] == p0[:len(p_batches[0])]).all()
+
+    assert (x_batches[-1] == x0[-(len(x_batches[0]) - 1):]).all()
+    assert (y_batches[-1] == y0[-(len(y_batches[0]) - 1):]).all()
+    assert (p_batches[-1] == p0[-(len(p_batches[0]) - 1):]).all()
