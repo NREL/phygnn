@@ -163,12 +163,6 @@ class PhysicsGuidedNeuralNetwork:
         self._metric = metric
         self._n_features = n_features
         self._n_labels = n_labels
-        self._layers = layers_obj
-        if layers_obj is None:
-            self._layers = Layers(n_features, n_labels=n_labels,
-                                  hidden_layers=hidden_layers,
-                                  input_layer=input_layer,
-                                  output_layer=output_layer)
         self._optimizer = None
         self._history = history
         self._learning_rate = learning_rate
@@ -179,6 +173,18 @@ class PhysicsGuidedNeuralNetwork:
         self.feature_names = feature_names
         self.output_names = output_names
         self.name = name if isinstance(name, str) else 'phygnn'
+
+        self._layers = layers_obj
+        if layers_obj is None:
+            self._layers = Layers(n_features, n_labels=n_labels,
+                                  hidden_layers=hidden_layers,
+                                  input_layer=input_layer,
+                                  output_layer=output_layer)
+        elif not isinstance(layers_obj, Layers):
+            msg = ('phygnn received layers_obj input of type "{}" but must be '
+                   'a phygnn Layers object'.format(type(layers_obj)))
+            logger.error(msg)
+            raise TypeError(msg)
 
         self.set_loss_weights(loss_weights)
 
@@ -756,9 +762,9 @@ class PhysicsGuidedNeuralNetwork:
             Number of times to iterate on the training data.
         shuffle : bool
             Flag to randomly subset the validation data and batch selection
-            from x and y.
+            from x, y, and p.
         validation_split : float
-            Fraction of x and y to use for validation.
+            Fraction of x, y, and p to use for validation.
         p_kwargs : None | dict
             Optional kwargs for the physical loss function self._p_fun.
         run_preflight : bool

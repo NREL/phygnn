@@ -136,10 +136,10 @@ class PhygnnModel(ModelBase):
             tested and should be used with caution.
         labels : np.ndarray | pd.DataFrame
             Known output data in a 2D array or DataFrame.
-            Same dimension rules as x.
+            Same dimension rules as features.
         p : np.ndarray | pd.DataFrame
             Supplemental feature data for the physics loss function in 2D array
-            or DataFrame. Same dimension rules as x.
+            or DataFrame. Same dimension rules as features.
         n_batch : int
             Number of times to update the NN weights per epoch (number of
             mini-batches). The training data will be split into this many
@@ -149,9 +149,9 @@ class PhygnnModel(ModelBase):
             Number of times to iterate on the training data.
         shuffle : bool
             Flag to randomly subset the validation data and batch selection
-            from x and y.
+            from features, labels, and p.
         validation_split : float
-            Fraction of x and y to use for validation.
+            Fraction of features and labels to use for validation.
         p_kwargs : None | dict
             Optional kwargs for the physical loss function self._p_fun.
         run_preflight : bool
@@ -439,10 +439,10 @@ class PhygnnModel(ModelBase):
             tested and should be used with caution.
         labels : np.ndarray | pd.DataFrame
             Known output data in a 2D array or DataFrame.
-            Same dimension rules as x.
+            Same dimension rules as features.
         p : np.ndarray | pd.DataFrame
             Supplemental feature data for the physics loss function in 2D array
-            or DataFrame. Same dimension rules as x.
+            or DataFrame. Same dimension rules as features.
         normalize : bool | tuple, optional
             Boolean flag(s) as to whether features and labels should be
             normalized. Possible values:
