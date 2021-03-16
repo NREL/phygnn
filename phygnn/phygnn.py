@@ -10,7 +10,7 @@ import pandas as pd
 import logging
 import tensorflow as tf
 from tensorflow.keras import optimizers, initializers
-from tensorflow.keras.layers import BatchNormalization, Dropout
+from tensorflow.keras.layers import BatchNormalization, Dropout, LSTM
 
 from phygnn.utilities.loss_metrics import METRICS
 from phygnn.utilities.tf_layers import Layers
@@ -836,7 +836,8 @@ class PhysicsGuidedNeuralNetwork:
         if return_diagnostics:
             return diagnostics
 
-    def predict(self, x, to_numpy=True, training=False):
+    def predict(self, x, to_numpy=True, training=False,
+                training_layers=(BatchNormalization, Dropout, LSTM)):
         """Run a prediction on input features.
 
         Parameters
@@ -854,6 +855,10 @@ class PhysicsGuidedNeuralNetwork:
         training : bool
             Flag for predict() used in the training routine. This is used
             to freeze the BatchNormalization and Dropout layers.
+        training_layers : list | tuple
+            List of tensorflow.keras.layers classes that training=bool should
+            be passed to. By default this is (BatchNormalization, Dropout,
+            LSTM)
 
         Returns
         -------
@@ -867,7 +872,7 @@ class PhysicsGuidedNeuralNetwork:
         y = self.layers[0](x)
 
         for layer in self.layers[1:]:
-            if isinstance(layer, (BatchNormalization, Dropout)):
+            if isinstance(layer, training_layers):
                 y = layer(y, training=training)
             else:
                 y = layer(y)
