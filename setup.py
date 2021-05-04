@@ -9,8 +9,6 @@ from subprocess import check_call
 import shlex
 from warnings import warn
 
-from phygnn import __version__ as version
-
 here = os.path.abspath(os.path.dirname(__file__))
 
 with open(os.path.join(here, "README.rst"), encoding="utf-8") as f:
@@ -18,6 +16,11 @@ with open(os.path.join(here, "README.rst"), encoding="utf-8") as f:
 
 with open(os.path.join(here, "requirements.txt")) as f:
     install_requires = f.readlines()
+
+with open(os.path.join(here, "phygnn", "version.py"), encoding="utf-8") as f:
+    version = f.read()
+
+version = version.split('=')[-1].strip().strip('"').strip("'")
 
 
 class PostDevelopCommand(develop):
