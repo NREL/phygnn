@@ -1,0 +1,374 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>phygnn &mdash; phygnn 0.0.11 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="phygnn package" href="phygnn/phygnn.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="#" class="icon icon-home"> phygnn
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.11
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="phygnn/phygnn.html">phygnn package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="phygnn/phygnn.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="phygnn/phygnn.model_interfaces.html">phygnn.model_interfaces package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="phygnn/phygnn.model_interfaces.html#submodules">Submodules</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="phygnn/phygnn.utilities.html">phygnn.utilities package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="phygnn/phygnn.utilities.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="phygnn/phygnn.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="phygnn/phygnn.phygnn.html">phygnn.phygnn module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="phygnn/phygnn.version.html">phygnn.version module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">phygnn</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>phygnn</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            
+              <a href="https://github.com/nrel/phygnn/blob/master/docs/source/index.rst" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="phygnn">
+<h1>phygnn<a class="headerlink" href="#phygnn" title="Permalink to this headline">¶</a></h1>
+<a class="reference external image-reference" href="https://nrel.github.io/phygnn/"><img alt="https://github.com/NREL/phygnn/workflows/Documentation/badge.svg" src="https://github.com/NREL/phygnn/workflows/Documentation/badge.svg" /></a>
+<a class="reference external image-reference" href="https://github.com/NREL/phygnn/actions?query=workflow%3A%22Pytests%22"><img alt="https://github.com/NREL/phygnn/workflows/Pytests/badge.svg" src="https://github.com/NREL/phygnn/workflows/Pytests/badge.svg" /></a>
+<a class="reference external image-reference" href="https://github.com/NREL/phygnn/actions?query=workflow%3A%22Lint+Code+Base%22"><img alt="https://github.com/NREL/phygnn/workflows/Lint%20Code%20Base/badge.svg" src="https://github.com/NREL/phygnn/workflows/Lint%20Code%20Base/badge.svg" /></a>
+<a class="reference external image-reference" href="https://pypi.org/project/nrel-phygnn/"><img alt="https://img.shields.io/pypi/pyversions/nrel-phygnn.svg" src="https://img.shields.io/pypi/pyversions/nrel-phygnn.svg" /></a>
+<a class="reference external image-reference" href="https://badge.fury.io/py/NREL-phygnn"><img alt="https://badge.fury.io/py/NREL-phygnn.svg" src="https://badge.fury.io/py/NREL-phygnn.svg" /></a>
+<a class="reference external image-reference" href="https://anaconda.org/nrel/nrel-phygnn"><img alt="https://anaconda.org/nrel/nrel-phygnn/badges/version.svg" src="https://anaconda.org/nrel/nrel-phygnn/badges/version.svg" /></a>
+<a class="reference external image-reference" href="https://anaconda.org/nrel/nrel-phygnn"><img alt="https://anaconda.org/nrel/nrel-phygnn/badges/license.svg" src="https://anaconda.org/nrel/nrel-phygnn/badges/license.svg" /></a>
+<a class="reference external image-reference" href="https://codecov.io/gh/nrel/phygnn"><img alt="https://codecov.io/gh/nrel/phygnn/branch/master/graph/badge.svg?token=ZJFQWAAM1N" src="https://codecov.io/gh/nrel/phygnn/branch/master/graph/badge.svg?token=ZJFQWAAM1N" /></a>
+<a class="reference external image-reference" href="https://zenodo.org/badge/latestdoi/276492167"><img alt="https://zenodo.org/badge/276492167.svg" src="https://zenodo.org/badge/276492167.svg" /></a>
+<p><strong>phygnn</strong> (fi-geon |  ˈfi-jən) noun.</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>a physics-guided neural network</p></li>
+<li><p>a rare and mythical bird</p></li>
+</ol>
+</div></blockquote>
+<p>This implementation of physics-guided neural networks augments a traditional
+neural network loss function with a generic loss term that can be used to
+guide the neural network to learn physical or theoretical constraints.
+phygnn enables scientific software developers and data scientists to easily
+integrate machine learning models into physics and engineering applications.
+This framework should help alleviate some challenges that are often encountered
+when applying purely data-driven machine learning models to scientific
+applications, such as when machine learning models produce physically
+inconsistent results or have trouble generalizing to out-of-sample scenarios.</p>
+<p>For details on the phygnn class framework see <a class="reference external" href="https://nrel.github.io/phygnn/phygnn/phygnn.phygnn.html">the phygnn module documentation
+here.</a></p>
+<p>For example notebooks using the phygnn architecture for regression,
+classification, and even GAN applications, see <a class="reference external" href="https://github.com/NREL/phygnn/tree/master/examples">the example notebooks here.</a></p>
+<p>At the National Renewable Energy Lab (NREL), we are using the phygnn framework
+to supplement traditional satellite-based cloud property prediction models. We
+use phygnn to predict cloud optical properties when the traditional mechanistic
+models fail and use a full tensor-based radiative transfer model as the
+physical loss function to transform the predicted cloud properties into
+phygnn-predicted irradiance data. We then calculate a loss value comparing the
+phygnn-predicted irradiance to high quality ground measurements. We have seen
+excellent improvements in the predicted irradiance data in rigorous
+out-of-sample-validation experiments.</p>
+<p>Engineers and researchers can use the phygnn framework to:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Enforce physically-consistent predictions from a deep neural network (see lake temperature reference below)</p></li>
+<li><p>Implement custom regularization (e.g. topological regularization)</p></li>
+<li><p>Use the physics loss function to extend training data, e.g. train against “known” outputs but also train using the downstream application of the predicted variables</p></li>
+<li><p>Use the physics loss function to adjust theoretical models based on empirical observation using respective loss weights</p></li>
+</ul>
+</div></blockquote>
+<p>Here are additional examples of similar architectures from the literature which
+helped inspire this work:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Jared Willard, Xiaowei Jia, Shaoming Xu, Michael Steinbach, and Vipin Kumar, “Integrating Physics-Based Modeling with Machine Learning: A Survey.” ArXiv abs/2003.04919 (2020).</p></li>
+<li><p>Forssell, U. and P. Lindskog. “Combining Semi-Physical and Neural Network Modeling: An Example ofIts Usefulness.” IFAC Proceedings Volumes 30 (1997): 767-770.</p></li>
+<li><p>Xinyue Hu, Haoji Hu, Saurabh Verma, and Zhi-Li Zhang, “Physics-Guided Deep Neural Networks for PowerFlow Analysis”, arXiv:2002.00097v1 (2020).</p></li>
+<li><p>Anuj Karpatne, William Watkins, Jordan Read, and Vipin Kumar, “Physics-guided Neural Networks (PGNN): An Application in Lake Temperature Modeling”. arXiv:1710.11431v2 (2018).</p></li>
+<li><p>Anuj Karpatne, Gowtham Atluri, James H Faghmous, Michael Steinbach, Arindam Banerjee, Auroop Ganguly, Shashi Shekhar, Nagiza Samatova, and Vipin Kumar. 2017. Theory-guided data science: A new paradigm for scientific discovery from data. IEEE Transactions on knowledge and data engineering 29, 10 (2017), 2318–2331.</p></li>
+<li><p>Justin Sirignano, Jonathan F. MacArt, Jonathan B. Freund, “DPM: A deep learning PDE augmentation method with application to large-eddy simulation”. Journal of Computational Physics, Volume 423, 2020, ISSN 0021-9991, <a class="reference external" href="https://doi.org/10.1016/j.jcp.2020.109811">https://doi.org/10.1016/j.jcp.2020.109811</a>.</p></li>
+</ul>
+</div></blockquote>
+<div class="section" id="suggested-citation">
+<h2>Suggested Citation<a class="headerlink" href="#suggested-citation" title="Permalink to this headline">¶</a></h2>
+<p>Update with current version and DOI:</p>
+<p>Grant Buster, Michael Rossol, Mike Bannister, and Dylan Hettinger. Physics-Guided Neural Networks (phygnn). <a class="reference external" href="https://github.com/NREL/phygnn">https://github.com/NREL/phygnn</a> (version v0.0.9), 2021. <a class="reference external" href="https://doi.org/10.5281/zenodo.4498541">https://doi.org/10.5281/zenodo.4498541</a>.</p>
+</div>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="simple-install">
+<h3>Simple Install<a class="headerlink" href="#simple-install" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic">
+<li><p>Use conda (anaconda or miniconda with python 3.7 or 3.8) to create a phygnn environment: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">create</span> <span class="pre">--name</span> <span class="pre">phygnn</span> <span class="pre">python=3.7</span></code></p>
+<blockquote>
+<div><ol class="lowerroman simple">
+<li><p>Note that phygnn is tested with python 3.7 and 3.8 via pip install. Users have reported issues installing phygnn on python 3.8 using conda install.</p></li>
+</ol>
+</div></blockquote>
+</li>
+<li><p>Activate your new conda env: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">phygnn</span></code></p></li>
+<li><p>Install with pip or conda:</p>
+<blockquote>
+<div><ol class="lowerroman simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">NREL-phygnn</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">-c</span> <span class="pre">nrel</span> <span class="pre">nrel-phygnn</span></code></p></li>
+</ol>
+</div></blockquote>
+</li>
+</ol>
+</div>
+<div class="section" id="developer-install">
+<h3>Developer Install<a class="headerlink" href="#developer-install" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic">
+<li><p>Use conda (anaconda or miniconda with python 3.7 or 3.8) to create a phygnn environment: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">create</span> <span class="pre">--name</span> <span class="pre">phygnn</span> <span class="pre">python=3.7</span></code></p></li>
+<li><p>Activate your new conda env: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">phygnn</span></code></p></li>
+<li><p>Clone the phygnn repository: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/NREL/phygnn.git</span></code> or <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">git&#64;github.com:NREL/phygnn.git</span></code></p></li>
+<li><p>Navigate to the cloned repo and checkout your desired branch: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">checkout</span> <span class="pre">master</span></code> or <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">checkout</span> <span class="pre">&lt;branch&gt;</span></code></p></li>
+<li><p>Navigate to the phygnn directory that contains setup.py and run: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-e</span> <span class="pre">.</span></code> (developer install) or <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">.</span></code> (static install).</p></li>
+<li><p>Test your installation:</p>
+<blockquote>
+<div><ol class="lowerroman simple">
+<li><p>Start ipython and test the following import: <code class="docutils literal notranslate"><span class="pre">from</span> <span class="pre">phygnn</span> <span class="pre">import</span> <span class="pre">PhysicsGuidedNeuralNetwork</span></code></p></li>
+<li><p>Navigate to the <code class="docutils literal notranslate"><span class="pre">tests/</span></code> directory and run the command: <code class="docutils literal notranslate"><span class="pre">pytest</span></code></p></li>
+</ol>
+</div></blockquote>
+</li>
+</ol>
+</div>
+</div>
+<div class="section" id="acknowledgements">
+<h2>Acknowledgements<a class="headerlink" href="#acknowledgements" title="Permalink to this headline">¶</a></h2>
+<p>This work was authored by the National Renewable Energy Laboratory, operated by Alliance for Sustainable Energy,
+LLC, for the U.S. Department of Energy (DOE) under Contract No. DE-AC36-08GO28308. This material is based upon
+work supported by the U.S. Department of Energy’s Office of Energy Efficiency and Renewable Energy (EERE) under
+the Solar Energy Technologies Office (Systems Integration Subprogram) Contract Number 36598. The views
+expressed in the article do not necessarily represent the views of the DOE or the U.S. Government. The U.S.
+Government retains and the publisher, by accepting the article for publication, acknowledges that the U.S.
+Government retains a nonexclusive, paid-up, irrevocable, worldwide license to publish or reproduce the published
+form of this work, or allow others to do so, for U.S. Government purposes.</p>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="phygnn/phygnn.html">phygnn package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="phygnn/phygnn.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="phygnn/phygnn.model_interfaces.html">phygnn.model_interfaces package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="phygnn/phygnn.utilities.html">phygnn.utilities package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="phygnn/phygnn.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="phygnn/phygnn.phygnn.html">phygnn.phygnn module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="phygnn/phygnn.version.html">phygnn.version module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="phygnn/phygnn.html" class="btn btn-neutral float-right" title="phygnn package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2020, Alliance for Sustainable Energy, LLC.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

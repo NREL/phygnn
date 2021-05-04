@@ -1,0 +1,491 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>phygnn.utilities.tf_layers module &mdash; phygnn 0.0.11 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="phygnn.utilities.tf_utilities module" href="phygnn.utilities.tf_utilities.html" />
+    <link rel="prev" title="phygnn.utilities.pre_processing module" href="phygnn.utilities.pre_processing.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> phygnn
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.11
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="phygnn.html">phygnn package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="phygnn.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="phygnn.model_interfaces.html">phygnn.model_interfaces package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="phygnn.model_interfaces.html#submodules">Submodules</a></li>
+</ul>
+</li>
+<li class="toctree-l3 current"><a class="reference internal" href="phygnn.utilities.html">phygnn.utilities package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="phygnn.utilities.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="phygnn.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="phygnn.phygnn.html">phygnn.phygnn module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="phygnn.version.html">phygnn.version module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">phygnn</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="phygnn.html">phygnn package</a> &raquo;</li>
+        
+          <li><a href="phygnn.utilities.html">phygnn.utilities package</a> &raquo;</li>
+        
+      <li>phygnn.utilities.tf_layers module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            
+              <a href="https://github.com/nrel/phygnn/blob/master/docs/source/phygnn/phygnn.utilities.tf_layers.rst" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-phygnn.utilities.tf_layers">
+<span id="phygnn-utilities-tf-layers-module"></span><h1>phygnn.utilities.tf_layers module<a class="headerlink" href="#module-phygnn.utilities.tf_layers" title="Permalink to this headline">¶</a></h1>
+<p>Tensorflow Layers Handlers</p>
+<dl class="py class">
+<dt id="phygnn.utilities.tf_layers.HiddenLayers">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">phygnn.utilities.tf_layers.</span></code><code class="sig-name descname"><span class="pre">HiddenLayers</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hidden_layers</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/utilities/tf_layers.html#HiddenLayers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.utilities.tf_layers.HiddenLayers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3.5/library/functions.html#object" title="(in Python v3.5)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Class to handle TensorFlow hidden layers</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>hidden_layers</strong> (<em>list</em>) – List of dictionaries of key word arguments for each hidden
+layer in the NN. Dense linear layers can be input with their
+activations or separately for more explicit control over the layer
+ordering. For example, this is a valid input for hidden_layers that
+will yield 7 hidden layers:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>[{‘units’: 64, ‘activation’: ‘relu’, ‘dropout’: 0.01},</dt><dd><p>{‘units’: 64},
+{‘batch_normalization’: {‘axis’: -1}},
+{‘activation’: ‘relu’},
+{‘dropout’: 0.01}]</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="phygnn.utilities.tf_layers.HiddenLayers.layers">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">layers</span></code><a class="headerlink" href="#phygnn.utilities.tf_layers.HiddenLayers.layers" title="Permalink to this definition">¶</a></dt>
+<dd><p>TensorFlow keras layers</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>list</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.utilities.tf_layers.HiddenLayers.hidden_layer_kwargs">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">hidden_layer_kwargs</span></code><a class="headerlink" href="#phygnn.utilities.tf_layers.HiddenLayers.hidden_layer_kwargs" title="Permalink to this definition">¶</a></dt>
+<dd><p>List of dictionaries of key word arguments for each hidden
+layer in the NN. This is a copy of the hidden_layers input arg
+that can be used to reconstruct the network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>list</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.utilities.tf_layers.HiddenLayers.weights">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">weights</span></code><a class="headerlink" href="#phygnn.utilities.tf_layers.HiddenLayers.weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a list of layer weights for gradient calculations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>list</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.utilities.tf_layers.HiddenLayers.kernel_weights">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">kernel_weights</span></code><a class="headerlink" href="#phygnn.utilities.tf_layers.HiddenLayers.kernel_weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a list of the NN kernel weights (tensors)</p>
+<p>(can be used for kernel regularization).</p>
+<p>Does not include input layer or dropout layers.
+Does include the output layer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>list</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.utilities.tf_layers.HiddenLayers.bias_weights">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">bias_weights</span></code><a class="headerlink" href="#phygnn.utilities.tf_layers.HiddenLayers.bias_weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a list of the NN bias weights (tensors)</p>
+<p>(can be used for bias regularization).</p>
+<p>Does not include input layer or dropout layers.
+Does include the output layer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>list</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.utilities.tf_layers.HiddenLayers.add_layer">
+<code class="sig-name descname"><span class="pre">add_layer</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">layer_kwargs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">insert_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/utilities/tf_layers.html#HiddenLayers.add_layer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.utilities.tf_layers.HiddenLayers.add_layer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a hidden layer to the DNN.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul>
+<li><p><strong>layer_kwargs</strong> (<em>dict</em>) – Dictionary of key word arguments for list layer. For example,
+any of the following are valid inputs:</p>
+<blockquote>
+<div><p>{‘units’: 64, ‘activation’: ‘relu’, ‘dropout’: 0.05}
+{‘units’: 64, ‘name’: ‘relu1’}
+{‘activation’: ‘relu’}
+{‘batch_normalization’: {‘axis’: -1}}
+{‘dropout’: 0.1}</p>
+</div></blockquote>
+</li>
+<li><p><strong>insert_index</strong> (<em>int | None</em>) – Optional index to insert the new layer at. None will append
+the layer to the end of the layer list.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.utilities.tf_layers.HiddenLayers.compile">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">compile</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden_layers</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/utilities/tf_layers.html#HiddenLayers.compile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.utilities.tf_layers.HiddenLayers.compile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add hidden layers to model</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul>
+<li><p><strong>model</strong> (<em>tensorflow.keras</em>) – Model to add hidden layers too</p></li>
+<li><p><strong>hidden_layers</strong> (<em>list</em>) – List of dictionaries of key word arguments for each hidden
+layer in the NN. Dense linear layers can be input with their
+activations or separately for more explicit control over the layer
+ordering. For example, this is a valid input for hidden_layers that
+will yield 7 hidden layers:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>[{‘units’: 64, ‘activation’: ‘relu’, ‘dropout’: 0.01},</dt><dd><p>{‘units’: 64},
+{‘batch_normalization’: {‘axis’: -1}},
+{‘activation’: ‘relu’},
+{‘dropout’: 0.01}]</p>
+</dd>
+</dl>
+</div></blockquote>
+</li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>model</strong> (<em>tensorflow.keras</em>) – Model with layers added</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="phygnn.utilities.tf_layers.Layers">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">phygnn.utilities.tf_layers.</span></code><code class="sig-name descname"><span class="pre">Layers</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_features</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/utilities/tf_layers.html#Layers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.utilities.tf_layers.Layers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#phygnn.utilities.tf_layers.HiddenLayers" title="phygnn.utilities.tf_layers.HiddenLayers"><code class="xref py py-class docutils literal notranslate"><span class="pre">phygnn.utilities.tf_layers.HiddenLayers</span></code></a></p>
+<p>Class to handle TensorFlow layers</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul>
+<li><p><strong>n_features</strong> (<em>int</em>) – Number of features (inputs) to train the model on</p></li>
+<li><p><strong>n_labels</strong> (<em>int, optional</em>) – Number of labels (outputs) to the model, by default 1</p></li>
+<li><p><strong>hidden_layers</strong> (<em>list | None, optional</em>) – List of dictionaries of key word arguments for each hidden
+layer in the NN. Dense linear layers can be input with their
+activations or separately for more explicit control over the layer
+ordering. For example, this is a valid input for hidden_layers that
+will yield 8 hidden layers (10 layers including input+output):</p>
+<blockquote>
+<div><dl class="simple">
+<dt>[{‘units’: 64, ‘activation’: ‘relu’, ‘dropout’: 0.01},</dt><dd><p>{‘units’: 64},
+{‘batch_normalization’: {‘axis’: -1}},
+{‘activation’: ‘relu’},
+{‘dropout’: 0.01},
+{‘class’: ‘Flatten’},
+]</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>by default None which will lead to a single linear layer</p>
+</li>
+<li><p><strong>input_layer</strong> (<em>None | dict</em>) – Input layer. specification. Can be a dictionary similar to
+hidden_layers specifying a dense / conv / lstm layer.  Will
+default to a keras InputLayer with input shape = n_features.</p></li>
+<li><p><strong>output_layer</strong> (<em>None | list | dict</em>) – Output layer specification. Can be a list/dict similar to
+hidden_layers input specifying a dense layer with activation.
+For example, for a classfication problem with a single output,
+output_layer should be [{‘units’: 1}, {‘activation’: ‘sigmoid’}].
+This defaults to a single dense layer with no activation
+(best for regression problems).</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="phygnn.utilities.tf_layers.Layers.input_layer_kwargs">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">input_layer_kwargs</span></code><a class="headerlink" href="#phygnn.utilities.tf_layers.Layers.input_layer_kwargs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dictionary of key word arguments for the input layer.
+This is a copy of the input_layer input arg
+that can be used to reconstruct the network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>list</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.utilities.tf_layers.Layers.output_layer_kwargs">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">output_layer_kwargs</span></code><a class="headerlink" href="#phygnn.utilities.tf_layers.Layers.output_layer_kwargs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dictionary of key word arguments for the output layer.
+This is a copy of the output_layer input arg
+that can be used to reconstruct the network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>list</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.utilities.tf_layers.Layers.compile">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">compile</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_features</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/utilities/tf_layers.html#Layers.compile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.utilities.tf_layers.Layers.compile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build all layers needed for model</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul>
+<li><p><strong>model</strong> (<em>tensorflow.keras.Sequential</em>) – Model to add layers too</p></li>
+<li><p><strong>n_features</strong> (<em>int</em>) – Number of features (inputs) to train the model on</p></li>
+<li><p><strong>n_labels</strong> (<em>int, optional</em>) – Number of labels (outputs) to the model, by default 1</p></li>
+<li><p><strong>hidden_layers</strong> (<em>list | None, optional</em>) – List of dictionaries of key word arguments for each hidden
+layer in the NN. Dense linear layers can be input with their
+activations or separately for more explicit control over the layer
+ordering. For example, this is a valid input for hidden_layers that
+will yield 7 hidden layers (9 layers total):</p>
+<blockquote>
+<div><dl class="simple">
+<dt>[{‘units’: 64, ‘activation’: ‘relu’, ‘dropout’: 0.01},</dt><dd><p>{‘units’: 64},
+{‘batch_normalization’: {‘axis’: -1}},
+{‘activation’: ‘relu’},
+{‘dropout’: 0.01}]</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>by default None which will lead to a single linear layer</p>
+</li>
+<li><p><strong>input_layer</strong> (<em>None | InputLayer</em>) – Keras input layer. Will default to an InputLayer with
+input shape = n_features.</p></li>
+<li><p><strong>output_layer</strong> (<em>None | list | dict</em>) – Output layer specification. Can be a list/dict similar to
+hidden_layers input specifying a dense layer with activation.
+For example, for a classfication problem with a single output,
+output_layer should be [{‘units’: 1}, {‘activation’: ‘sigmoid’}]
+This defaults to a single dense layer with no activation
+(best for regression problems).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>model</strong> (<em>tensorflow.keras</em>) – Model with layers added</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="phygnn.utilities.tf_utilities.html" class="btn btn-neutral float-right" title="phygnn.utilities.tf_utilities module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="phygnn.utilities.pre_processing.html" class="btn btn-neutral float-left" title="phygnn.utilities.pre_processing module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2020, Alliance for Sustainable Energy, LLC.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

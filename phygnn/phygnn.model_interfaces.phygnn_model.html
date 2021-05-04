@@ -1,0 +1,616 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>phygnn.model_interfaces.phygnn_model module &mdash; phygnn 0.0.11 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="phygnn.model_interfaces.random_forest_model module" href="phygnn.model_interfaces.random_forest_model.html" />
+    <link rel="prev" title="phygnn.model_interfaces.base_model module" href="phygnn.model_interfaces.base_model.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> phygnn
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.11
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="phygnn.html">phygnn package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="phygnn.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="phygnn.model_interfaces.html">phygnn.model_interfaces package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="phygnn.model_interfaces.html#submodules">Submodules</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="phygnn.utilities.html">phygnn.utilities package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="phygnn.utilities.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="phygnn.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="phygnn.phygnn.html">phygnn.phygnn module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="phygnn.version.html">phygnn.version module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">phygnn</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="phygnn.html">phygnn package</a> &raquo;</li>
+        
+          <li><a href="phygnn.model_interfaces.html">phygnn.model_interfaces package</a> &raquo;</li>
+        
+      <li>phygnn.model_interfaces.phygnn_model module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            
+              <a href="https://github.com/nrel/phygnn/blob/master/docs/source/phygnn/phygnn.model_interfaces.phygnn_model.rst" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-phygnn.model_interfaces.phygnn_model">
+<span id="phygnn-model-interfaces-phygnn-model-module"></span><h1>phygnn.model_interfaces.phygnn_model module<a class="headerlink" href="#module-phygnn.model_interfaces.phygnn_model" title="Permalink to this headline">¶</a></h1>
+<p>TensorFlow Model</p>
+<dl class="py class">
+<dt id="phygnn.model_interfaces.phygnn_model.PhygnnModel">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">phygnn.model_interfaces.phygnn_model.</span></code><code class="sig-name descname"><span class="pre">PhygnnModel</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(True,</span> <span class="pre">False)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">one_hot_categories</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/model_interfaces/phygnn_model.html#PhygnnModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.model_interfaces.phygnn_model.PhygnnModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="phygnn.model_interfaces.base_model.html#phygnn.model_interfaces.base_model.ModelBase" title="phygnn.model_interfaces.base_model.ModelBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">phygnn.model_interfaces.base_model.ModelBase</span></code></a></p>
+<p>Phygnn Model interface</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>PhysicsGuidedNeuralNetwork</em>) – PhysicsGuidedNeuralNetwork Model instance</p></li>
+<li><p><strong>feature_names</strong> (<em>list</em>) – Ordered list of feature names.</p></li>
+<li><p><strong>label_names</strong> (<em>list</em>) – Ordered list of label (output) names.</p></li>
+<li><p><strong>norm_params</strong> (<em>dict, optional</em>) – Dictionary mapping feature and label names (keys) to normalization
+parameters (mean, stdev), by default None</p></li>
+<li><p><strong>normalize</strong> (<em>bool | tuple, optional</em>) – Boolean flag(s) as to whether features and labels should be
+normalized. Possible values:
+- True means normalize both
+- False means don’t normalize either
+- Tuple of flags (normalize_feature, normalize_label)
+by default True</p></li>
+<li><p><strong>one_hot_categories</strong> (<em>dict, optional</em>) – Features to one-hot encode using given categories, if None do
+not run one-hot encoding, by default None</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt id="phygnn.model_interfaces.phygnn_model.PhygnnModel.MODEL_CLASS">
+<code class="sig-name descname"><span class="pre">MODEL_CLASS</span></code><a class="headerlink" href="#phygnn.model_interfaces.phygnn_model.PhygnnModel.MODEL_CLASS" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="phygnn.phygnn.html#phygnn.phygnn.PhysicsGuidedNeuralNetwork" title="phygnn.phygnn.PhysicsGuidedNeuralNetwork"><code class="xref py py-class docutils literal notranslate"><span class="pre">phygnn.phygnn.PhysicsGuidedNeuralNetwork</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.model_interfaces.phygnn_model.PhygnnModel.layers">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">layers</span></code><a class="headerlink" href="#phygnn.model_interfaces.phygnn_model.PhygnnModel.layers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Model layers</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>list</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.model_interfaces.phygnn_model.PhygnnModel.weights">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">weights</span></code><a class="headerlink" href="#phygnn.model_interfaces.phygnn_model.PhygnnModel.weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a list of layer weights for gradient calculations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>list</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.model_interfaces.phygnn_model.PhygnnModel.kernel_weights">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">kernel_weights</span></code><a class="headerlink" href="#phygnn.model_interfaces.phygnn_model.PhygnnModel.kernel_weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a list of the NN kernel weights (tensors)</p>
+<p>(can be used for kernel regularization).</p>
+<p>Does not include input layer or dropout layers.
+Does include the output layer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>list</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.model_interfaces.phygnn_model.PhygnnModel.bias_weights">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">bias_weights</span></code><a class="headerlink" href="#phygnn.model_interfaces.phygnn_model.PhygnnModel.bias_weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a list of the NN bias weights (tensors)</p>
+<p>(can be used for bias regularization).</p>
+<p>Does not include input layer or dropout layers.
+Does include the output layer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>list</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.model_interfaces.phygnn_model.PhygnnModel.history">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">history</span></code><a class="headerlink" href="#phygnn.model_interfaces.phygnn_model.PhygnnModel.history" title="Permalink to this definition">¶</a></dt>
+<dd><p>Model training history DataFrame (None if not yet trained)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>pandas.DataFrame | None</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.model_interfaces.phygnn_model.PhygnnModel.train_model">
+<code class="sig-name descname"><span class="pre">train_model</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">features</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_batch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shuffle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_split</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_preflight</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_diagnostics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parse_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/model_interfaces/phygnn_model.html#PhygnnModel.train_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.model_interfaces.phygnn_model.PhygnnModel.train_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Train the model with the provided features and label</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>features</strong> (<em>np.ndarray | pd.DataFrame</em>) – Feature data in a &gt;=2D array or DataFrame. If this is a DataFrame,
+the index is ignored, the columns are used with self.feature_names,
+and the df is converted into a numpy array for batching and passing
+to the training algorithm. A 2D input should have the shape:
+(n_observations, n_features). A 3D input should have the shape:
+(n_observations, n_timesteps, n_features). 4D inputs have not been
+tested and should be used with caution.</p></li>
+<li><p><strong>labels</strong> (<em>np.ndarray | pd.DataFrame</em>) – Known output data in a 2D array or DataFrame.
+Same dimension rules as features.</p></li>
+<li><p><strong>p</strong> (<em>np.ndarray | pd.DataFrame</em>) – Supplemental feature data for the physics loss function in 2D array
+or DataFrame. Same dimension rules as features.</p></li>
+<li><p><strong>n_batch</strong> (<em>int</em>) – Number of times to update the NN weights per epoch (number of
+mini-batches). The training data will be split into this many
+mini-batches and the NN will train on each mini-batch, update
+weights, then move onto the next mini-batch.</p></li>
+<li><p><strong>n_epoch</strong> (<em>int</em>) – Number of times to iterate on the training data.</p></li>
+<li><p><strong>shuffle</strong> (<em>bool</em>) – Flag to randomly subset the validation data and batch selection
+from features, labels, and p.</p></li>
+<li><p><strong>validation_split</strong> (<em>float</em>) – Fraction of features and labels to use for validation.</p></li>
+<li><p><strong>p_kwargs</strong> (<em>None | dict</em>) – Optional kwargs for the physical loss function self._p_fun.</p></li>
+<li><p><strong>run_preflight</strong> (<em>bool</em>) – Flag to run preflight checks.</p></li>
+<li><p><strong>return_diagnostics</strong> (<em>bool</em>) – Flag to return training diagnostics dictionary.</p></li>
+<li><p><strong>parse_kwargs</strong> (<em>dict</em>) – kwargs for cls._parse_features</p></li>
+<li><p><strong>norm_labels</strong> (<em>bool, optional</em>) – Flag to normalize label, by default True</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>diagnostics</strong> (<em>dict, optional</em>) – Namespace of training parameters that can be used for diagnostics.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.model_interfaces.phygnn_model.PhygnnModel.save_model">
+<code class="sig-name descname"><span class="pre">save_model</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/model_interfaces/phygnn_model.html#PhygnnModel.save_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.model_interfaces.phygnn_model.PhygnnModel.save_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save phygnn model to path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – Save phygnn model</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.model_interfaces.phygnn_model.PhygnnModel.set_loss_weights">
+<code class="sig-name descname"><span class="pre">set_loss_weights</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">loss_weights</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/model_interfaces/phygnn_model.html#PhygnnModel.set_loss_weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.model_interfaces.phygnn_model.PhygnnModel.set_loss_weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set new loss weights</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>loss_weights</strong> (<em>tuple</em>) – Loss weights for the neural network y_true vs y_predicted
+and for the p_fun loss, respectively. For example,
+loss_weights=(0.0, 1.0) would simplify the phygnn loss function
+to just the p_fun output.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.model_interfaces.phygnn_model.PhygnnModel.build">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">build</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p_fun</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(True,</span> <span class="pre">False)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">one_hot_categories</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loss_weights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.5,</span> <span class="pre">0.5)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layers_obj</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mae'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initializer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">learning_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">history</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_reg_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_reg_power</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_reg_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_reg_power</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/model_interfaces/phygnn_model.html#PhygnnModel.build"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.model_interfaces.phygnn_model.PhygnnModel.build" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build phygnn model from given features, layers and kwargs</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul>
+<li><p><strong>p_fun</strong> (<em>function</em>) – Physics function to guide the neural network loss function.
+This fun must take (phygnn, y_true, y_predicted, p, <a href="#id1"><span class="problematic" id="id2">**</span></a>p_kwargs)
+as arguments with datatypes (PhysicsGuidedNeuralNetwork, tf.Tensor,
+np.ndarray, np.ndarray). The function must return a tf.Tensor
+object with a single numeric loss value (output.ndim == 0).</p></li>
+<li><p><strong>feature_names</strong> (<em>list</em>) – Ordered list of feature names.</p></li>
+<li><p><strong>label_names</strong> (<em>list</em>) – Ordered list of label (output) names.</p></li>
+<li><p><strong>normalize</strong> (<em>bool | tuple, optional</em>) – Boolean flag(s) as to whether features and labels should be
+normalized. Possible values:
+- True means normalize both
+- False means don’t normalize either
+- Tuple of flags (normalize_feature, normalize_label)
+by default True</p></li>
+<li><p><strong>one_hot_categories</strong> (<em>dict, optional</em>) – Features to one-hot encode using given categories, if None do
+not run one-hot encoding, by default None</p></li>
+<li><p><strong>loss_weights</strong> (<em>tuple, optional</em>) – Loss weights for the neural network y_true vs y_predicted
+and for the p_fun loss, respectively. For example,
+loss_weights=(0.0, 1.0) would simplify the phygnn loss function
+to just the p_fun output.</p></li>
+<li><p><strong>hidden_layers</strong> (<em>list, optional</em>) – List of dictionaries of key word arguments for each hidden
+layer in the NN. Dense linear layers can be input with their
+activations or separately for more explicit control over the layer
+ordering. For example, this is a valid input for hidden_layers that
+will yield 8 hidden layers (10 layers including input+output):</p>
+<blockquote>
+<div><dl class="simple">
+<dt>[{‘units’: 64, ‘activation’: ‘relu’, ‘dropout’: 0.01},</dt><dd><p>{‘units’: 64},
+{‘batch_normalization’: {‘axis’: -1}},
+{‘activation’: ‘relu’},
+{‘dropout’: 0.01},
+{‘class’: ‘Flatten’},
+]</p>
+</dd>
+</dl>
+</div></blockquote>
+</li>
+<li><p><strong>input_layer</strong> (<em>None | dict</em>) – Input layer. specification. Can be a dictionary similar to
+hidden_layers specifying a dense / conv / lstm layer.  Will
+default to a keras InputLayer with input shape = n_features.</p></li>
+<li><p><strong>output_layer</strong> (<em>None | list | dict</em>) – Output layer specification. Can be a list/dict similar to
+hidden_layers input specifying a dense layer with activation.
+For example, for a classfication problem with a single output,
+output_layer should be [{‘units’: 1}, {‘activation’: ‘sigmoid’}].
+This defaults to a single dense layer with no activation
+(best for regression problems).</p></li>
+<li><p><strong>layers_obj</strong> (<em>None | phygnn.utilities.tf_layers.Layers</em>) – Optional initialized Layers object to set as the model layers
+including pre-set weights. This option will override the
+hidden_layers, input_layer, and output_layer arguments.</p></li>
+<li><p><strong>metric</strong> (<em>str, optional</em>) – Loss metric option for the NN loss function (not the physical
+loss function). Must be a valid key in phygnn.loss_metrics.METRICS</p></li>
+<li><p><strong>initializer</strong> (<em>tensorflow.keras.initializers, optional</em>) – Instantiated initializer object. None defaults to GlorotUniform</p></li>
+<li><p><strong>optimizer</strong> (<em>tensorflow.keras.optimizers | dict | None</em>) – Instantiated tf.keras.optimizers object or a dict optimizer config
+from tf.keras.optimizers.get_config(). None defaults to Adam.</p></li>
+<li><p><strong>learning_rate</strong> (<em>float, optional</em>) – Optimizer learning rate. Not used if optimizer input arg is a
+pre-initialized object or if optimizer input arg is a config dict.</p></li>
+<li><p><strong>history</strong> (<em>None | pd.DataFrame, optional</em>) – Learning history if continuing a training session.</p></li>
+<li><p><strong>kernel_reg_rate</strong> (<em>float, optional</em>) – Kernel regularization rate. Increasing this value above zero will
+add a structural loss term to the loss function that
+disincentivizes large hidden layer weights and should reduce
+model complexity. Setting this to 0.0 will disable kernel
+regularization.</p></li>
+<li><p><strong>kernel_reg_power</strong> (<em>int, optional</em>) – Kernel regularization power. kernel_reg_power=1 is L1
+regularization (lasso regression), and kernel_reg_power=2 is L2
+regularization (ridge regression).</p></li>
+<li><p><strong>bias_reg_rate</strong> (<em>float, optional</em>) – Bias regularization rate. Increasing this value above zero will
+add a structural loss term to the loss function that
+disincentivizes large hidden layer biases and should reduce
+model complexity. Setting this to 0.0 will disable bias
+regularization.</p></li>
+<li><p><strong>bias_reg_power</strong> (<em>int, optional</em>) – Bias regularization power. bias_reg_power=1 is L1
+regularization (lasso regression), and bias_reg_power=2 is L2
+regularization (ridge regression).</p></li>
+<li><p><strong>name</strong> (<em>None | str</em>) – Optional model name for debugging.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>model</strong> (<em>PhygnnModel</em>) – Initialized PhygnnModel instance</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.model_interfaces.phygnn_model.PhygnnModel.build_trained">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">build_trained</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p_fun</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">features</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(True,</span> <span class="pre">False)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">one_hot_categories</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loss_weights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.5,</span> <span class="pre">0.5)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layers_obj</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mae'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initializer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">learning_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">history</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_reg_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_reg_power</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_reg_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_reg_power</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_batch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shuffle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_split</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_preflight</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_diagnostics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parse_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/model_interfaces/phygnn_model.html#PhygnnModel.build_trained"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.model_interfaces.phygnn_model.PhygnnModel.build_trained" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build phygnn model from given features, layers and
+kwargs and then train with given labels and kwargs</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul>
+<li><p><strong>p_fun</strong> (<em>function</em>) – Physics function to guide the neural network loss function.
+This fun must take (phygnn, y_true, y_predicted, p, <a href="#id3"><span class="problematic" id="id4">**</span></a>p_kwargs)
+as arguments with datatypes (PhysicsGuidedNeuralNetwork, tf.Tensor,
+np.ndarray, np.ndarray). The function must return a tf.Tensor
+object with a single numeric loss value (output.ndim == 0).</p></li>
+<li><p><strong>features</strong> (<em>np.ndarray | pd.DataFrame</em>) – Feature data in a &gt;=2D array or DataFrame. If this is a DataFrame,
+the index is ignored, the columns are used with self.feature_names,
+and the df is converted into a numpy array for batching and passing
+to the training algorithm. A 2D input should have the shape:
+(n_observations, n_features). A 3D input should have the shape:
+(n_observations, n_timesteps, n_features). 4D inputs have not been
+tested and should be used with caution.</p></li>
+<li><p><strong>labels</strong> (<em>np.ndarray | pd.DataFrame</em>) – Known output data in a 2D array or DataFrame.
+Same dimension rules as features.</p></li>
+<li><p><strong>p</strong> (<em>np.ndarray | pd.DataFrame</em>) – Supplemental feature data for the physics loss function in 2D array
+or DataFrame. Same dimension rules as features.</p></li>
+<li><p><strong>normalize</strong> (<em>bool | tuple, optional</em>) – Boolean flag(s) as to whether features and labels should be
+normalized. Possible values:
+- True means normalize both
+- False means don’t normalize either
+- Tuple of flags (normalize_feature, normalize_label)
+by default True</p></li>
+<li><p><strong>one_hot_categories</strong> (<em>dict, optional</em>) – Features to one-hot encode using given categories, if None do
+not run one-hot encoding, by default None</p></li>
+<li><p><strong>loss_weights</strong> (<em>tuple, optional</em>) – Loss weights for the neural network y_true vs y_predicted
+and for the p_fun loss, respectively. For example,
+loss_weights=(0.0, 1.0) would simplify the phygnn loss function
+to just the p_fun output.</p></li>
+<li><p><strong>hidden_layers</strong> (<em>list, optional</em>) – List of dictionaries of key word arguments for each hidden
+layer in the NN. Dense linear layers can be input with their
+activations or separately for more explicit control over the layer
+ordering. For example, this is a valid input for hidden_layers that
+will yield 8 hidden layers (10 layers including input+output):</p>
+<blockquote>
+<div><dl class="simple">
+<dt>[{‘units’: 64, ‘activation’: ‘relu’, ‘dropout’: 0.01},</dt><dd><p>{‘units’: 64},
+{‘batch_normalization’: {‘axis’: -1}},
+{‘activation’: ‘relu’},
+{‘dropout’: 0.01},
+{‘class’: ‘Flatten’},
+]</p>
+</dd>
+</dl>
+</div></blockquote>
+</li>
+<li><p><strong>input_layer</strong> (<em>None | dict</em>) – Input layer. specification. Can be a dictionary similar to
+hidden_layers specifying a dense / conv / lstm layer.  Will
+default to a keras InputLayer with input shape = n_features.</p></li>
+<li><p><strong>output_layer</strong> (<em>None | list | dict</em>) – Output layer specification. Can be a list/dict similar to
+hidden_layers input specifying a dense layer with activation.
+For example, for a classfication problem with a single output,
+output_layer should be [{‘units’: 1}, {‘activation’: ‘sigmoid’}].
+This defaults to a single dense layer with no activation
+(best for regression problems).</p></li>
+<li><p><strong>layers_obj</strong> (<em>None | phygnn.utilities.tf_layers.Layers</em>) – Optional initialized Layers object to set as the model layers
+including pre-set weights. This option will override the
+hidden_layers, input_layer, and output_layer arguments.</p></li>
+<li><p><strong>metric</strong> (<em>str, optional</em>) – Loss metric option for the NN loss function (not the physical
+loss function). Must be a valid key in phygnn.loss_metrics.METRICS</p></li>
+<li><p><strong>initializer</strong> (<em>tensorflow.keras.initializers, optional</em>) – Instantiated initializer object. None defaults to GlorotUniform</p></li>
+<li><p><strong>optimizer</strong> (<em>tensorflow.keras.optimizers | dict | None</em>) – Instantiated tf.keras.optimizers object or a dict optimizer config
+from tf.keras.optimizers.get_config(). None defaults to Adam.</p></li>
+<li><p><strong>learning_rate</strong> (<em>float, optional</em>) – Optimizer learning rate. Not used if optimizer input arg is a
+pre-initialized object or if optimizer input arg is a config dict.</p></li>
+<li><p><strong>history</strong> (<em>None | pd.DataFrame, optional</em>) – Learning history if continuing a training session.</p></li>
+<li><p><strong>kernel_reg_rate</strong> (<em>float, optional</em>) – Kernel regularization rate. Increasing this value above zero will
+add a structural loss term to the loss function that
+disincentivizes large hidden layer weights and should reduce
+model complexity. Setting this to 0.0 will disable kernel
+regularization.</p></li>
+<li><p><strong>kernel_reg_power</strong> (<em>int, optional</em>) – Kernel regularization power. kernel_reg_power=1 is L1
+regularization (lasso regression), and kernel_reg_power=2 is L2
+regularization (ridge regression).</p></li>
+<li><p><strong>bias_reg_rate</strong> (<em>float, optional</em>) – Bias regularization rate. Increasing this value above zero will
+add a structural loss term to the loss function that
+disincentivizes large hidden layer biases and should reduce
+model complexity. Setting this to 0.0 will disable bias
+regularization.</p></li>
+<li><p><strong>bias_reg_power</strong> (<em>int, optional</em>) – Bias regularization power. bias_reg_power=1 is L1
+regularization (lasso regression), and bias_reg_power=2 is L2
+regularization (ridge regression).</p></li>
+<li><p><strong>n_batch</strong> (<em>int</em>) – Number of times to update the NN weights per epoch (number of
+mini-batches). The training data will be split into this many
+mini-batches and the NN will train on each mini-batch, update
+weights, then move onto the next mini-batch.</p></li>
+<li><p><strong>n_epoch</strong> (<em>int</em>) – Number of times to iterate on the training data.</p></li>
+<li><p><strong>shuffle</strong> (<em>bool</em>) – Flag to randomly subset the validation data and batch selection
+from features and labels.</p></li>
+<li><p><strong>validation_split</strong> (<em>float</em>)</p></li>
+<li><p><strong>run_preflight</strong> (<em>bool</em>) – Flag to run preflight checks.</p></li>
+<li><p><strong>return_diagnostics</strong> (<em>bool</em>) – Flag to return training diagnostics dictionary.
+Fraction of features and labels to use for validation.</p></li>
+<li><p><strong>p_kwargs</strong> (<em>None | dict</em>) – Optional kwargs for the physical loss function self._p_fun.</p></li>
+<li><p><strong>parse_kwargs</strong> (<em>dict</em>) – kwargs for cls._parse_features</p></li>
+<li><p><strong>norm_labels</strong> (<em>bool, optional</em>) – Flag to normalize label, by default True</p></li>
+<li><p><strong>save_path</strong> (<em>str, optional</em>) – Directory path to save model to. The tensorflow model will be
+saved to the directory while the framework parameters will be
+saved in json, by default None</p></li>
+<li><p><strong>name</strong> (<em>None | str</em>) – Optional model name for debugging.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>model</strong> (<em>TfModel</em>) – Initialized and trained TfModel obj</p></li>
+<li><p><strong>diagnostics</strong> (<em>dict, optional</em>) – Namespace of training parameters that can be used for diagnostics.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.model_interfaces.phygnn_model.PhygnnModel.load">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">load</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/model_interfaces/phygnn_model.html#PhygnnModel.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.model_interfaces.phygnn_model.PhygnnModel.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load model from model path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – Load phygnn model from pickle file.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>model</strong> (<em>PhygnnModel</em>) – Loaded PhygnnModel from disk.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="phygnn.model_interfaces.random_forest_model.html" class="btn btn-neutral float-right" title="phygnn.model_interfaces.random_forest_model module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="phygnn.model_interfaces.base_model.html" class="btn btn-neutral float-left" title="phygnn.model_interfaces.base_model module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2020, Alliance for Sustainable Energy, LLC.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

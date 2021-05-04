@@ -1,0 +1,299 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>phygnn.utilities.loss_metrics &mdash; phygnn 0.0.11 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> phygnn
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.11
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../phygnn/phygnn.html">phygnn package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../phygnn/phygnn.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../phygnn/phygnn.model_interfaces.html">phygnn.model_interfaces package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../phygnn/phygnn.model_interfaces.html#submodules">Submodules</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../../phygnn/phygnn.utilities.html">phygnn.utilities package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../phygnn/phygnn.utilities.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../phygnn/phygnn.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../phygnn/phygnn.phygnn.html">phygnn.phygnn module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../phygnn/phygnn.version.html">phygnn.version module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">phygnn</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>phygnn.utilities.loss_metrics</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for phygnn.utilities.loss_metrics</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Loss metrics for PhyGNN</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">from</span> <span class="nn">tensorflow.keras.losses</span> <span class="kn">import</span> <span class="n">binary_crossentropy</span> <span class="k">as</span> <span class="n">tf_bx</span>
+
+
+<div class="viewcode-block" id="binary_crossentropy"><a class="viewcode-back" href="../../../phygnn/phygnn.utilities.loss_metrics.html#phygnn.utilities.loss_metrics.binary_crossentropy">[docs]</a><span class="k">def</span> <span class="nf">binary_crossentropy</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Binary crossentropy loss from keras&quot;&quot;&quot;</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">tf_bx</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mae"><a class="viewcode-back" href="../../../phygnn/phygnn.utilities.loss_metrics.html#phygnn.utilities.loss_metrics.mae">[docs]</a><span class="k">def</span> <span class="nf">mae</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_predicted</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate the Mean Absolute Error (MAE)&quot;&quot;&quot;</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">y_predicted</span> <span class="o">-</span> <span class="n">y_true</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">boolean_mask</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="o">~</span><span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">is_nan</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">boolean_mask</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">is_finite</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">err</span></div>
+
+
+<div class="viewcode-block" id="mse"><a class="viewcode-back" href="../../../phygnn/phygnn.utilities.loss_metrics.html#phygnn.utilities.loss_metrics.mse">[docs]</a><span class="k">def</span> <span class="nf">mse</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_predicted</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate the Mean Square Error (MSE)&quot;&quot;&quot;</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">y_predicted</span> <span class="o">-</span> <span class="n">y_true</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">boolean_mask</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="o">~</span><span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">is_nan</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">boolean_mask</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">is_finite</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">err</span></div>
+
+
+<div class="viewcode-block" id="mbe"><a class="viewcode-back" href="../../../phygnn/phygnn.utilities.loss_metrics.html#phygnn.utilities.loss_metrics.mbe">[docs]</a><span class="k">def</span> <span class="nf">mbe</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_predicted</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate the (absolute) Mean Bias Error (MBE).</span>
+
+<span class="sd">    Note that this is actually abs(mbe) so that the NN doesnt predict a</span>
+<span class="sd">    large negative mbe.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">y_predicted</span> <span class="o">-</span> <span class="n">y_true</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">boolean_mask</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="o">~</span><span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">is_nan</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">boolean_mask</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">is_finite</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">err</span></div>
+
+
+<div class="viewcode-block" id="relative_mae"><a class="viewcode-back" href="../../../phygnn/phygnn.utilities.loss_metrics.html#phygnn.utilities.loss_metrics.relative_mae">[docs]</a><span class="k">def</span> <span class="nf">relative_mae</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_predicted</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate the relative Mean Absolute Error (MAE)&quot;&quot;&quot;</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">mae</span><span class="p">(</span><span class="n">y_predicted</span><span class="p">,</span> <span class="n">y_true</span><span class="p">)</span>
+    <span class="n">err</span> <span class="o">/=</span> <span class="n">tf</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">y_true</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">err</span></div>
+
+
+<div class="viewcode-block" id="relative_mse"><a class="viewcode-back" href="../../../phygnn/phygnn.utilities.loss_metrics.html#phygnn.utilities.loss_metrics.relative_mse">[docs]</a><span class="k">def</span> <span class="nf">relative_mse</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_predicted</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate the relative Mean Squared Error (MSE)&quot;&quot;&quot;</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">mse</span><span class="p">(</span><span class="n">y_predicted</span><span class="p">,</span> <span class="n">y_true</span><span class="p">)</span>
+    <span class="n">err</span> <span class="o">/=</span> <span class="n">tf</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">y_true</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">err</span></div>
+
+
+<div class="viewcode-block" id="relative_mbe"><a class="viewcode-back" href="../../../phygnn/phygnn.utilities.loss_metrics.html#phygnn.utilities.loss_metrics.relative_mbe">[docs]</a><span class="k">def</span> <span class="nf">relative_mbe</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_predicted</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate the relative Mean Bias Error (MBE)</span>
+
+<span class="sd">    Note that this is actually abs(relative_mbe) so that the NN doesnt predict</span>
+<span class="sd">    a large negative mbe.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">mbe</span><span class="p">(</span><span class="n">y_predicted</span><span class="p">,</span> <span class="n">y_true</span><span class="p">)</span>
+    <span class="n">err</span> <span class="o">/=</span> <span class="n">tf</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">y_true</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">err</span></div>
+
+
+<span class="n">METRICS</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;mae&#39;</span><span class="p">:</span> <span class="n">mae</span><span class="p">,</span>
+           <span class="s1">&#39;mbe&#39;</span><span class="p">:</span> <span class="n">mbe</span><span class="p">,</span>
+           <span class="s1">&#39;mse&#39;</span><span class="p">:</span> <span class="n">mse</span><span class="p">,</span>
+           <span class="s1">&#39;relative_mae&#39;</span><span class="p">:</span> <span class="n">relative_mae</span><span class="p">,</span>
+           <span class="s1">&#39;relative_mbe&#39;</span><span class="p">:</span> <span class="n">relative_mbe</span><span class="p">,</span>
+           <span class="s1">&#39;relative_mse&#39;</span><span class="p">:</span> <span class="n">relative_mse</span><span class="p">,</span>
+           <span class="s1">&#39;binary_crossentropy&#39;</span><span class="p">:</span> <span class="n">binary_crossentropy</span><span class="p">,</span>
+           <span class="p">}</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2020, Alliance for Sustainable Energy, LLC.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

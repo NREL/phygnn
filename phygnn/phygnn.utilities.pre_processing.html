@@ -1,0 +1,391 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>phygnn.utilities.pre_processing module &mdash; phygnn 0.0.11 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="phygnn.utilities.tf_layers module" href="phygnn.utilities.tf_layers.html" />
+    <link rel="prev" title="phygnn.utilities.loss_metrics module" href="phygnn.utilities.loss_metrics.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> phygnn
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.11
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="phygnn.html">phygnn package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="phygnn.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="phygnn.model_interfaces.html">phygnn.model_interfaces package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="phygnn.model_interfaces.html#submodules">Submodules</a></li>
+</ul>
+</li>
+<li class="toctree-l3 current"><a class="reference internal" href="phygnn.utilities.html">phygnn.utilities package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="phygnn.utilities.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="phygnn.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="phygnn.phygnn.html">phygnn.phygnn module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="phygnn.version.html">phygnn.version module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">phygnn</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="phygnn.html">phygnn package</a> &raquo;</li>
+        
+          <li><a href="phygnn.utilities.html">phygnn.utilities package</a> &raquo;</li>
+        
+      <li>phygnn.utilities.pre_processing module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            
+              <a href="https://github.com/nrel/phygnn/blob/master/docs/source/phygnn/phygnn.utilities.pre_processing.rst" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-phygnn.utilities.pre_processing">
+<span id="phygnn-utilities-pre-processing-module"></span><h1>phygnn.utilities.pre_processing module<a class="headerlink" href="#module-phygnn.utilities.pre_processing" title="Permalink to this headline">¶</a></h1>
+<p>Data pre-processing module.</p>
+<dl class="py class">
+<dt id="phygnn.utilities.pre_processing.PreProcess">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">phygnn.utilities.pre_processing.</span></code><code class="sig-name descname"><span class="pre">PreProcess</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">features</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/utilities/pre_processing.html#PreProcess"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.utilities.pre_processing.PreProcess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3.5/library/functions.html#object" title="(in Python v3.5)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Class to handle the pre-processing of feature data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>features</strong> (<em>np.ndarray | pd.DataFrame</em>) – Feature data in a 2D array or DataFrame.</p></li>
+<li><p><strong>feature_names</strong> (<em>str, optional</em>) – Feature names, used if features is an ndarray, by default None</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="phygnn.utilities.pre_processing.PreProcess.normalize">
+<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">normalize</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">native_arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stdev</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/utilities/pre_processing.html#PreProcess.normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.utilities.pre_processing.PreProcess.normalize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normalize features with mean at 0 and stdev of 1.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>native_arr</strong> (<em>ndarray</em>) – native data</p></li>
+<li><p><strong>mean</strong> (<em>float | None</em>) – mean to use for normalization</p></li>
+<li><p><strong>stdev</strong> (<em>float | None</em>) – stdev to use for normalization</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>norm_arr</strong> (<em>ndarray</em>) – normalized data</p></li>
+<li><p><strong>mean</strong> (<em>float</em>) – mean used for normalization</p></li>
+<li><p><strong>stdev</strong> (<em>float</em>) – stdev used for normalization</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.utilities.pre_processing.PreProcess.unnormalize">
+<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">unnormalize</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">norm_arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stdev</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/utilities/pre_processing.html#PreProcess.unnormalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.utilities.pre_processing.PreProcess.unnormalize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unnormalize data with mean at 0 and stdev of 1.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>norm_arr</strong> (<em>ndarray</em>) – normalized data</p></li>
+<li><p><strong>mean</strong> (<em>float</em>) – mean used for normalization</p></li>
+<li><p><strong>stdev</strong> (<em>float</em>) – stdev used for normalization</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>native_arr</strong> (<em>ndarray</em>) – native un-normalized data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.utilities.pre_processing.PreProcess.check_one_hot_categories">
+<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">check_one_hot_categories</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">one_hot_categories</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/utilities/pre_processing.html#PreProcess.check_one_hot_categories"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.utilities.pre_processing.PreProcess.check_one_hot_categories" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check one hot features and categories for duplicate names and against
+feature names if provided</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>one_hot_categories</strong> (<em>dict, optional</em>) – Features to one-hot encode using given categories</p></li>
+<li><p><strong>feature_names</strong> (<em>[type], optional</em>) – Feature names, by default None</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.utilities.pre_processing.PreProcess.process_one_hot">
+<code class="sig-name descname"><span class="pre">process_one_hot</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">convert_int</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">categories</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_ind</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/utilities/pre_processing.html#PreProcess.process_one_hot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.utilities.pre_processing.PreProcess.process_one_hot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process str and int columns in the feature data to one-hot vectors.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul>
+<li><p><strong>convert_int</strong> (<em>bool, optional</em>) – Flag to convert integer data to one-hot vectors, by default False</p></li>
+<li><p><strong>categories</strong> (<em>dict | None, optional</em>) – Categories to use for one hot encoding where a key is the original
+column name in the feature dataframe and value is a list of the
+possible unique values of the feature column. The value list must
+have as many or more entries as unique values in the feature
+column. This will name the feature column headers for the new
+one-hot-encoding if features is a dataframe. Empty dict or None
+results in category names being determined automatically. Format:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>{‘col_name1’<span class="classifier">[‘cat1’, ‘cat2’, ‘cat3’],</span></dt><dd><p>‘col_name2’ : [‘other_cat1’, ‘other_cat2’]}</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>by default None</p>
+</li>
+<li><p><strong>return_ind</strong> (<em>bool, optional</em>) – Return one hot column indices, by default False</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>processed</strong> (<em>np.ndarray | pd.DataFrame</em>) – Feature data with str and int columns removed and one-hot boolean
+vectors appended as new columns. If features is a dataframe and
+categories is input, the new one-hot columns will be named
+according to categories.</p></li>
+<li><p><strong>one_hot_ind</strong> (<em>list, optional</em>) – List of numeric column indices in the native data that are
+to-be-transformed into one-hot vectors.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.utilities.pre_processing.PreProcess.one_hot">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">one_hot</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">features</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convert_int</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">categories</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_ind</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/utilities/pre_processing.html#PreProcess.one_hot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.utilities.pre_processing.PreProcess.one_hot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process str and int columns in the feature data to one-hot vectors.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul>
+<li><p><strong>features</strong> (<em>np.ndarray | pd.DataFrame</em>) – Feature data in a 2D array or DataFrame.</p></li>
+<li><p><strong>feature_names</strong> (<em>str, optional</em>) – Feature names, used if features is an ndarray, by default None</p></li>
+<li><p><strong>convert_int</strong> (<em>bool, optional</em>) – Flag to convert integer data to one-hot vectors, by default False</p></li>
+<li><p><strong>categories</strong> (<em>dict | None, optional</em>) – Categories to use for one hot encoding where a key is the original
+column name in the feature dataframe and value is a list of the
+possible unique values of the feature column. The value list must
+have as many or more entries as unique values in the feature
+column. This will name the feature column headers for the new
+one-hot-encoding if features is a dataframe. Empty dict or None
+results in category names being determined automatically. Format:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>{‘col_name1’<span class="classifier">[‘cat1’, ‘cat2’, ‘cat3’],</span></dt><dd><p>‘col_name2’ : [‘other_cat1’, ‘other_cat2’]}</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>by default None</p>
+</li>
+<li><p><strong>return_ind</strong> (<em>bool, optional</em>) – Return one hot column indices, by default False</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>processed</strong> (<em>np.ndarray | pd.DataFrame</em>) – Feature data with str and int columns removed and one-hot boolean
+vectors appended as new columns. If features is a dataframe and
+categories is input, the new one-hot columns will be named
+according to categories.</p></li>
+<li><p><strong>one_hot_ind</strong> (<em>list, optional</em>) – List of numeric column indices in the native data that are
+to-be-transformed into one-hot vectors.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="phygnn.utilities.tf_layers.html" class="btn btn-neutral float-right" title="phygnn.utilities.tf_layers module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="phygnn.utilities.loss_metrics.html" class="btn btn-neutral float-left" title="phygnn.utilities.loss_metrics module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2020, Alliance for Sustainable Energy, LLC.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

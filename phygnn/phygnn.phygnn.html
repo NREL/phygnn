@@ -1,0 +1,728 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>phygnn.phygnn module &mdash; phygnn 0.0.11 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="phygnn.version module" href="phygnn.version.html" />
+    <link rel="prev" title="phygnn.utilities.tf_utilities module" href="phygnn.utilities.tf_utilities.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> phygnn
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.11
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="phygnn.html">phygnn package</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="phygnn.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="phygnn.model_interfaces.html">phygnn.model_interfaces package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="phygnn.model_interfaces.html#submodules">Submodules</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="phygnn.utilities.html">phygnn.utilities package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="phygnn.utilities.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="phygnn.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">phygnn.phygnn module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="phygnn.version.html">phygnn.version module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">phygnn</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="phygnn.html">phygnn package</a> &raquo;</li>
+        
+      <li>phygnn.phygnn module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            
+              <a href="https://github.com/nrel/phygnn/blob/master/docs/source/phygnn/phygnn.phygnn.rst" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-phygnn.phygnn">
+<span id="phygnn-phygnn-module"></span><h1>phygnn.phygnn module<a class="headerlink" href="#module-phygnn.phygnn" title="Permalink to this headline">¶</a></h1>
+<p>Physics Guided Neural Network</p>
+<dl class="py function">
+<dt id="phygnn.phygnn.p_fun_dummy">
+<code class="sig-prename descclassname"><span class="pre">phygnn.phygnn.</span></code><code class="sig-name descname"><span class="pre">p_fun_dummy</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_predicted</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/phygnn.html#p_fun_dummy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.phygnn.p_fun_dummy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Example dummy function for p loss calculation.</p>
+<p>This dummy function does not do a real physics calculation, it just shows
+the required p_fun interface and calculates a normal MAE loss based on
+y_predicted and y_true.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>PhysicsGuidedNeuralNetwork</em>) – Instance of the phygnn model at the current point in training.</p></li>
+<li><p><strong>y_true</strong> (<em>np.ndarray</em>) – Known y values that were given to the phygnn.fit() method.</p></li>
+<li><p><strong>y_predicted</strong> (<em>tf.Tensor</em>) – Predicted y values in a 2D tensor based on x values in the
+current batch.</p></li>
+<li><p><strong>p</strong> (<em>np.ndarray</em>) – Supplemental physical feature data that can be used to calculate a
+y_physical value to compare against y_predicted. The rows in this
+array have been carried through the batching process alongside y_true
+and the x-features used to create y_predicted and so can be used 1-to-1
+with the rows in y_predicted and y_true.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>p_loss</strong> (<em>tf.Tensor</em>) – A 0D tensor physical loss value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">phygnn.phygnn.</span></code><code class="sig-name descname"><span class="pre">PhysicsGuidedNeuralNetwork</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p_fun</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loss_weights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.5,</span> <span class="pre">0.5)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layers_obj</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mae'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initializer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">learning_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">history</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_reg_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_reg_power</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_reg_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_reg_power</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/phygnn.html#PhysicsGuidedNeuralNetwork"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3.5/library/functions.html#object" title="(in Python v3.5)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Simple Deep Neural Network with custom physical loss function.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul>
+<li><p><strong>p_fun</strong> (<em>function</em>) – Physics function to guide the neural network loss function.
+This fun must take (phygnn, y_true, y_predicted, p, <a href="#id1"><span class="problematic" id="id2">**</span></a>p_kwargs)
+as arguments with datatypes (PhysicsGuidedNeuralNetwork, tf.Tensor,
+np.ndarray, np.ndarray). The function must return a tf.Tensor
+object with a single numeric loss value (output.ndim == 0).</p></li>
+<li><p><strong>loss_weights</strong> (<em>tuple, optional</em>) – Loss weights for the neural network y_true vs. y_predicted
+and for the p_fun loss, respectively. For example,
+loss_weights=(0.0, 1.0) would simplify the phygnn loss function
+to just the p_fun output.</p></li>
+<li><p><strong>n_features</strong> (<em>int, optional</em>) – Number of input features. This should match the last dimension
+of the feature training data.</p></li>
+<li><p><strong>n_labels</strong> (<em>int, optional</em>) – Number of output labels. This should match the last dimension
+of the label training data.</p></li>
+<li><p><strong>hidden_layers</strong> (<em>list, optional</em>) – List of dictionaries of key word arguments for each hidden
+layer in the NN. Dense linear layers can be input with their
+activations or separately for more explicit control over the layer
+ordering. For example, this is a valid input for hidden_layers that
+will yield 8 hidden layers (10 layers including input+output):</p>
+<blockquote>
+<div><dl class="simple">
+<dt>[{‘units’: 64, ‘activation’: ‘relu’, ‘dropout’: 0.01},</dt><dd><p>{‘units’: 64},
+{‘batch_normalization’: {‘axis’: -1}},
+{‘activation’: ‘relu’},
+{‘dropout’: 0.01},
+{‘class’: ‘Flatten’},
+]</p>
+</dd>
+</dl>
+</div></blockquote>
+</li>
+<li><p><strong>input_layer</strong> (<em>None | dict</em>) – Input layer. specification. Can be a dictionary similar to
+hidden_layers specifying a dense / conv / lstm layer.  Will
+default to a keras InputLayer with input shape = n_features.</p></li>
+<li><p><strong>output_layer</strong> (<em>None | list | dict</em>) – Output layer specification. Can be a list/dict similar to
+hidden_layers input specifying a dense layer with activation.
+For example, for a classfication problem with a single output,
+output_layer should be [{‘units’: 1}, {‘activation’: ‘sigmoid’}].
+This defaults to a single dense layer with no activation
+(best for regression problems).</p></li>
+<li><p><strong>layers_obj</strong> (<em>None | phygnn.utilities.tf_layers.Layers</em>) – Optional initialized Layers object to set as the model layers
+including pre-set weights. This option will override the
+hidden_layers, input_layer, and output_layer arguments.</p></li>
+<li><p><strong>metric</strong> (<em>str, optional</em>) – Loss metric option for the NN loss function (not the physical
+loss function). Must be a valid key in phygnn.loss_metrics.METRICS
+or a method in tensorflow.keras.losses that takes
+(y_true, y_predicted) as arguments.</p></li>
+<li><p><strong>initializer</strong> (<em>tensorflow.keras.initializers, optional</em>) – Instantiated initializer object. None defaults to GlorotUniform</p></li>
+<li><p><strong>optimizer</strong> (<em>tensorflow.keras.optimizers | dict | None</em>) – Instantiated tf.keras.optimizers object or a dict optimizer config
+from tf.keras.optimizers.get_config(). None defaults to Adam.</p></li>
+<li><p><strong>learning_rate</strong> (<em>float, optional</em>) – Optimizer learning rate. Not used if optimizer input arg is a
+pre-initialized object or if optimizer input arg is a config dict.</p></li>
+<li><p><strong>history</strong> (<em>None | pd.DataFrame, optional</em>) – Learning history if continuing a training session.</p></li>
+<li><p><strong>kernel_reg_rate</strong> (<em>float, optional</em>) – Kernel regularization rate. Increasing this value above zero will
+add a structural loss term to the loss function that
+disincentivizes large hidden layer weights and should reduce
+model complexity. Setting this to 0.0 will disable kernel
+regularization.</p></li>
+<li><p><strong>kernel_reg_power</strong> (<em>int, optional</em>) – Kernel regularization power. kernel_reg_power=1 is L1
+regularization (lasso regression), and kernel_reg_power=2 is L2
+regularization (ridge regression).</p></li>
+<li><p><strong>bias_reg_rate</strong> (<em>float, optional</em>) – Bias regularization rate. Increasing this value above zero will
+add a structural loss term to the loss function that
+disincentivizes large hidden layer biases and should reduce
+model complexity. Setting this to 0.0 will disable bias
+regularization.</p></li>
+<li><p><strong>bias_reg_power</strong> (<em>int, optional</em>) – Bias regularization power. bias_reg_power=1 is L1
+regularization (lasso regression), and bias_reg_power=2 is L2
+regularization (ridge regression).</p></li>
+<li><p><strong>feature_names</strong> (<em>list | tuple | None, optional</em>) – Training feature names (strings). Mostly a convenience so that a
+loaded-from-disk model will have declared feature names, making it
+easier to feed in features for prediction. This will also get set
+if phygnn is trained on a DataFrame.</p></li>
+<li><p><strong>output_names</strong> (<em>list | tuple | None, optional</em>) – Prediction output names (strings). Mostly a convenience so that a
+loaded-from-disk model will have declared output names, making it
+easier to understand prediction output. This will also get set
+if phygnn is trained on a DataFrame.</p></li>
+<li><p><strong>name</strong> (<em>None | str</em>) – Optional model name for debugging.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.history">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">history</span></code><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.history" title="Permalink to this definition">¶</a></dt>
+<dd><p>Model training history DataFrame (None if not yet trained)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>pandas.DataFrame | None</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.layers">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">layers</span></code><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.layers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ordered list of TensorFlow keras layers that make up this model
+including input and output layers</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>list</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.layers_obj">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">layers_obj</span></code><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.layers_obj" title="Permalink to this definition">¶</a></dt>
+<dd><p>phygnn layers handler object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>phygnn.utilities.tf_layers.Layers</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.weights">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">weights</span></code><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a list of layer weights for gradient calculations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>list</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.kernel_weights">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">kernel_weights</span></code><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.kernel_weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a list of the NN kernel weights (tensors)</p>
+<p>(can be used for kernel regularization).</p>
+<p>Does not include input layer or dropout layers.
+Does include the output layer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>list</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.bias_weights">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">bias_weights</span></code><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.bias_weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a list of the NN bias weights (tensors)</p>
+<p>(can be used for bias regularization).</p>
+<p>Does not include input layer or dropout layers.
+Does include the output layer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>list</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.kernel_reg_term">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">kernel_reg_term</span></code><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.kernel_reg_term" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the regularization term for the kernel regularization without
+the regularization rate applied.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.bias_reg_term">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">bias_reg_term</span></code><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.bias_reg_term" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the regularization term for the bias regularization without
+the regularization rate applied.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.model_params">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">model_params</span></code><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.model_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Model parameters, used to save model to disc</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><em>dict</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.seed">
+<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">seed</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/phygnn.html#PhysicsGuidedNeuralNetwork.seed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.seed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the random seed for reproducable results.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>int</em>) – Random seed</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.get_val_split">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">get_val_split</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shuffle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_split</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/phygnn.html#PhysicsGuidedNeuralNetwork.get_val_split"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.get_val_split" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a validation split and remove from from the training data.
+This applies the split along the 1st data dimension.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>np.ndarray</em>) – Feature data in a &gt;=2D array</p></li>
+<li><p><strong>y</strong> (<em>np.ndarray</em>) – Known output data in a &gt;=2D array.</p></li>
+<li><p><strong>p</strong> (<em>np.ndarray</em>) – Supplemental feature data for the physics loss function
+in a &gt;=2D array.</p></li>
+<li><p><strong>shuffle</strong> (<em>bool</em>) – Flag to randomly subset the validation data from x and y.
+shuffle=False will take the first entries in x and y.</p></li>
+<li><p><strong>validation_split</strong> (<em>float</em>) – Fraction of x and y to put in the validation set.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>x</strong> (<em>np.ndarray</em>) – Feature data for model training as &gt;=2D array. Length of this
+will be the length of the input x multiplied by one minus
+the split fraction</p></li>
+<li><p><strong>y</strong> (<em>np.ndarray</em>) – Known output data for model training as &gt;=2D array. Length of this
+will be the length of the input y multiplied by one minus
+the split fraction</p></li>
+<li><p><strong>p</strong> (<em>np.ndarray</em>) – Supplemental feature data for physics loss function to be used
+in model training as &gt;=2D array. Length of this will be the length
+of the input p multiplied by one minus the split fraction</p></li>
+<li><p><strong>x_val</strong> (<em>np.ndarray</em>) – Feature data for model validation as &gt;=2D array. Length of this
+will be the length of the input x multiplied by the split fraction</p></li>
+<li><p><strong>y_val</strong> (<em>np.ndarray</em>) – Known output data for model validation as &gt;=2D array. Length of
+this will be the length of the input y multiplied by the split
+fraction</p></li>
+<li><p><strong>p_val</strong> (<em>np.ndarray</em>) – Supplemental feature data for physics loss function to be used in
+model validation as &gt;=2D array. Length of this will be the length
+of the input p multiplied by the split fraction</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.make_batches">
+<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">make_batches</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_batch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shuffle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/phygnn.html#PhysicsGuidedNeuralNetwork.make_batches"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.make_batches" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make lists of unique data batches by splitting x and y along the
+1st data dimension.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>np.ndarray</em>) – Feature data for training</p></li>
+<li><p><strong>y</strong> (<em>np.ndarray</em>) – Known output data for training</p></li>
+<li><p><strong>p</strong> (<em>np.ndarray</em>) – Supplemental feature data</p></li>
+<li><p><strong>n_batch</strong> (<em>int</em>) – Number of times to update the NN weights per epoch. The training
+data will be split into this many batches and the NN will train on
+each batch, update weights, then move onto the next batch.</p></li>
+<li><p><strong>shuffle</strong> (<em>bool</em>) – Flag to randomly subset the validation data from x and y.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>x_batches</strong> (<em>list</em>) – List of ND arrays that are split subsets of x.
+ND matches input dimension. Length of list is n_batch.</p></li>
+<li><p><strong>y_batches</strong> (<em>list</em>) – List of ND arrays that are split subsets of y.
+ND matches input dimension. Length of list is n_batch.</p></li>
+<li><p><strong>p_batches</strong> (<em>list</em>) – List of ND arrays that are split subsets of p.
+ND matches input dimension. Length of list is n_batch.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.preflight_p_fun">
+<code class="sig-name descname"><span class="pre">preflight_p_fun</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/phygnn.html#PhysicsGuidedNeuralNetwork.preflight_p_fun"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.preflight_p_fun" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run a pre-flight check making sure the p_fun is differentiable.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.preflight_data">
+<code class="sig-name descname"><span class="pre">preflight_data</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/phygnn.html#PhysicsGuidedNeuralNetwork.preflight_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.preflight_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run simple preflight checks on data shapes and data types.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>np.ndarray | pd.DataFrame</em>) – Feature data in a &gt;=2D array or DataFrame. If this is a DataFrame,
+the index is ignored, the columns are used with self.feature_names,
+and the df is converted into a numpy array for batching and passing
+to the training algorithm. A 2D input should have the shape:
+(n_observations, n_features). A 3D input should have the shape:
+(n_observations, n_timesteps, n_features). 4D inputs have not been
+tested and should be used with caution.</p></li>
+<li><p><strong>y</strong> (<em>np.ndarray | pd.DataFrame</em>) – Known output data in a 2D array or DataFrame.
+Same dimension rules as x.</p></li>
+<li><p><strong>p</strong> (<em>np.ndarray | pd.DataFrame</em>) – Supplemental feature data for the physics loss function in 2D array
+or DataFrame. Same dimension rules as x.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>x</strong> (<em>np.ndarray</em>) – Feature data</p></li>
+<li><p><strong>y</strong> (<em>np.ndarray</em>) – Known output data</p></li>
+<li><p><strong>p</strong> (<em>np.ndarray</em>) – Supplemental feature data</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.preflight_features">
+<code class="sig-name descname"><span class="pre">preflight_features</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/phygnn.html#PhysicsGuidedNeuralNetwork.preflight_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.preflight_features" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run preflight checks and data conversions on feature data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> (<em>np.ndarray | pd.DataFrame</em>) – Feature data in a &gt;=2D array or DataFrame. If this is a DataFrame,
+the index is ignored, the columns are used with self.feature_names,
+and the df is converted into a numpy array for batching and passing
+to the training algorithm. A 2D input should have the shape:
+(n_observations, n_features). A 3D input should have the shape:
+(n_observations, n_timesteps, n_features). 4D inputs have not been
+tested and should be used with caution.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>x</strong> (<em>np.ndarray</em>) – Feature data in a 2D array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.reset_history">
+<code class="sig-name descname"><span class="pre">reset_history</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/phygnn.html#PhysicsGuidedNeuralNetwork.reset_history"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.reset_history" title="Permalink to this definition">¶</a></dt>
+<dd><p>Erase previous training history without resetting trained weights</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.set_loss_weights">
+<code class="sig-name descname"><span class="pre">set_loss_weights</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">loss_weights</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/phygnn.html#PhysicsGuidedNeuralNetwork.set_loss_weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.set_loss_weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set new loss weights</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>loss_weights</strong> (<em>tuple</em>) – Loss weights for the neural network y_true vs y_predicted
+and for the p_fun loss, respectively. For example,
+loss_weights=(0.0, 1.0) would simplify the phygnn loss function
+to just the p_fun output.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.calc_loss">
+<code class="sig-name descname"><span class="pre">calc_loss</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_predicted</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/phygnn.html#PhysicsGuidedNeuralNetwork.calc_loss"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.calc_loss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the loss function by comparing y_true to model-predicted y</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y_true</strong> (<em>np.ndarray</em>) – Known output data in a 2D array.</p></li>
+<li><p><strong>y_predicted</strong> (<em>tf.Tensor</em>) – Model-predicted output data in a 2D tensor.</p></li>
+<li><p><strong>p</strong> (<em>np.ndarray</em>) – Supplemental feature data for the physics loss function in 2D array</p></li>
+<li><p><strong>p_kwargs</strong> (<em>None | dict</em>) – Optional kwargs for the physical loss function self._p_fun.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>loss</strong> (<em>tf.tensor</em>) – Sum of the NN loss function comparing the y_predicted against
+y_true and the physical loss function (self._p_fun) with
+respective weights applied.</p></li>
+<li><p><strong>nn_loss</strong> (<em>tf.tensor</em>) – Standard NN training loss comparing y to y_predicted.</p></li>
+<li><p><strong>p_loss</strong> (<em>tf.tensor</em>) – Physics loss from p_fun.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.fit">
+<code class="sig-name descname"><span class="pre">fit</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_batch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shuffle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_split</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_preflight</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_diagnostics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/phygnn.html#PhysicsGuidedNeuralNetwork.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit the neural network to data from x and y.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>np.ndarray | pd.DataFrame</em>) – Feature data in a &gt;=2D array or DataFrame. If this is a DataFrame,
+the index is ignored, the columns are used with self.feature_names,
+and the df is converted into a numpy array for batching and passing
+to the training algorithm. A 2D input should have the shape:
+(n_observations, n_features). A 3D input should have the shape:
+(n_observations, n_timesteps, n_features). 4D inputs have not been
+tested and should be used with caution.</p></li>
+<li><p><strong>y</strong> (<em>np.ndarray | pd.DataFrame</em>) – Known output data in a 2D array or DataFrame.
+Same dimension rules as x.</p></li>
+<li><p><strong>p</strong> (<em>np.ndarray | pd.DataFrame</em>) – Supplemental feature data for the physics loss function in 2D array
+or DataFrame. Same dimension rules as x.</p></li>
+<li><p><strong>n_batch</strong> (<em>int</em>) – Number of times to update the NN weights per epoch (number of
+mini-batches). The training data will be split into this many
+mini-batches and the NN will train on each mini-batch, update
+weights, then move onto the next mini-batch.</p></li>
+<li><p><strong>n_epoch</strong> (<em>int</em>) – Number of times to iterate on the training data.</p></li>
+<li><p><strong>shuffle</strong> (<em>bool</em>) – Flag to randomly subset the validation data and batch selection
+from x, y, and p.</p></li>
+<li><p><strong>validation_split</strong> (<em>float</em>) – Fraction of x, y, and p to use for validation.</p></li>
+<li><p><strong>p_kwargs</strong> (<em>None | dict</em>) – Optional kwargs for the physical loss function self._p_fun.</p></li>
+<li><p><strong>run_preflight</strong> (<em>bool</em>) – Flag to run preflight checks.</p></li>
+<li><p><strong>return_diagnostics</strong> (<em>bool</em>) – Flag to return training diagnostics dictionary.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>diagnostics</strong> (<em>dict</em>) – Namespace of training parameters that can be used for diagnostics.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.predict">
+<code class="sig-name descname"><span class="pre">predict</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">to_numpy=True</span></em>, <em class="sig-param"><span class="pre">training=False</span></em>, <em class="sig-param"><span class="pre">training_layers=(&lt;class</span> <span class="pre">'tensorflow.python.keras.layers.normalization_v2.BatchNormalization'&gt;</span></em>, <em class="sig-param"><span class="pre">&lt;class</span> <span class="pre">'tensorflow.python.keras.layers.core.Dropout'&gt;</span></em>, <em class="sig-param"><span class="pre">&lt;class</span> <span class="pre">'tensorflow.python.keras.layers.recurrent_v2.LSTM'&gt;)</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/phygnn.html#PhysicsGuidedNeuralNetwork.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run a prediction on input features.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>np.ndarray | pd.DataFrame</em>) – Feature data in a &gt;=2D array or DataFrame. If this is a DataFrame,
+the index is ignored, the columns are used with self.feature_names,
+and the df is converted into a numpy array for batching and passing
+to the training algorithm. A 2D input should have the shape:
+(n_observations, n_features). A 3D input should have the shape:
+(n_observations, n_timesteps, n_features). 4D inputs have not been
+tested and should be used with caution.</p></li>
+<li><p><strong>to_numpy</strong> (<em>bool</em>) – Flag to convert output from tensor to numpy array</p></li>
+<li><p><strong>training</strong> (<em>bool</em>) – Flag for predict() used in the training routine. This is used
+to freeze the BatchNormalization and Dropout layers.</p></li>
+<li><p><strong>training_layers</strong> (<em>list | tuple</em>) – List of tensorflow.keras.layers classes that training=bool should
+be passed to. By default this is (BatchNormalization, Dropout,
+LSTM)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>y</strong> (<em>tf.Tensor | np.ndarray</em>) – Predicted output data.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.save">
+<code class="sig-name descname"><span class="pre">save</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fpath</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/phygnn.html#PhysicsGuidedNeuralNetwork.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save phygnn model to pickle file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>fpath</strong> (<em>str</em>) – File path to .pkl file to save model to.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="phygnn.phygnn.PhysicsGuidedNeuralNetwork.load">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">load</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fpath</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phygnn/phygnn.html#PhysicsGuidedNeuralNetwork.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phygnn.phygnn.PhysicsGuidedNeuralNetwork.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load a phygnn model that has been saved to a pickle file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>fpath</strong> (<em>str</em>) – File path to .pkl file to load model from.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>model</strong> (<em>PhysicsGuidedNeuralNetwork</em>) – Instantiated phygnn model</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="phygnn.version.html" class="btn btn-neutral float-right" title="phygnn.version module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="phygnn.utilities.tf_utilities.html" class="btn btn-neutral float-left" title="phygnn.utilities.tf_utilities module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2020, Alliance for Sustainable Energy, LLC.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
