@@ -7,20 +7,11 @@ from setuptools import setup, find_packages
 from setuptools.command.develop import develop
 from subprocess import check_call
 import shlex
-import sys
 from warnings import warn
 
-
-py_version = sys.version_info
-if py_version.major < 3:
-    raise RuntimeError("phygnn is only compatible with python 3!")
+from phygnn import __version__ as version
 
 here = os.path.abspath(os.path.dirname(__file__))
-
-with open(os.path.join(here, "phygnn", "version.py"), encoding="utf-8") as f:
-    version = f.read()
-
-version = version.split('=')[-1].strip().strip('"').strip("'")
 
 with open(os.path.join(here, "README.rst"), encoding="utf-8") as f:
     readme = f.read()
