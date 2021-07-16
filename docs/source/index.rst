@@ -1,19 +1,8 @@
-.. phygnn documentation master file, created by
-   sphinx-quickstart on Thu Jun 14 10:26:46 2018.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. toctree::
+   :hidden:
+
+   Home page <self>
+   Installation and Usage <misc/installation_usage>
+   API reference <_autosummary/phygnn>
 
 .. include:: ../../README.rst
-
-.. toctree::
-   :maxdepth: 3
-   :caption: Contents:
-
-   phygnn/phygnn
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

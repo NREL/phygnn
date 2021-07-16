@@ -18,21 +18,19 @@ Documentation config file
 import os
 import sphinx_rtd_theme
 import sys
+sys.path.insert(0, os.path.abspath('../../'))
 
 # -- Project information -----------------------------------------------------
 
 project = 'phygnn'
 copyright = '2020, Alliance for Sustainable Energy, LLC'
-author = 'Grant Buster, Michael Rossol, Mike Bannister, Dylan Hettinger'
+author = 'NREL: Grant Buster, Michael Rossol, Mike Bannister, Dylan Hettinger'
 
 pkg = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
 pkg = os.path.dirname(pkg)
 sys.path.append(pkg)
 
-with open(os.path.join(pkg, "phygnn", "version.py"), encoding="utf-8") as f:
-    v = f.read()
-
-v = v.split('=')[-1].strip().strip('"').strip("'")
+from phygnn.version import __version__ as v
 # The short X.Y version
 version = v
 # The full version, including alpha/beta/rc tags
@@ -49,6 +47,7 @@ release = v
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx.ext.doctest",
     "sphinx.ext.intersphinx",
     "sphinx.ext.coverage",
@@ -59,7 +58,9 @@ extensions = [
     "sphinx_rtd_theme",
 ]
 
-intersphinx_mapping = {'python': ('http://docs.python.org/3.5', None)}
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3/", None),
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -84,7 +85,13 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = ["_build", ".DS_Store"]
+exclude_patterns = [
+    "**.ipynb_checkpoints",
+    "**__pycache__**",
+    # to ensure that include files (partial pages) aren't built, exclude them
+    # https://github.com/sphinx-doc/sphinx/issues/1965#issuecomment-124732907
+    "**/includes/**",
+]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -102,12 +109,13 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # documentation.
 #
 html_theme_options = {"navigation_depth": 4, "collapse_navigation": False}
+html_css_file = ["custom.css"]
 
 html_context = {
     "display_github": True,
     "github_user": "nrel",
     "github_repo": "phygnn",
-    "github_version": "master",
+    "github_version": "main",
     "conf_py_path": "/docs/source/",
     "source_suffix": source_suffix,
 }
@@ -132,7 +140,6 @@ html_static_path = ['_static']
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'phygnndoc'
-
 
 # -- Options for LaTeX output ------------------------------------------------
 
@@ -159,9 +166,8 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'phygnn.tex', 'phygnn Documentation',
-     'Grant Buster, Michael Rossol, Mike Bannister, Dylan Hettinger', 'manual'),
+     'Michael Rossol, Grant Buster', 'manual'),
 ]
-
 
 # -- Options for manual page output ------------------------------------------
 
@@ -171,7 +177,6 @@ man_pages = [
     (master_doc, 'phygnn', 'phygnn Documentation',
      [author], 1)
 ]
-
 
 # -- Options for Texinfo output ----------------------------------------------
 
@@ -184,14 +189,17 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-
 # -- Extension configuration -------------------------------------------------
 
-autoclass_content = 'both'
+autosummary_generate = True  # Turn on sphinx.ext.autosummary
+autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
 autodoc_member_order = 'bysource'
+autodoc_inherit_docstrings = True  # If no docstring, inherit from base class
+add_module_names = False  # Remove namespaces from class/method signatures
+# Remove 'view source code' from top of page (for html, not python)
+html_show_sourcelink = False
 numpy_show_class_member = True
 napoleon_google_docstring = False
 napoleon_use_param = False
 napoleon_use_ivar = False
 napoleon_use_rtype = False
-autosummary_generate = True
