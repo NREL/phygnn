@@ -420,7 +420,7 @@ class TfModel(ModelBase):
         if not os.path.exists(path):
             os.makedirs(path)
 
-        tf.saved_model.save(self.model, path)
+        self.model.save(path)
 
         model_params = {'feature_names': self.feature_names,
                         'label_names': self.label_names,
