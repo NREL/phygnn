@@ -27,16 +27,10 @@ jobs:
         python -m pip install pytest-cov
         python -m pip install tensorflow==1.15.0
         python -m pip install .
-    - name: Run pytest and Generate coverage report
+    - name: Run pytest
       run: |
-        python -m pytest -v --cov=./ --cov-report=xml:coverage.xml
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
-        flags: unittests
-        env_vars: OS,PYTHON
-        name: codecov-umbrella
-        fail_ci_if_error: false
-        verbose: true
+        python -m pytest::test_base_model.py -v
+        python -m pytest::test_pre_processing.py -v
+        python -m pytest::test_random_forest_model.py -v
+        python -m pytest::test_tf_layers.py -v
+        python -m pytest::test_tf_model.py -v

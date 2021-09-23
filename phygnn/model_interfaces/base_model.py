@@ -9,6 +9,7 @@ import pandas as pd
 import tensorflow as tf
 from warnings import warn
 
+from phygnn.utilities import TF2
 from phygnn.utilities.pre_processing import PreProcess
 
 logger = logging.getLogger(__name__)
@@ -334,7 +335,7 @@ class ModelBase(ABC):
         ------
         list
         """
-        return [i for l in self.one_hot_categories.values() for i in l]
+        return [i for sub in self.one_hot_categories.values() for i in sub]
 
     @property
     def one_hot_categories(self):
@@ -429,7 +430,10 @@ class ModelBase(ABC):
             Random number generator seed
         """
         np.random.seed(s)
-        tf.random.set_seed(s)
+        if TF2:
+            tf.random.set_seed(s)
+        else:
+            tf.random.set_random_seed(s)
 
     @staticmethod
     def _parse_data(data, names=None):

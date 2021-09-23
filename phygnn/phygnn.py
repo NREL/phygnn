@@ -51,7 +51,10 @@ def p_fun_dummy(model, y_true, y_predicted, p):
 
 
 class PhysicsGuidedNeuralNetwork:
-    """Simple Deep Neural Network with custom physical loss function."""
+    """Simple Deep Neural Network with custom physical loss function.
+
+    Note that the phygnn model requires TensorFlow 2.x
+    """
 
     def __init__(self, p_fun, loss_weights=(0.5, 0.5),
                  n_features=1, n_labels=1, hidden_layers=None,

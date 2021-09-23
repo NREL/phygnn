@@ -4,13 +4,12 @@ Tests for basic tensorflow model functionality and execution.
 # pylint: disable=W0613
 import numpy as np
 import os
-from packaging import version
 import pandas as pd
 import pytest
 import shutil
-import tensorflow as tf
 
 from phygnn import TESTDATADIR
+from phygnn.utilities import TF2
 from phygnn.model_interfaces.tf_model import TfModel
 
 FPATH = os.path.join(TESTDATADIR, '_temp_model')
@@ -18,13 +17,12 @@ FPATH_JSON = os.path.join(TESTDATADIR, '_temp_model.json')
 if not os.path.exists(FPATH):
     os.mkdir(FPATH)
 
-s = 0
-np.random.seed(s)
+TfModel.seed(0)
 
-if version.parse(tf.__version__) < version.parse('2.0.0'):
-    tf.random.set_random_seed(s)
+if TF2:
+    mae_key = 'val_mae'
 else:
-    tf.random.set_seed(s)
+    mae_key = 'val_mean_absolute_error'
 
 N = 100
 A = np.linspace(-1, 1, N)
@@ -59,7 +57,7 @@ def test_nn(hidden_layers, loss):
     assert len(model.history) == 10
 
     test_mae = np.mean(np.abs(model[X].values - Y))
-    assert model.history['val_mae'].values[-1] < loss
+    assert model.history[mae_key].values[-1] < loss
     assert test_mae < loss
 
 
@@ -80,7 +78,7 @@ def test_normalize(normalize, loss):
                                   early_stop=False)
 
     test_mae = np.mean(np.abs(model[X].values - Y))
-    assert model.history['val_mae'].values[-1] < loss
+    assert model.history[mae_key].values[-1] < loss
     assert test_mae < loss
 
 
@@ -101,7 +99,7 @@ def test_complex_nn():
 
     test_mae = np.mean(np.abs(model[X].values - Y))
     loss = 0.15
-    assert model.history['val_mae'].values[-1] < loss
+    assert model.history[mae_key].values[-1] < loss
     assert test_mae < loss
 
 
@@ -124,8 +122,8 @@ def test_dropout():
                                     epochs=10, fit_kwargs={"batch_size": 16},
                                     early_stop=False)
 
-    out1 = model_1.history['val_mae'].values[-5:]
-    out2 = model_2.history['val_mae'].values[-5:]
+    out1 = model_1.history[mae_key].values[-5:]
+    out2 = model_2.history[mae_key].values[-5:]
     assert (out2 > out1).all()
 
 
