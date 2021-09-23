@@ -51,7 +51,10 @@ def p_fun_dummy(model, y_true, y_predicted, p):
 
 
 class PhysicsGuidedNeuralNetwork:
-    """Simple Deep Neural Network with custom physical loss function."""
+    """Simple Deep Neural Network with custom physical loss function.
+
+    Note that the phygnn model requires TensorFlow 2.x
+    """
 
     def __init__(self, p_fun, loss_weights=(0.5, 0.5),
                  n_features=1, n_labels=1, hidden_layers=None,
@@ -193,12 +196,12 @@ class PhysicsGuidedNeuralNetwork:
         else:
             try:
                 self._metric_fun = getattr(tf.keras.losses, self._metric)
-            except Exception:
-                e = ('Could not recognize error metric "{}". The following '
-                     'error metrics are available: {}'
-                     .format(self._metric, list(METRICS.keys())))
-                logger.error(e)
-                raise KeyError(e)
+            except Exception as e:
+                msg = ('Could not recognize error metric "{}". The following '
+                       'error metrics are available: {}'
+                       .format(self._metric, list(METRICS.keys())))
+                logger.error(msg)
+                raise KeyError(msg) from e
 
         self._initializer = initializer
         if initializer is None:

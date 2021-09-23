@@ -6,20 +6,18 @@ import numpy as np
 import os
 import pandas as pd
 import pytest
-import shutil
-import tensorflow as tf
+import tempfile
 
-from phygnn import TESTDATADIR
+from phygnn.utilities import TF2
 from phygnn.model_interfaces.tf_model import TfModel
 
-FPATH = os.path.join(TESTDATADIR, '_temp_model')
-FPATH_JSON = os.path.join(TESTDATADIR, '_temp_model.json')
-if not os.path.exists(FPATH):
-    os.mkdir(FPATH)
 
-s = 0
-np.random.seed(s)
-tf.random.set_seed(s)
+TfModel.seed(0)
+
+if TF2:
+    mae_key = 'val_mae'
+else:
+    mae_key = 'val_mean_absolute_error'
 
 N = 100
 A = np.linspace(-1, 1, N)
@@ -54,7 +52,7 @@ def test_nn(hidden_layers, loss):
     assert len(model.history) == 10
 
     test_mae = np.mean(np.abs(model[X].values - Y))
-    assert model.history['val_mae'].values[-1] < loss
+    assert model.history[mae_key].values[-1] < loss
     assert test_mae < loss
 
 
@@ -75,7 +73,7 @@ def test_normalize(normalize, loss):
                                   early_stop=False)
 
     test_mae = np.mean(np.abs(model[X].values - Y))
-    assert model.history['val_mae'].values[-1] < loss
+    assert model.history[mae_key].values[-1] < loss
     assert test_mae < loss
 
 
@@ -96,7 +94,7 @@ def test_complex_nn():
 
     test_mae = np.mean(np.abs(model[X].values - Y))
     loss = 0.15
-    assert model.history['val_mae'].values[-1] < loss
+    assert model.history[mae_key].values[-1] < loss
     assert test_mae < loss
 
 
@@ -119,29 +117,29 @@ def test_dropout():
                                     epochs=10, fit_kwargs={"batch_size": 16},
                                     early_stop=False)
 
-    out1 = model_1.history['val_mae'].values[-5:]
-    out2 = model_2.history['val_mae'].values[-5:]
+    out1 = model_1.history[mae_key].values[-5:]
+    out2 = model_2.history[mae_key].values[-5:]
     assert (out2 > out1).all()
 
 
 def test_save_load():
     """Test the save/load operations of TfModel"""
-    hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
-                     {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
-    model = TfModel.build_trained(FEATURES, LABELS,
-                                  hidden_layers=hidden_layers,
-                                  epochs=10, fit_kwargs={"batch_size": 16},
-                                  early_stop=False,
-                                  save_path=FPATH)
-    y_pred = model[X]
+    with tempfile.TemporaryDirectory() as td:
+        model_fpath = os.path.join(td, 'test_model/')
+        hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
+                         {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
+        model = TfModel.build_trained(FEATURES, LABELS,
+                                      hidden_layers=hidden_layers,
+                                      epochs=10, fit_kwargs={"batch_size": 16},
+                                      early_stop=False,
+                                      save_path=model_fpath)
+        y_pred = model[X]
 
-    loaded = TfModel.load(FPATH)
-    y_pred_loaded = loaded[X]
-    np.allclose(y_pred.values, y_pred_loaded.values)
-    assert loaded.feature_names == ['a', 'b']
-    assert loaded.label_names == ['c']
-    shutil.rmtree(FPATH)
-    os.remove(FPATH_JSON)
+        loaded = TfModel.load(model_fpath)
+        y_pred_loaded = loaded[X]
+        np.allclose(y_pred.values, y_pred_loaded.values)
+        assert loaded.feature_names == ['a', 'b']
+        assert loaded.label_names == ['c']
 
 
 def test_OHE():
