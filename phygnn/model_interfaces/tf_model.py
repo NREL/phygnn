@@ -421,12 +421,10 @@ class TfModel(ModelBase):
         if not os.path.exists(path):
             os.makedirs(path)
 
-        json_path = path + 'model.json'
-        tf_path = path
+        if TF2:
+            self.model.save(path)
         if not TF2:
-            tf_path += 'model.h5'
-
-        self.model.save(tf_path)
+            tf.saved_model.save(self.model, path)
 
         model_params = {'feature_names': self.feature_names,
                         'label_names': self.label_names,
@@ -435,6 +433,7 @@ class TfModel(ModelBase):
                                       self.normalize_labels),
                         'one_hot_categories': self.one_hot_categories}
 
+        json_path = path + 'model.json'
         model_params = self.dict_json_convert(model_params)
         with open(json_path, 'w') as f:
             json.dump(model_params, f, indent=2, sort_keys=True)
@@ -468,13 +467,9 @@ class TfModel(ModelBase):
             logger.error(e)
             raise IOError(e)
 
+        loaded = tf.keras.models.load_model(path)
+
         json_path = path + 'model.json'
-        tf_path = path
-        if not TF2:
-            tf_path += 'model.h5'
-
-        loaded = tf.keras.models.load_model(tf_path)
-
         with open(json_path, 'r') as f:
             model_params = json.load(f)
 
