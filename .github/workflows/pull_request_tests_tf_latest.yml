@@ -1,4 +1,4 @@
-name: Pytests
+name: pytests_tf_latest
 
 on:
   pull_request:
@@ -17,7 +17,6 @@ jobs:
             python-version: 3.8
           - os: ubuntu-latest
             python-version: 3.7
-
     steps:
     - uses: actions/checkout@v2
       with:
