@@ -6,16 +6,11 @@ import numpy as np
 import os
 import pandas as pd
 import pytest
-import shutil
+import tempfile
 
-from phygnn import TESTDATADIR
 from phygnn.utilities import TF2
 from phygnn.model_interfaces.tf_model import TfModel
 
-FPATH = os.path.join(TESTDATADIR, '_temp_model')
-FPATH_JSON = os.path.join(TESTDATADIR, '_temp_model.json')
-if not os.path.exists(FPATH):
-    os.mkdir(FPATH)
 
 TfModel.seed(0)
 
@@ -129,22 +124,22 @@ def test_dropout():
 
 def test_save_load():
     """Test the save/load operations of TfModel"""
-    hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
-                     {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
-    model = TfModel.build_trained(FEATURES, LABELS,
-                                  hidden_layers=hidden_layers,
-                                  epochs=10, fit_kwargs={"batch_size": 16},
-                                  early_stop=False,
-                                  save_path=FPATH)
-    y_pred = model[X]
+    with tempfile.TemporaryDirectory() as td:
+        model_fpath = os.path.join(td, 'test_model/')
+        hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
+                         {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
+        model = TfModel.build_trained(FEATURES, LABELS,
+                                      hidden_layers=hidden_layers,
+                                      epochs=10, fit_kwargs={"batch_size": 16},
+                                      early_stop=False,
+                                      save_path=model_fpath)
+        y_pred = model[X]
 
-    loaded = TfModel.load(FPATH)
-    y_pred_loaded = loaded[X]
-    np.allclose(y_pred.values, y_pred_loaded.values)
-    assert loaded.feature_names == ['a', 'b']
-    assert loaded.label_names == ['c']
-    shutil.rmtree(FPATH)
-    os.remove(FPATH_JSON)
+        loaded = TfModel.load(model_fpath)
+        y_pred_loaded = loaded[X]
+        np.allclose(y_pred.values, y_pred_loaded.values)
+        assert loaded.feature_names == ['a', 'b']
+        assert loaded.label_names == ['c']
 
 
 def test_OHE():
