@@ -6,6 +6,7 @@ import json
 import logging
 import numpy as np
 import os
+from packaging import version
 import pandas as pd
 import tensorflow as tf
 from tensorflow import feature_column
@@ -420,7 +421,10 @@ class TfModel(ModelBase):
         if not os.path.exists(path):
             os.makedirs(path)
 
-        self.model.save(path)
+        if version.parse(tf.__version__) < version.parse('2.0.0'):
+            self.model.save(path + os.path.basename(path) + '.h5')
+        else:
+            self.model.save(path)
 
         model_params = {'feature_names': self.feature_names,
                         'label_names': self.label_names,
@@ -631,7 +635,11 @@ class TfModel(ModelBase):
             logger.error(e)
             raise IOError(e)
 
-        loaded = tf.keras.models.load_model(path)
+        if version.parse(tf.__version__) < version.parse('2.0.0'):
+            loaded = tf.keras.models.load_model(
+                path + os.path.basename(path) + '.h5')
+        else:
+            loaded = tf.keras.models.load_model(path)
 
         json_path = path.rstrip('/') + '.json'
         with open(json_path, 'r') as f:

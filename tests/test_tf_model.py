@@ -4,6 +4,7 @@ Tests for basic tensorflow model functionality and execution.
 # pylint: disable=W0613
 import numpy as np
 import os
+from packaging import version
 import pandas as pd
 import pytest
 import shutil
@@ -19,7 +20,11 @@ if not os.path.exists(FPATH):
 
 s = 0
 np.random.seed(s)
-tf.random.set_seed(s)
+
+if version.parse(tf.__version__) < version.parse('2.0.0'):
+    tf.random.set_random_seed(s)
+else:
+    tf.random.set_seed(s)
 
 N = 100
 A = np.linspace(-1, 1, N)
