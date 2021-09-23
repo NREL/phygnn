@@ -196,12 +196,12 @@ class PhysicsGuidedNeuralNetwork:
         else:
             try:
                 self._metric_fun = getattr(tf.keras.losses, self._metric)
-            except Exception:
-                e = ('Could not recognize error metric "{}". The following '
-                     'error metrics are available: {}'
-                     .format(self._metric, list(METRICS.keys())))
-                logger.error(e)
-                raise KeyError(e)
+            except Exception as e:
+                msg = ('Could not recognize error metric "{}". The following '
+                       'error metrics are available: {}'
+                       .format(self._metric, list(METRICS.keys())))
+                logger.error(msg)
+                raise KeyError(msg) from e
 
         self._initializer = initializer
         if initializer is None:
