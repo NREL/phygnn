@@ -13,6 +13,7 @@ from tensorflow.keras.optimizers import Adam
 from warnings import warn
 
 from phygnn.model_interfaces.base_model import ModelBase
+from phygnn.utilities import TF2
 from phygnn.utilities.tf_layers import Layers
 from phygnn.utilities.pre_processing import PreProcess
 
@@ -420,7 +421,10 @@ class TfModel(ModelBase):
         if not os.path.exists(path):
             os.makedirs(path)
 
-        tf.saved_model.save(self.model, path)
+        if TF2:
+            self.model.save(path)
+        if not TF2:
+            tf.saved_model.save(self.model, path)
 
         model_params = {'feature_names': self.feature_names,
                         'label_names': self.label_names,
@@ -429,10 +433,49 @@ class TfModel(ModelBase):
                                       self.normalize_labels),
                         'one_hot_categories': self.one_hot_categories}
 
-        json_path = path.rstrip('/') + '.json'
+        json_path = path + 'model.json'
         model_params = self.dict_json_convert(model_params)
         with open(json_path, 'w') as f:
             json.dump(model_params, f, indent=2, sort_keys=True)
+
+    @classmethod
+    def load(cls, path):
+        """
+        Load model from model path.
+
+        Parameters
+        ----------
+        path : str
+            Directory path to TfModel to load model from. There should be a
+            tensorflow saved model directory with a parallel pickle file for
+            the TfModel framework.
+
+        Returns
+        -------
+        model : TfModel
+            Loaded TfModel from disk.
+        """
+        if path.endswith('.json'):
+            path = path.replace('.json', '/')
+
+        if not path.endswith('/'):
+            path += '/'
+
+        if not os.path.isdir(path):
+            e = ('Can only load directory path but target is not '
+                 'directory: {}'.format(path))
+            logger.error(e)
+            raise IOError(e)
+
+        loaded = tf.keras.models.load_model(path)
+
+        json_path = path + 'model.json'
+        with open(json_path, 'r') as f:
+            model_params = json.load(f)
+
+        model = cls(loaded, **model_params)
+
+        return model
 
     @classmethod
     def build(cls, feature_names, label_names, normalize=(True, False),
@@ -599,44 +642,5 @@ class TfModel(ModelBase):
 
         if save_path is not None:
             model.save_model(save_path)
-
-        return model
-
-    @classmethod
-    def load(cls, path):
-        """
-        Load model from model path.
-
-        Parameters
-        ----------
-        path : str
-            Directory path to TfModel to load model from. There should be a
-            tensorflow saved model directory with a parallel pickle file for
-            the TfModel framework.
-
-        Returns
-        -------
-        model : TfModel
-            Loaded TfModel from disk.
-        """
-        if path.endswith('.json'):
-            path = path.replace('.json', '/')
-
-        if not path.endswith('/'):
-            path += '/'
-
-        if not os.path.isdir(path):
-            e = ('Can only load directory path but target is not '
-                 'directory: {}'.format(path))
-            logger.error(e)
-            raise IOError(e)
-
-        loaded = tf.keras.models.load_model(path)
-
-        json_path = path.rstrip('/') + '.json'
-        with open(json_path, 'r') as f:
-            model_params = json.load(f)
-
-        model = cls(loaded, **model_params)
 
         return model

@@ -1,0 +1,36 @@
+name: pytests_tf_1_15
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: [3.7]
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        ref: ${{ github.event.pull_request.head.ref }}
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install pytest
+        python -m pip install pytest-cov
+        python -m pip install tensorflow==1.15.0
+        python -m pip install .
+    - name: Run pytest
+      run: |
+        python -m pytest ./tests/test_base_model.py -v
+        python -m pytest ./tests/test_pre_processing.py -v
+        python -m pytest ./tests/test_random_forest_model.py -v
+        python -m pytest ./tests/test_tf_layers.py -v
+        python -m pytest ./tests/test_tf_model.py -v
