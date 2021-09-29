@@ -25,7 +25,7 @@ phygnn
 
 .. image:: https://codecov.io/gh/nrel/phygnn/branch/master/graph/badge.svg?token=ZJFQWAAM1N
     :target: https://codecov.io/gh/nrel/phygnn
-    
+
 .. image:: https://zenodo.org/badge/276492167.svg
    :target: https://zenodo.org/badge/latestdoi/276492167
 
@@ -111,8 +111,8 @@ Developer Install
 
 1. Use conda (anaconda or miniconda with python 3.7 or 3.8) to create a phygnn environment: ``conda create --name phygnn python=3.7``
 2. Activate your new conda env: ``conda activate phygnn``
-3. Clone the phygnn repository: ``git clone https://github.com/NREL/phygnn.git`` or ``git clone git@github.com:NREL/phygnn.git``
-4. Navigate to the cloned repo and checkout your desired branch: ``git checkout master`` or ``git checkout <branch>``
+3. Clone the phygnn repository: ``git clone git@github.com:NREL/phygnn.git``
+4. Navigate to the cloned repo and checkout your desired branch: ``git checkout main`` or ``git checkout <branch>``
 5. Navigate to the phygnn directory that contains setup.py and run: ``pip install -e .`` (developer install) or ``pip install .`` (static install).
 6. Test your installation:
 
