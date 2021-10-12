@@ -5,7 +5,7 @@ phygnn
 .. image:: https://github.com/NREL/phygnn/workflows/Documentation/badge.svg
     :target: https://nrel.github.io/phygnn/
 
-.. image:: https://github.com/NREL/phygnn/workflows/Pytests/badge.svg
+.. image:: https://github.com/NREL/phygnn/workflows/pytests_tf_latest/badge.svg
     :target: https://github.com/NREL/phygnn/actions?query=workflow%3A%22pytests_tf_latest%22
 
 .. image:: https://github.com/NREL/phygnn/workflows/Lint%20Code%20Base/badge.svg
