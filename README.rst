@@ -44,8 +44,8 @@ when applying purely data-driven machine learning models to scientific
 applications, such as when machine learning models produce physically
 inconsistent results or have trouble generalizing to out-of-sample scenarios.
 
-For details on the phygnn class framework see `the phygnn module documentation
-here. <https://nrel.github.io/phygnn/phygnn/phygnn.phygnn.html>`_
+For details on the phygnn class framework see `the phygnn class documentation
+here. <https://nrel.github.io/phygnn/_autosummary/phygnn.phygnn.PhysicsGuidedNeuralNetwork.html>`_
 
 For example notebooks using the phygnn architecture for regression,
 classification, and even GAN applications, see `the example notebooks here.
