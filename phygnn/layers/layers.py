@@ -37,7 +37,10 @@ class HiddenLayers:
         self._i = 0
         self._layers = []
         self._hidden_layers_kwargs = copy.deepcopy(hidden_layers)
-        for layer in hidden_layers:
+        self._hidden_layers_kwargs = self.parse_repeats(
+            self._hidden_layers_kwargs)
+
+        for layer in self._hidden_layers_kwargs:
             self.add_layer(layer)
 
     def __repr__(self):
@@ -76,6 +79,43 @@ class HiddenLayers:
         self._i += 1
 
         return layer
+
+    @staticmethod
+    def parse_repeats(hidden_layers):
+        """Parse repeat layers. Must have "repeat" and "n" to repeat one
+        or more layers.
+
+        Parameters
+        ----------
+        hidden_layers : list
+            Hidden layer kwargs including possibly entries with
+            {'n': 2, 'repeat': [{...}, {...}]} that will duplicate the list sub
+            entry n times.
+
+        Returns
+        -------
+        hidden_layers : list
+            Hidden layer kwargs exploded for 'repeat' entries.
+        """
+
+        out = []
+        for layer in hidden_layers:
+            if 'repeat' in layer and 'n' in layer:
+                repeat = layer.pop('repeat')
+                repeat = [repeat] if isinstance(repeat, dict) else repeat
+                n = layer.pop('n')
+                for _ in range(n):
+                    out += repeat
+
+            elif 'repeat' in layer and 'n' not in layer:
+                msg = ('Keyword "repeat" was found in layer but "n" was not: '
+                       '{}'.format(layer))
+                raise KeyError(msg)
+
+            else:
+                out.append(layer)
+
+        return out
 
     @property
     def layers(self):
@@ -310,14 +350,17 @@ class Layers(HiddenLayers):
         self._layers = []
         self._n_features = n_features
         self._n_labels = n_labels
-        self._hidden_layers_kwargs = copy.deepcopy(hidden_layers)
         self._input_layer_kwargs = copy.deepcopy(input_layer)
         self._output_layer_kwargs = copy.deepcopy(output_layer)
+
+        self._hidden_layers_kwargs = copy.deepcopy(hidden_layers)
+        self._hidden_layers_kwargs = self.parse_repeats(
+            self._hidden_layers_kwargs)
 
         self._add_input_layer()
 
         if hidden_layers:
-            for layer in hidden_layers:
+            for layer in self._hidden_layers_kwargs:
                 self.add_layer(layer)
 
         self._add_output_layer()

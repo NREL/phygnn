@@ -58,3 +58,26 @@ def test_complex_layers():
     layers = HiddenLayers(hidden_layers)
 
     assert len(layers) == 7
+
+
+def test_repeat_layers():
+    """Test repeat argument to duplicate layers"""
+    hidden_layers = [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
+                     {'n': 3, 'repeat': [{'units': 64},
+                                         {'activation': 'relu'},
+                                         {'dropout': 0.01}]},
+                     ]
+    layers = HiddenLayers(hidden_layers)
+    assert len(layers) == 12
+
+    hidden_layers = [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
+                     {'n': 3, 'repeat': {'units': 64}},
+                     ]
+    layers = HiddenLayers(hidden_layers)
+    assert len(layers) == 6
+
+    hidden_layers = [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
+                     {'repeat': {'units': 64}},
+                     ]
+    with pytest.raises(KeyError):
+        layers = HiddenLayers(hidden_layers)
