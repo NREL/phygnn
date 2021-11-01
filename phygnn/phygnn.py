@@ -217,38 +217,6 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
         return self._history
 
     @property
-    def kernel_weights(self):
-        """
-        Get a list of the NN kernel weights (tensors)
-
-        (can be used for kernel regularization).
-
-        Does not include input layer or dropout layers.
-        Does include the output layer.
-
-        Returns
-        -------
-        list
-        """
-        return self._layers.kernel_weights
-
-    @property
-    def bias_weights(self):
-        """
-        Get a list of the NN bias weights (tensors)
-
-        (can be used for bias regularization).
-
-        Does not include input layer or dropout layers.
-        Does include the output layer.
-
-        Returns
-        -------
-        list
-        """
-        return self._layers.bias_weights
-
-    @property
     def kernel_reg_term(self):
         """Get the regularization term for the kernel regularization without
         the regularization rate applied."""
