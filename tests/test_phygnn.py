@@ -12,7 +12,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
                                      BatchNormalization, Conv1D, Conv3D,
                                      Flatten, LSTM)
-from phygnn import PhysicsGuidedNeuralNetwork, p_fun_dummy
+from phygnn import PhysicsGuidedNeuralNetwork
 
 
 N = 100
@@ -257,14 +257,14 @@ def test_save_load():
 def test_dummy_p_fun():
     """Test the phygnn model with dummy pfun that is just MAE"""
     PhysicsGuidedNeuralNetwork.seed(0)
-    model_0 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_dummy,
+    model_0 = PhysicsGuidedNeuralNetwork(p_fun=None,
                                          hidden_layers=HIDDEN_LAYERS,
                                          loss_weights=(0.5, 0.5),
                                          n_features=2, n_labels=1)
     model_0.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
 
     PhysicsGuidedNeuralNetwork.seed(0)
-    model_1 = PhysicsGuidedNeuralNetwork(p_fun=p_fun_dummy,
+    model_1 = PhysicsGuidedNeuralNetwork(p_fun=None,
                                          hidden_layers=HIDDEN_LAYERS,
                                          loss_weights=(1.0, 0.0),
                                          metric='mae',

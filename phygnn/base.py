@@ -129,6 +129,38 @@ class CustomNetwork(ABC):
         return self._layers.weights
 
     @property
+    def kernel_weights(self):
+        """
+        Get a list of the NN kernel weights (tensors)
+
+        (can be used for kernel regularization).
+
+        Does not include input layer or dropout layers.
+        Does include the output layer.
+
+        Returns
+        -------
+        list
+        """
+        return self._layers.kernel_weights
+
+    @property
+    def bias_weights(self):
+        """
+        Get a list of the NN bias weights (tensors)
+
+        (can be used for bias regularization).
+
+        Does not include input layer or dropout layers.
+        Does include the output layer.
+
+        Returns
+        -------
+        list
+        """
+        return self._layers.bias_weights
+
+    @property
     def model_params(self):
         """
         Model parameters, used to save model to disc
