@@ -3,9 +3,14 @@
 Tensorflow Layers Handlers
 """
 import copy
-import tensorflow
+import logging
+import tensorflow as tf
 from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
                                      BatchNormalization)
+import phygnn.layers.custom
+
+
+logger = logging.getLogger(__name__)
 
 
 class HiddenLayers:
@@ -58,25 +63,6 @@ class HiddenLayers:
         tensorflow.keras.layers
         """
         return self.layers[idx]
-
-    def __setitem__(self, idx, layer_kwargs):
-        """
-        Add layer
-
-        Parameters
-        ----------
-        idx : int | None
-            Index to insert layer at, if None append to the end
-        layer_kwargs : dict
-            Dictionary of key word arguments for list layer. For example,
-            any of the following are valid inputs:
-                {'units': 64, 'activation': 'relu', 'dropout': 0.05}
-                {'units': 64, 'name': 'relu1'}
-                {'activation': 'relu'}
-                {'batch_normalization': {'axis': -1}}
-                {'dropout': 0.1}
-        """
-        self.add_layer(layer_kwargs, insert_index=idx)
 
     def __iter__(self):
         return self
@@ -178,7 +164,7 @@ class HiddenLayers:
 
         return weights
 
-    def add_layer(self, layer_kwargs, insert_index=None):
+    def add_layer(self, layer_kwargs):
         """Add a hidden layer to the DNN.
 
         Parameters
@@ -191,21 +177,32 @@ class HiddenLayers:
                 {'activation': 'relu'}
                 {'batch_normalization': {'axis': -1}}
                 {'dropout': 0.1}
-        insert_index : int | None
-            Optional index to insert the new layer at. None will append
-            the layer to the end of the layer list.
         """
 
         layer_kwargs_cp = copy.deepcopy(layer_kwargs)
 
-        layer_cls = layer_kwargs_cp.pop('class', None)
-        if layer_cls is not None:
+        layer_class = None
+        class_name = layer_kwargs_cp.pop('class', None)
+        if class_name is not None:
             msg = ('Need layer "class" definition as string to retrieve '
-                   'from tensorflow.keras.layers but received: {}'
-                   .format(type(layer_cls)))
-            assert isinstance(layer_cls, str), msg
-            layer_cls = getattr(tensorflow.keras.layers, layer_cls)
-            self._layers.append(layer_cls(**layer_kwargs_cp))
+                   'from phygnn.layers.custom or from '
+                   'tensorflow.keras.layers, but received: {} {}'
+                   .format(type(class_name), class_name))
+            assert isinstance(class_name, str), msg
+
+            layer_class = getattr(phygnn.layers.custom, class_name, None)
+
+            if layer_class is None:
+                layer_class = getattr(tf.keras.layers, class_name, None)
+
+            if layer_class is None:
+                msg = ('Could not retrieve layer class "{}" from '
+                       'phygnn.layers.custom or from tensorflow.keras.layers.'
+                       .format(class_name))
+                logger.error(msg)
+                raise KeyError(msg)
+
+            self._layers.append(layer_class(**layer_kwargs_cp))
             layer_kwargs_cp = {}
 
         activation_arg = layer_kwargs_cp.pop('activation', None)
@@ -230,13 +227,7 @@ class HiddenLayers:
         # This ensures proper default ordering of layers if requested together.
         for layer in [dense_layer, bn_layer, a_layer, drop_layer]:
             if layer is not None:
-                if insert_index is not None:
-                    if (dense_layer is not None
-                            and not isinstance(layer, Dense)):
-                        insert_index += 1
-                    self._layers.insert(insert_index, layer)
-                else:
-                    self._layers.append(layer)
+                self._layers.append(layer)
 
     @classmethod
     def compile(cls, model, hidden_layers):
@@ -299,49 +290,66 @@ class Layers(HiddenLayers):
                  {'class': 'Flatten'},
                  ]
             by default None which will lead to a single linear layer
-        input_layer : None | dict
+        input_layer : None | bool | dict
             Input layer. specification. Can be a dictionary similar to
             hidden_layers specifying a dense / conv / lstm layer.  Will
             default to a keras InputLayer with input shape = n_features.
-        output_layer : None | list | dict
+            Can be False if the input layer will be included in the
+            hidden_layers input.
+        output_layer : None | bool | list | dict
             Output layer specification. Can be a list/dict similar to
             hidden_layers input specifying a dense layer with activation.
             For example, for a classfication problem with a single output,
             output_layer should be [{'units': 1}, {'activation': 'sigmoid'}].
             This defaults to a single dense layer with no activation
-            (best for regression problems).
+            (best for regression problems).  Can be False if the output layer
+            will be included in the hidden_layers input.
         """
 
         self._i = 0
         self._layers = []
+        self._n_features = n_features
+        self._n_labels = n_labels
         self._hidden_layers_kwargs = copy.deepcopy(hidden_layers)
         self._input_layer_kwargs = copy.deepcopy(input_layer)
         self._output_layer_kwargs = copy.deepcopy(output_layer)
 
-        if input_layer is None:
-            self._layers = [InputLayer(input_shape=[n_features])]
-        else:
-            if not isinstance(input_layer, dict):
-                msg = ('Input layer spec needs to be a dict but received: {}'
-                       .format(type(input_layer)))
-                raise TypeError(msg)
-            else:
-                self.add_layer(input_layer)
+        self._add_input_layer()
 
         if hidden_layers:
             for layer in hidden_layers:
                 self.add_layer(layer)
 
-        if output_layer is None:
-            self._layers.append(Dense(n_labels))
-        else:
-            if isinstance(output_layer, dict):
-                output_layer = [output_layer]
-            if not isinstance(output_layer, list):
-                msg = ('Output layer spec needs to be a dict or list but '
-                       'received: {}'.format(type(output_layer)))
+        self._add_output_layer()
+
+    def _add_input_layer(self):
+        """Add an input layer, defaults to tf.layers.InputLayer"""
+
+        if self.input_layer_kwargs is None:
+            self._layers = [InputLayer(input_shape=[self._n_features])]
+
+        elif self.input_layer_kwargs:
+            if not isinstance(self.input_layer_kwargs, dict):
+                msg = ('Input layer spec needs to be a dict but received: {}'
+                       .format(type(self.input_layer_kwargs)))
                 raise TypeError(msg)
-            for layer in output_layer:
+            else:
+                self.add_layer(self.input_layer_kwargs)
+
+    def _add_output_layer(self):
+        """Add an output layer, defaults to tf.layers.Dense without activation
+        """
+
+        if self._output_layer_kwargs is None:
+            self._layers.append(Dense(self._n_labels))
+        elif self._output_layer_kwargs:
+            if isinstance(self._output_layer_kwargs, dict):
+                self._output_layer_kwargs = [self._output_layer_kwargs]
+            if not isinstance(self._output_layer_kwargs, list):
+                msg = ('Output layer spec needs to be a dict or list but '
+                       'received: {}'.format(type(self._output_layer_kwargs)))
+                raise TypeError(msg)
+            for layer in self._output_layer_kwargs:
                 self.add_layer(layer)
 
     @property
@@ -396,16 +404,19 @@ class Layers(HiddenLayers):
                  {'activation': 'relu'},
                  {'dropout': 0.01}]
             by default None which will lead to a single linear layer
-        input_layer : None | InputLayer
+        input_layer : None | bool | InputLayer
             Keras input layer. Will default to an InputLayer with
             input shape = n_features.
-        output_layer : None | list | dict
+            Can be False if the input layer will be included in the
+            hidden_layers input.
+        output_layer : None | bool | list | dict
             Output layer specification. Can be a list/dict similar to
             hidden_layers input specifying a dense layer with activation.
             For example, for a classfication problem with a single output,
             output_layer should be [{'units': 1}, {'activation': 'sigmoid'}]
             This defaults to a single dense layer with no activation
-            (best for regression problems).
+            (best for regression problems).  Can be False if the output layer
+            will be included in the hidden_layers input.
 
         Returns
         -------

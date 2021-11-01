@@ -3,7 +3,7 @@ Test the custom tensorflow utilities
 """
 import pytest
 
-from phygnn.utilities.tf_layers import Layers, HiddenLayers
+from phygnn.layers.layers import Layers, HiddenLayers
 
 
 @pytest.mark.parametrize(

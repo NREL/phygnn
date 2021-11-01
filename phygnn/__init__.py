@@ -4,7 +4,8 @@ import os
 from .model_interfaces import PhygnnModel, RandomForestModel, TfModel
 from .base import CustomNetwork, GradientUtils
 from .phygnn import PhysicsGuidedNeuralNetwork
-from .utilities import Layers, HiddenLayers, PreProcess, tf_isin, tf_log10
+from .layers import Layers, HiddenLayers
+from .utilities import PreProcess, tf_isin, tf_log10
 from phygnn.version import __version__
 
 __author__ = """Grant Buster"""
