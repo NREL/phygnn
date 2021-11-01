@@ -22,7 +22,7 @@ class CustomNetwork(ABC):
     Note that the phygnn model requires TensorFlow 2.x
     """
 
-    def __init__(self, n_features=1, n_labels=1, hidden_layers=None,
+    def __init__(self, n_features=None, n_labels=None, hidden_layers=None,
                  input_layer=None, output_layer=None, layers_obj=None,
                  feature_names=None, output_names=None, name=None):
         """
