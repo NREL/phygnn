@@ -7,7 +7,9 @@ import logging
 import tensorflow as tf
 from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
                                      BatchNormalization)
+
 import phygnn.layers.custom
+from phygnn.layers.custom import SkipConnection
 
 
 logger = logging.getLogger(__name__)
@@ -129,6 +131,22 @@ class HiddenLayers:
         return self._layers
 
     @property
+    def skip_layers(self):
+        """
+        Get a dictionary of unique SkipConnection objects in the layers list
+        keyed by SkipConnection name.
+
+        Returns
+        -------
+        list
+        """
+        out = {}
+        for layer in self.layers:
+            if isinstance(layer, SkipConnection):
+                out[layer.name] = layer
+        return out
+
+    @property
     def hidden_layer_kwargs(self):
         """
         List of dictionaries of key word arguments for each hidden
@@ -204,6 +222,58 @@ class HiddenLayers:
 
         return weights
 
+    def add_skip_layer(self, name):
+        """Add a skip layer, looking for a prior skip connection start point if
+        already in the layer list.
+
+        Parameters
+        ----------
+        name : str
+            Unique string identifier of the skip connection. The skip endpoint
+            should have the same name.
+        """
+        if name in self.skip_layers:
+            self._layers.append(self.skip_layers[name])
+        else:
+            self._layers.append(SkipConnection(name))
+
+    def add_layer_by_class(self, class_name, **kwargs):
+        """Add a new layer by the class name, either from phygnn.layers.custom
+        or tf.keras.layers
+
+        Parameters
+        ----------
+        class_name : str
+            Class name from phygnn.layers.custom or tf.keras.layers
+        kwargs : dict
+            Key word arguments to initialize the class.
+        """
+        layer_class = None
+        msg = ('Need layer "class" definition as string to retrieve '
+               'from phygnn.layers.custom or from '
+               'tensorflow.keras.layers, but received: {} {}'
+               .format(type(class_name), class_name))
+        assert isinstance(class_name, str), msg
+
+        # prioritize phygnn custom classes
+        layer_class = getattr(phygnn.layers.custom, class_name, None)
+
+        if layer_class is None:
+            layer_class = getattr(tf.keras.layers, class_name, None)
+
+        if layer_class is None:
+            msg = ('Could not retrieve layer class "{}" from '
+                   'phygnn.layers.custom or from tensorflow.keras.layers.'
+                   .format(class_name))
+            logger.error(msg)
+            raise KeyError(msg)
+
+        if layer_class == SkipConnection:
+            name = kwargs['name']
+            self.add_skip_layer(name)
+        else:
+            self._layers.append(layer_class(**kwargs))
+
     def add_layer(self, layer_kwargs):
         """Add a hidden layer to the DNN.
 
@@ -219,55 +289,37 @@ class HiddenLayers:
                 {'dropout': 0.1}
         """
 
-        layer_kwargs_cp = copy.deepcopy(layer_kwargs)
+        layer_kws = copy.deepcopy(layer_kwargs)
 
-        layer_class = None
-        class_name = layer_kwargs_cp.pop('class', None)
+        class_name = layer_kws.pop('class', None)
         if class_name is not None:
-            msg = ('Need layer "class" definition as string to retrieve '
-                   'from phygnn.layers.custom or from '
-                   'tensorflow.keras.layers, but received: {} {}'
-                   .format(type(class_name), class_name))
-            assert isinstance(class_name, str), msg
+            self.add_layer_by_class(class_name, **layer_kws)
 
-            layer_class = getattr(phygnn.layers.custom, class_name, None)
+        else:
+            activation_arg = layer_kws.pop('activation', None)
+            dropout_rate = layer_kws.pop('dropout', None)
+            batch_norm_kwargs = layer_kws.pop('batch_normalization', None)
+            dense_units = layer_kws.pop('units', None)
 
-            if layer_class is None:
-                layer_class = getattr(tf.keras.layers, class_name, None)
+            dense_layer = None
+            bn_layer = None
+            a_layer = None
+            drop_layer = None
 
-            if layer_class is None:
-                msg = ('Could not retrieve layer class "{}" from '
-                       'phygnn.layers.custom or from tensorflow.keras.layers.'
-                       .format(class_name))
-                logger.error(msg)
-                raise KeyError(msg)
+            if dense_units is not None:
+                dense_layer = Dense(dense_units)
+            if batch_norm_kwargs is not None:
+                bn_layer = BatchNormalization(**batch_norm_kwargs)
+            if activation_arg is not None:
+                a_layer = Activation(activation_arg)
+            if dropout_rate is not None:
+                drop_layer = Dropout(dropout_rate)
 
-            self._layers.append(layer_class(**layer_kwargs_cp))
-            layer_kwargs_cp = {}
-
-        activation_arg = layer_kwargs_cp.pop('activation', None)
-        dropout_rate = layer_kwargs_cp.pop('dropout', None)
-        batch_norm_kwargs = layer_kwargs_cp.pop('batch_normalization', None)
-        dense_units = layer_kwargs_cp.pop('units', None)
-
-        dense_layer = None
-        bn_layer = None
-        a_layer = None
-        drop_layer = None
-
-        if dense_units is not None:
-            dense_layer = Dense(dense_units)
-        if batch_norm_kwargs is not None:
-            bn_layer = BatchNormalization(**batch_norm_kwargs)
-        if activation_arg is not None:
-            a_layer = Activation(activation_arg)
-        if dropout_rate is not None:
-            drop_layer = Dropout(dropout_rate)
-
-        # This ensures proper default ordering of layers if requested together.
-        for layer in [dense_layer, bn_layer, a_layer, drop_layer]:
-            if layer is not None:
-                self._layers.append(layer)
+            # This ensures proper default ordering of layers if requested
+            # together.
+            for layer in [dense_layer, bn_layer, a_layer, drop_layer]:
+                if layer is not None:
+                    self._layers.append(layer)
 
     @classmethod
     def compile(cls, model, hidden_layers):
