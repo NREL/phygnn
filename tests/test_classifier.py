@@ -3,7 +3,7 @@ Tests for basic phygnn functionality and execution.
 """
 import numpy as np
 import pandas as pd
-from phygnn import PhysicsGuidedNeuralNetwork, p_fun_dummy
+from phygnn import PhysicsGuidedNeuralNetwork
 
 
 x1 = np.arange(500) - 250
@@ -30,7 +30,7 @@ output_layer = [{'units': 1},
 def test_classification():
     """Test the phygnn model as a classifier without the pfun"""
     PhysicsGuidedNeuralNetwork.seed(0)
-    model = PhysicsGuidedNeuralNetwork(p_fun=p_fun_dummy,
+    model = PhysicsGuidedNeuralNetwork(p_fun=None,
                                        hidden_layers=hidden_layers,
                                        output_layer=output_layer,
                                        loss_weights=(1.0, 0.0),

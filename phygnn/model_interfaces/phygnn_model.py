@@ -296,17 +296,20 @@ class PhygnnModel(ModelBase):
                  {'dropout': 0.01},
                  {'class': 'Flatten'},
                  ]
-        input_layer : None | dict
+        input_layer : None | bool | dict
             Input layer. specification. Can be a dictionary similar to
             hidden_layers specifying a dense / conv / lstm layer.  Will
             default to a keras InputLayer with input shape = n_features.
-        output_layer : None | list | dict
+            Can be False if the input layer will be included in the
+            hidden_layers input.
+        output_layer : None | bool | list | dict
             Output layer specification. Can be a list/dict similar to
             hidden_layers input specifying a dense layer with activation.
             For example, for a classfication problem with a single output,
             output_layer should be [{'units': 1}, {'activation': 'sigmoid'}].
             This defaults to a single dense layer with no activation
-            (best for regression problems).
+            (best for regression problems).  Can be False if the output layer
+            will be included in the hidden_layers input.
         layers_obj : None | phygnn.utilities.tf_layers.Layers
             Optional initialized Layers object to set as the model layers
             including pre-set weights. This option will override the
@@ -471,17 +474,20 @@ class PhygnnModel(ModelBase):
                  {'dropout': 0.01},
                  {'class': 'Flatten'},
                  ]
-        input_layer : None | dict
+        input_layer : None | bool | dict
             Input layer. specification. Can be a dictionary similar to
             hidden_layers specifying a dense / conv / lstm layer.  Will
             default to a keras InputLayer with input shape = n_features.
-        output_layer : None | list | dict
+            Can be False if the input layer will be included in the
+            hidden_layers input.
+        output_layer : None } bool | list | dict
             Output layer specification. Can be a list/dict similar to
             hidden_layers input specifying a dense layer with activation.
             For example, for a classfication problem with a single output,
             output_layer should be [{'units': 1}, {'activation': 'sigmoid'}].
             This defaults to a single dense layer with no activation
-            (best for regression problems).
+            (best for regression problems).  Can be False if the output layer
+            will be included in the hidden_layers input.
         layers_obj : None | phygnn.utilities.tf_layers.Layers
             Optional initialized Layers object to set as the model layers
             including pre-set weights. This option will override the
