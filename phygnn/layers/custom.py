@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """Custom tf layers."""
+import logging
 import tensorflow as tf
+
+
+logger = logging.getLogger(__name__)
 
 
 class SpatioTemporalExpansion(tf.keras.layers.Layer):
@@ -103,3 +107,54 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
             x = self._spatial_expand(x)
 
         return x
+
+
+class SkipConnection(tf.keras.layers.Layer):
+    """Custom layer to implement a skip connection. This layer should be
+    initialized and referenced in a layer list by the same name as both the
+    skip start and skip end.
+    """
+
+    def __init__(self, name):
+        """
+        Parameters
+        ----------
+        name : str
+            Unique string identifier of the skip connection. The skip endpoint
+            should have the same name.
+        """
+        super().__init__()
+        self._name = name
+        self._cache = None
+
+    def call(self, x):
+        """Call the custom SkipConnection layer
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor.
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor. If this is the skip start, the input will be cached
+            and returned without manipulation. If this is the skip endpoint,
+            the output will be the input x added to the tensor cached at the
+            skip start.
+        """
+        if self._cache is None:
+            self._cache = x
+            return x
+        else:
+            if x.shape != self._cache.shape:
+                msg = ('The endpoint input tensor for SkipConnection "{}" had '
+                       'shape {} but the cached data from the start of the '
+                       'skip connection had shape {}.'
+                       .format(self._name, x.shape, self._cache.shape))
+                logger.error(msg)
+                raise RuntimeError(msg)
+
+            out = tf.add(x, self._cache)
+            self._cache = None
+            return out
