@@ -2,55 +2,20 @@
 """
 Physics Guided Neural Network
 """
-import os
-import pickle
 import time
 import numpy as np
 import pandas as pd
 import logging
 import tensorflow as tf
 from tensorflow.keras import optimizers, initializers
-from tensorflow.keras.layers import BatchNormalization, Dropout, LSTM
 
+from phygnn.base import CustomNetwork
 from phygnn.utilities.loss_metrics import METRICS
-from phygnn.utilities.tf_layers import Layers
 
 logger = logging.getLogger(__name__)
 
 
-def p_fun_dummy(model, y_true, y_predicted, p):
-    """Example dummy function for p loss calculation.
-
-    This dummy function does not do a real physics calculation, it just shows
-    the required p_fun interface and calculates a normal MAE loss based on
-    y_predicted and y_true.
-
-    Parameters
-    ----------
-    model : PhysicsGuidedNeuralNetwork
-        Instance of the phygnn model at the current point in training.
-    y_true : np.ndarray
-        Known y values that were given to the phygnn.fit() method.
-    y_predicted : tf.Tensor
-        Predicted y values in a 2D tensor based on x values in the
-        current batch.
-    p : np.ndarray
-        Supplemental physical feature data that can be used to calculate a
-        y_physical value to compare against y_predicted. The rows in this
-        array have been carried through the batching process alongside y_true
-        and the x-features used to create y_predicted and so can be used 1-to-1
-        with the rows in y_predicted and y_true.
-
-    Returns
-    -------
-    p_loss : tf.Tensor
-        A 0D tensor physical loss value.
-    """
-    # pylint: disable=W0613
-    return tf.math.reduce_mean(tf.math.abs(y_predicted - y_true))
-
-
-class PhysicsGuidedNeuralNetwork:
+class PhysicsGuidedNeuralNetwork(CustomNetwork):
     """Simple Deep Neural Network with custom physical loss function.
 
     Note that the phygnn model requires TensorFlow 2.x
@@ -161,11 +126,18 @@ class PhysicsGuidedNeuralNetwork:
             Optional model name for debugging.
         """
 
-        self._p_fun = p_fun if p_fun is not None else p_fun_dummy
+        super().__init__(n_features=n_features,
+                         n_labels=n_labels,
+                         hidden_layers=hidden_layers,
+                         input_layer=input_layer,
+                         output_layer=output_layer,
+                         layers_obj=layers_obj,
+                         feature_names=feature_names,
+                         output_names=output_names)
+
+        self._p_fun = p_fun if p_fun is not None else self.p_fun_dummy
         self._loss_weights = None
         self._metric = metric
-        self._n_features = n_features
-        self._n_labels = n_labels
         self._optimizer = None
         self._history = history
         self._learning_rate = learning_rate
@@ -173,21 +145,7 @@ class PhysicsGuidedNeuralNetwork:
         self.kernel_reg_power = kernel_reg_power
         self.bias_reg_rate = bias_reg_rate
         self.bias_reg_power = bias_reg_power
-        self.feature_names = feature_names
-        self.output_names = output_names
         self.name = name if isinstance(name, str) else 'phygnn'
-
-        self._layers = layers_obj
-        if layers_obj is None:
-            self._layers = Layers(n_features, n_labels=n_labels,
-                                  hidden_layers=hidden_layers,
-                                  input_layer=input_layer,
-                                  output_layer=output_layer)
-        elif not isinstance(layers_obj, Layers):
-            msg = ('phygnn received layers_obj input of type "{}" but must be '
-                   'a phygnn Layers object'.format(type(layers_obj)))
-            logger.error(msg)
-            raise TypeError(msg)
 
         self.set_loss_weights(loss_weights)
 
@@ -215,6 +173,38 @@ class PhysicsGuidedNeuralNetwork:
         elif optimizer is None:
             self._optimizer = optimizers.Adam(learning_rate=learning_rate)
 
+    @staticmethod
+    def p_fun_dummy(model, y_true, y_predicted, p):
+        """Example dummy function for p loss calculation.
+
+        This dummy function does not do a real physics calculation, it just
+        shows the required p_fun interface and calculates a normal MAE loss
+        based on y_predicted and y_true.
+
+        Parameters
+        ----------
+        model : PhysicsGuidedNeuralNetwork
+            Instance of the phygnn model at the current point in training.
+        y_true : np.ndarray
+            Known y values that were given to the phygnn.fit() method.
+        y_predicted : tf.Tensor
+            Predicted y values in a >=2D tensor based on x values in the
+            current batch.
+        p : np.ndarray
+            Supplemental physical feature data that can be used to calculate a
+            y_physical value to compare against y_predicted. The rows in this
+            array have been carried through the batching process alongside
+            y_true and the x-features used to create y_predicted and so can be
+            used 1-to-1 with the rows in y_predicted and y_true.
+
+        Returns
+        -------
+        p_loss : tf.Tensor
+            A 0D tensor physical loss value.
+        """
+        # pylint: disable=W0613
+        return tf.math.reduce_mean(tf.math.abs(y_predicted - y_true))
+
     @property
     def history(self):
         """
@@ -225,40 +215,6 @@ class PhysicsGuidedNeuralNetwork:
         pandas.DataFrame | None
         """
         return self._history
-
-    @property
-    def layers(self):
-        """
-        Ordered list of TensorFlow keras layers that make up this model
-        including input and output layers
-
-        Returns
-        -------
-        list
-        """
-        return self._layers.layers
-
-    @property
-    def layers_obj(self):
-        """
-        phygnn layers handler object
-
-        Returns
-        -------
-        phygnn.utilities.tf_layers.Layers
-        """
-        return self._layers
-
-    @property
-    def weights(self):
-        """
-        Get a list of layer weights for gradient calculations.
-
-        Returns
-        -------
-        list
-        """
-        return self._layers.weights
 
     @property
     def kernel_weights(self):
@@ -326,176 +282,22 @@ class PhysicsGuidedNeuralNetwork:
         dict
         """
 
-        model_params = {'p_fun': self._p_fun,
-                        'hidden_layers': self._layers.hidden_layer_kwargs,
-                        'input_layer': self._layers.input_layer_kwargs,
-                        'output_layer': self._layers.output_layer_kwargs,
-                        'loss_weights': self._loss_weights,
-                        'metric': self._metric,
-                        'n_features': self._n_features,
-                        'n_labels': self._n_labels,
-                        'initializer': self._initializer,
-                        'optimizer': self._optimizer.get_config(),
-                        'learning_rate': self._learning_rate,
-                        'layers_obj': self.layers_obj,
-                        'history': self.history,
-                        'kernel_reg_rate': self.kernel_reg_rate,
-                        'kernel_reg_power': self.kernel_reg_power,
-                        'bias_reg_rate': self.bias_reg_rate,
-                        'bias_reg_power': self.bias_reg_power,
-                        'feature_names': self.feature_names,
-                        'output_names': self.output_names,
-                        'name': self.name,
-                        }
+        model_params = super().model_params
+        model_params.update({'p_fun': self._p_fun,
+                             'loss_weights': self._loss_weights,
+                             'metric': self._metric,
+                             'initializer': self._initializer,
+                             'optimizer': self._optimizer.get_config(),
+                             'learning_rate': self._learning_rate,
+                             'layers_obj': self.layers_obj,
+                             'history': self.history,
+                             'kernel_reg_rate': self.kernel_reg_rate,
+                             'kernel_reg_power': self.kernel_reg_power,
+                             'bias_reg_rate': self.bias_reg_rate,
+                             'bias_reg_power': self.bias_reg_power,
+                             })
 
         return model_params
-
-    @staticmethod
-    def _check_shapes(x, y):
-        """Check the shape of two input arrays for usage in this NN."""
-        msg = ('Number of input observations dont match! Received arrays of '
-               'shapes {} and {} where the 0-axis should match and be the '
-               'number of observations'.format(x.shape, y.shape))
-        assert x.shape[0] == y.shape[0], msg
-
-        return True
-
-    @staticmethod
-    def seed(s=0):
-        """
-        Set the random seed for reproducable results.
-
-        Parameters
-        ----------
-        s : int
-            Random seed
-        """
-        np.random.seed(s)
-        tf.random.set_seed(s)
-
-    @classmethod
-    def get_val_split(cls, x, y, p, shuffle=True, validation_split=0.2):
-        """Get a validation split and remove from from the training data.
-        This applies the split along the 1st data dimension.
-
-        Parameters
-        ----------
-        x : np.ndarray
-            Feature data in a >=2D array
-        y : np.ndarray
-            Known output data in a >=2D array.
-        p : np.ndarray
-            Supplemental feature data for the physics loss function
-            in a >=2D array.
-        shuffle : bool
-            Flag to randomly subset the validation data from x and y.
-            shuffle=False will take the first entries in x and y.
-        validation_split : float
-            Fraction of x and y to put in the validation set.
-
-        Returns
-        -------
-        x : np.ndarray
-            Feature data for model training as >=2D array. Length of this
-            will be the length of the input x multiplied by one minus
-            the split fraction
-        y : np.ndarray
-            Known output data for model training as >=2D array. Length of this
-            will be the length of the input y multiplied by one minus
-            the split fraction
-        p : np.ndarray
-            Supplemental feature data for physics loss function to be used
-            in model training as >=2D array. Length of this will be the length
-            of the input p multiplied by one minus the split fraction
-        x_val : np.ndarray
-            Feature data for model validation as >=2D array. Length of this
-            will be the length of the input x multiplied by the split fraction
-        y_val : np.ndarray
-            Known output data for model validation as >=2D array. Length of
-            this will be the length of the input y multiplied by the split
-            fraction
-        p_val : np.ndarray
-            Supplemental feature data for physics loss function to be used in
-            model validation as >=2D array. Length of this will be the length
-            of the input p multiplied by the split fraction
-        """
-
-        L = x.shape[0]
-        n = int(L * validation_split)
-
-        # get the validation dataset indices, i
-        if shuffle:
-            i = np.random.choice(L, replace=False, size=(n,))
-        else:
-            i = np.arange(n)
-
-        # get the training dataset indices, j
-        j = np.array(list(set(range(L)) - set(i)))
-
-        assert len(set(i)) == len(i)
-        assert len(set(list(i) + list(j))) == L
-
-        x_val, y_val, p_val = x[i], y[i], p[i]
-        x, y, p = x[j], y[j], p[j]
-
-        cls._check_shapes(x_val, y_val)
-        cls._check_shapes(x_val, p_val)
-        cls._check_shapes(x, y)
-        cls._check_shapes(x, p)
-
-        logger.debug('Validation feature data has shape {} and training '
-                     'feature data has shape {} (split of {})'
-                     .format(x_val.shape, x.shape, validation_split))
-
-        return x, y, p, x_val, y_val, p_val
-
-    @staticmethod
-    def make_batches(x, y, p, n_batch=16, shuffle=True):
-        """Make lists of unique data batches by splitting x and y along the
-        1st data dimension.
-
-        Parameters
-        ----------
-        x : np.ndarray
-            Feature data for training
-        y : np.ndarray
-            Known output data for training
-        p : np.ndarray
-            Supplemental feature data
-        n_batch : int
-            Number of times to update the NN weights per epoch. The training
-            data will be split into this many batches and the NN will train on
-            each batch, update weights, then move onto the next batch.
-        shuffle : bool
-            Flag to randomly subset the validation data from x and y.
-
-        Returns
-        -------
-        x_batches : list
-            List of ND arrays that are split subsets of x.
-            ND matches input dimension. Length of list is n_batch.
-        y_batches : list
-            List of ND arrays that are split subsets of y.
-            ND matches input dimension. Length of list is n_batch.
-        p_batches : list
-            List of ND arrays that are split subsets of p.
-            ND matches input dimension. Length of list is n_batch.
-        """
-
-        L = x.shape[0]
-        if shuffle:
-            i = np.random.choice(L, replace=False, size=(L,))
-            assert len(set(i)) == L
-        else:
-            i = np.arange(L)
-
-        batch_indexes = np.array_split(i, n_batch)
-
-        x_batches = [x[j] for j in batch_indexes]
-        y_batches = [y[j] for j in batch_indexes]
-        p_batches = [p[j] for j in batch_indexes]
-
-        return x_batches, y_batches, p_batches
 
     def preflight_p_fun(self, x, y_true, p, p_kwargs):
         """Run a pre-flight check making sure the p_fun is differentiable."""
@@ -532,101 +334,6 @@ class PhysicsGuidedNeuralNetwork:
 
         logger.debug('p_fun passed preflight check.')
 
-    def preflight_data(self, x, y, p):
-        """Run simple preflight checks on data shapes and data types.
-
-        Parameters
-        ----------
-        x : np.ndarray | pd.DataFrame
-            Feature data in a >=2D array or DataFrame. If this is a DataFrame,
-            the index is ignored, the columns are used with self.feature_names,
-            and the df is converted into a numpy array for batching and passing
-            to the training algorithm. A 2D input should have the shape:
-            (n_observations, n_features). A 3D input should have the shape:
-            (n_observations, n_timesteps, n_features). 4D inputs have not been
-            tested and should be used with caution.
-        y : np.ndarray | pd.DataFrame
-            Known output data in a 2D array or DataFrame.
-            Same dimension rules as x.
-        p : np.ndarray | pd.DataFrame
-            Supplemental feature data for the physics loss function in 2D array
-            or DataFrame. Same dimension rules as x.
-
-        Returns
-        ----------
-        x : np.ndarray
-            Feature data
-        y : np.ndarray
-            Known output data
-        p : np.ndarray
-            Supplemental feature data
-        """
-
-        self._check_shapes(x, y)
-        self._check_shapes(x, p)
-
-        x_msg = ('x data has {} features but expected {}'
-                 .format(x.shape[-1], self._n_features))
-        y_msg = ('y data has {} features but expected {}'
-                 .format(y.shape[-1], self._n_labels))
-        assert x.shape[-1] == self._n_features, x_msg
-        assert y.shape[-1] == self._n_labels, y_msg
-
-        x = self.preflight_features(x)
-
-        if isinstance(y, pd.DataFrame):
-            y_cols = y.columns.values.tolist()
-            if self.output_names is None:
-                self.output_names = y_cols
-            else:
-                msg = ('Cannot work with input y columns: {}, previously set '
-                       'output names are: {}'
-                       .format(y_cols, self.output_names))
-                assert self.output_names == y_cols, msg
-            y = y.values
-
-        if isinstance(p, pd.DataFrame):
-            p = p.values
-
-        return x, y, p
-
-    def preflight_features(self, x):
-        """Run preflight checks and data conversions on feature data.
-
-        Parameters
-        ----------
-        x : np.ndarray | pd.DataFrame
-            Feature data in a >=2D array or DataFrame. If this is a DataFrame,
-            the index is ignored, the columns are used with self.feature_names,
-            and the df is converted into a numpy array for batching and passing
-            to the training algorithm. A 2D input should have the shape:
-            (n_observations, n_features). A 3D input should have the shape:
-            (n_observations, n_timesteps, n_features). 4D inputs have not been
-            tested and should be used with caution.
-
-        Returns
-        ----------
-        x : np.ndarray
-            Feature data in a 2D array
-        """
-
-        x_msg = ('x data has {} features but expected {}'
-                 .format(x.shape[-1], self._n_features))
-        assert x.shape[-1] == self._n_features, x_msg
-
-        if isinstance(x, pd.DataFrame):
-            x_cols = x.columns.values.tolist()
-            if self.feature_names is None:
-                self.feature_names = x_cols
-            else:
-                msg = ('Cannot work with input x columns: {}, previously set '
-                       'feature names are: {}'
-                       .format(x_cols, self.feature_names))
-                assert self.feature_names == x_cols, msg
-            x = x.values
-
-        return x
-
     def reset_history(self):
         """Erase previous training history without resetting trained weights"""
         self._history = None
@@ -652,11 +359,12 @@ class PhysicsGuidedNeuralNetwork:
         Parameters
         ----------
         y_true : np.ndarray
-            Known output data in a 2D array.
+            Known output data in a >=2D array.
         y_predicted : tf.Tensor
-            Model-predicted output data in a 2D tensor.
+            Model-predicted output data in a >=2D tensor.
         p : np.ndarray
-            Supplemental feature data for the physics loss function in 2D array
+            Supplemental feature data for the physics loss function in >=2D
+            array
         p_kwargs : None | dict
             Optional kwargs for the physical loss function self._p_fun.
 
@@ -728,7 +436,7 @@ class PhysicsGuidedNeuralNetwork:
 
         return grad, loss, nn_loss, p_loss
 
-    def _run_gradient_descent(self, x, y_true, p, p_kwargs):
+    def run_gradient_descent(self, x, y_true, p, p_kwargs):
         """Run gradient descent for one mini-batch of (x, y_true)
         and adjust NN weights."""
         grad, loss, nn_loss, p_loss = self._get_grad(x, y_true, p, p_kwargs)
@@ -746,16 +454,16 @@ class PhysicsGuidedNeuralNetwork:
             Feature data in a >=2D array or DataFrame. If this is a DataFrame,
             the index is ignored, the columns are used with self.feature_names,
             and the df is converted into a numpy array for batching and passing
-            to the training algorithm. A 2D input should have the shape:
-            (n_observations, n_features). A 3D input should have the shape:
-            (n_observations, n_timesteps, n_features). 4D inputs have not been
-            tested and should be used with caution.
+            to the training algorithm. Generally speaking, the data should
+            always have the number of observations in the first axis and the
+            number of features/channels in the last axis. Spatial and temporal
+            dimensions can be used in intermediate axes.
         y : np.ndarray | pd.DataFrame
-            Known output data in a 2D array or DataFrame.
+            Known output data in a >=2D array or DataFrame.
             Same dimension rules as x.
         p : np.ndarray | pd.DataFrame
-            Supplemental feature data for the physics loss function in 2D array
-            or DataFrame. Same dimension rules as x.
+            Supplemental feature data for the physics loss function in >=2D
+            array or DataFrame. Same dimension rules as x.
         n_batch : int
             Number of times to update the NN weights per epoch (number of
             mini-batches). The training data will be split into this many
@@ -813,7 +521,7 @@ class PhysicsGuidedNeuralNetwork:
 
             batch_iter = zip(x_batches, y_batches, p_batches)
             for x_batch, y_batch, p_batch in batch_iter:
-                tr_loss, tr_nn_loss, tr_p_loss = self._run_gradient_descent(
+                tr_loss, tr_nn_loss, tr_p_loss = self.run_gradient_descent(
                     x_batch, y_batch, p_batch, p_kwargs)
 
             y_val_pred = self.predict(x_val, to_numpy=False)
@@ -838,106 +546,3 @@ class PhysicsGuidedNeuralNetwork:
 
         if return_diagnostics:
             return diagnostics
-
-    def predict(self, x, to_numpy=True, training=False,
-                training_layers=(BatchNormalization, Dropout, LSTM)):
-        """Run a prediction on input features.
-
-        Parameters
-        ----------
-        x : np.ndarray | pd.DataFrame
-            Feature data in a >=2D array or DataFrame. If this is a DataFrame,
-            the index is ignored, the columns are used with self.feature_names,
-            and the df is converted into a numpy array for batching and passing
-            to the training algorithm. A 2D input should have the shape:
-            (n_observations, n_features). A 3D input should have the shape:
-            (n_observations, n_timesteps, n_features). 4D inputs have not been
-            tested and should be used with caution.
-        to_numpy : bool
-            Flag to convert output from tensor to numpy array
-        training : bool
-            Flag for predict() used in the training routine. This is used
-            to freeze the BatchNormalization and Dropout layers.
-        training_layers : list | tuple
-            List of tensorflow.keras.layers classes that training=bool should
-            be passed to. By default this is (BatchNormalization, Dropout,
-            LSTM)
-
-        Returns
-        -------
-        y : tf.Tensor | np.ndarray
-            Predicted output data.
-        """
-
-        x = self.preflight_features(x)
-
-        # run x through the input layer to get y
-        y = self.layers[0](x)
-
-        for layer in self.layers[1:]:
-            if isinstance(layer, training_layers):
-                y = layer(y, training=training)
-            else:
-                y = layer(y)
-
-        if to_numpy:
-            y = y.numpy()
-
-        return y
-
-    def save(self, fpath):
-        """Save phygnn model to pickle file.
-
-        Parameters
-        ----------
-        fpath : str
-            File path to .pkl file to save model to.
-        """
-
-        if not fpath.endswith('.pkl'):
-            e = 'Can only save model to .pkl file!'
-            logger.error(e)
-            raise ValueError(e)
-
-        dirname = os.path.dirname(fpath)
-        if dirname and not os.path.exists(dirname):
-            os.makedirs(dirname)
-
-        model_params = self.model_params
-
-        with open(fpath, 'wb') as f:
-            pickle.dump(model_params, f)
-
-    @classmethod
-    def load(cls, fpath):
-        """Load a phygnn model that has been saved to a pickle file.
-
-        Parameters
-        ----------
-        fpath : str
-            File path to .pkl file to load model from.
-
-        Returns
-        -------
-        model : PhysicsGuidedNeuralNetwork
-            Instantiated phygnn model
-        """
-
-        if not os.path.exists(fpath):
-            e = 'Could not load file, does not exist: {}'.format(fpath)
-            logger.error(e)
-            raise FileNotFoundError(e)
-
-        if not fpath.endswith('.pkl'):
-            e = 'Can only load model from .pkl file!'
-            logger.error(e)
-            raise ValueError(e)
-
-        with open(fpath, 'rb') as f:
-            model_params = pickle.load(f)
-
-        model = cls(**model_params)
-        logger.debug('Initialized phygnn model from disk with {} layers: {}'
-                     .format(len(model.layers), model.layers))
-
-        return model
