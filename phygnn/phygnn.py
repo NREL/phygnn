@@ -487,10 +487,9 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
         t0 = time.time()
         for epoch in epochs:
 
-            x_batches, y_batches, p_batches = self.make_batches(
-                x, y, p, n_batch=n_batch, shuffle=shuffle)
+            batch_iter = self.make_batches(x, y, p, n_batch=n_batch,
+                                           shuffle=shuffle)
 
-            batch_iter = zip(x_batches, y_batches, p_batches)
             for x_batch, y_batch, p_batch in batch_iter:
                 tr_loss, tr_nn_loss, tr_p_loss = self.run_gradient_descent(
                     x_batch, y_batch, p_batch, p_kwargs)

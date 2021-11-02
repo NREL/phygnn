@@ -307,15 +307,10 @@ class CustomNetwork(ABC):
 
         Returns
         -------
-        x_batches : list
-            List of ND arrays that are split subsets of x.
-            ND matches input dimension. Length of list is n_batch.
-        y_batches : list
-            List of ND arrays that are split subsets of y.
-            ND matches input dimension. Length of list is n_batch.
-        p_batches : list
-            List of ND arrays that are split subsets of p.
-            ND matches input dimension. Length of list is n_batch.
+        batches : generator
+            Generator (iterator) that has [x_batch, y_batch, p_batch] where
+            each entry is an ND array with the same original dimensions just
+            batched along the 0 axis
         """
 
         L = x.shape[0]
@@ -327,11 +322,8 @@ class CustomNetwork(ABC):
 
         batch_indexes = np.array_split(i, n_batch)
 
-        x_batches = [x[j] for j in batch_indexes]
-        y_batches = [y[j] for j in batch_indexes]
-        p_batches = [p[j] for j in batch_indexes]
-
-        return x_batches, y_batches, p_batches
+        for batch_index in batch_indexes:
+            yield x[batch_index], y[batch_index], p[batch_index]
 
     def preflight_data(self, x, y, p):
         """Run simple preflight checks on data shapes and data types.
