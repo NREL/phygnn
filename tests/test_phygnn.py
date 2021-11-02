@@ -241,9 +241,9 @@ def test_save_load():
 
     assert len(model.layers) == len(loaded.layers)
     for layer0, layer1 in zip(model.layers, loaded.layers):
-        for i in range(len(layer0.weights)):
-            assert layer0.weights[i].shape == layer1.weights[i].shape
-            assert np.allclose(layer0.weights[i], layer1.weights[i])
+        for i, weights0 in enumerate(layer0.weights):
+            assert weights0.shape == layer1.weights[i].shape
+            assert np.allclose(weights0, layer1.weights[i])
 
     y_pred_loaded = loaded.predict(X)
     assert np.allclose(y_pred, y_pred_loaded)
@@ -414,9 +414,9 @@ def test_conv1d():
 
     assert len(model.layers) == len(loaded.layers)
     for layer0, layer1 in zip(model.layers, loaded.layers):
-        for i in range(len(layer0.weights)):
-            assert layer0.weights[i].shape == layer1.weights[i].shape
-            assert np.allclose(layer0.weights[i], layer1.weights[i])
+        for i, weights0 in enumerate(layer0.weights):
+            assert weights0.shape == layer1.weights[i].shape
+            assert np.allclose(weights0, layer1.weights[i])
 
     y_pred_loaded = loaded.predict(train_x)
 
@@ -466,9 +466,9 @@ def test_conv3d():
 
     assert len(model.layers) == len(loaded.layers)
     for layer0, layer1 in zip(model.layers, loaded.layers):
-        for i in range(len(layer0.weights)):
-            assert layer0.weights[i].shape == layer1.weights[i].shape
-            assert np.allclose(layer0.weights[i], layer1.weights[i])
+        for i, weights0 in enumerate(layer0.weights):
+            assert weights0.shape == layer1.weights[i].shape
+            assert np.allclose(weights0, layer1.weights[i])
 
     y_pred_loaded = loaded.predict(train_x)
 
@@ -511,9 +511,9 @@ def test_lstm():
 
     assert len(model.layers) == len(loaded.layers)
     for layer0, layer1 in zip(model.layers, loaded.layers):
-        for i in range(len(layer0.weights)):
-            assert layer0.weights[i].shape == layer1.weights[i].shape
-            assert np.allclose(layer0.weights[i], layer1.weights[i])
+        for i, weights0 in enumerate(layer0.weights):
+            assert weights0.shape == layer1.weights[i].shape
+            assert np.allclose(weights0, layer1.weights[i])
 
     y_pred_loaded = loaded.predict(train_x)
 
@@ -596,8 +596,14 @@ def test_validation_split_5D():
 
 def test_batching_shuffle():
     """Test the batching operation with shuffling"""
-    x_batches, y_batches, p_batches = PhysicsGuidedNeuralNetwork.make_batches(
+    batch_iter = PhysicsGuidedNeuralNetwork.make_batches(
         X, Y, P, n_batch=4, shuffle=True)
+
+    # unpack generator
+    batch_iter = list(batch_iter)
+    x_batches = [b[0] for b in batch_iter]
+    y_batches = [b[1] for b in batch_iter]
+    p_batches = [b[2] for b in batch_iter]
 
     assert len(x_batches) == 4
     assert len(y_batches) == 4
@@ -616,9 +622,14 @@ def test_batching_shuffle():
 
 def test_batching_no_shuffle():
     """Test the batching operation without shuffling"""
-    x_batches, y_batches, p_batches = PhysicsGuidedNeuralNetwork.make_batches(
+    batch_iter = PhysicsGuidedNeuralNetwork.make_batches(
         X, Y, P, n_batch=6, shuffle=False)
 
+    # unpack generator
+    batch_iter = list(batch_iter)
+    x_batches = [b[0] for b in batch_iter]
+    y_batches = [b[1] for b in batch_iter]
+    p_batches = [b[2] for b in batch_iter]
     assert len(x_batches) == 6
     assert len(y_batches) == 6
     assert len(p_batches) == 6
@@ -644,8 +655,14 @@ def test_batching_5D():
     y0 = np.random.uniform(0, 1, (50, 4, 1, 1, 1))
     p0 = x0.copy()
 
-    x_batches, y_batches, p_batches = PhysicsGuidedNeuralNetwork.make_batches(
+    batch_iter = PhysicsGuidedNeuralNetwork.make_batches(
         x0, y0, p0, n_batch=6, shuffle=False)
+
+    # unpack generator
+    batch_iter = list(batch_iter)
+    x_batches = [b[0] for b in batch_iter]
+    y_batches = [b[1] for b in batch_iter]
+    p_batches = [b[2] for b in batch_iter]
 
     assert len(x_batches) == 6
     assert len(y_batches) == 6
