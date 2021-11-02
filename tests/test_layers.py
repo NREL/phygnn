@@ -1,8 +1,12 @@
 """
 Test the custom tensorflow utilities
 """
+import copy
+import numpy as np
 import pytest
+import tensorflow as tf
 
+from phygnn.layers.custom import SkipConnection
 from phygnn.layers.layers import Layers, HiddenLayers
 
 
@@ -81,3 +85,36 @@ def test_repeat_layers():
                      ]
     with pytest.raises(KeyError):
         layers = HiddenLayers(hidden_layers)
+
+
+def test_skip_connection():
+    """Test a functional skip connection"""
+    hidden_layers = [
+        {'units': 64, 'activation': 'relu', 'dropout': 0.01},
+        {'class': 'SkipConnection', 'name': 'a'},
+        {'units': 64, 'activation': 'relu', 'dropout': 0.01},
+        {'class': 'SkipConnection', 'name': 'a'}]
+    layers = HiddenLayers(hidden_layers)
+    assert len(layers.layers) == 8
+
+    skip_layers = [x for x in layers.layers if isinstance(x, SkipConnection)]
+    assert len(skip_layers) == 2
+    assert id(skip_layers[0]) == id(skip_layers[1])
+
+    x = np.ones((5, 3))
+    cache = None
+    x_input = None
+
+    for i, layer in enumerate(layers):
+        if i == 3:  # skip start
+            cache = copy.deepcopy(x)
+        elif i == 7:  # skip end
+            x_input = copy.deepcopy(x)
+
+        x = layer(x)
+
+        if i == 3:  # skip start
+            assert layer._cache is not None
+        elif i == 7:  # skip end
+            assert layer._cache is None
+            assert tf.reduce_all(x == tf.add(x_input, cache))

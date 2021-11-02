@@ -39,8 +39,10 @@ class HiddenLayers:
         self._i = 0
         self._layers = []
         self._hidden_layers_kwargs = copy.deepcopy(hidden_layers)
-        self._hidden_layers_kwargs = self.parse_repeats(
-            self._hidden_layers_kwargs)
+
+        if self._hidden_layers_kwargs is not None:
+            self._hidden_layers_kwargs = self.parse_repeats(
+                self._hidden_layers_kwargs)
 
         for layer in self._hidden_layers_kwargs:
             self.add_layer(layer)
@@ -404,10 +406,11 @@ class Layers(HiddenLayers):
         self._n_labels = n_labels
         self._input_layer_kwargs = copy.deepcopy(input_layer)
         self._output_layer_kwargs = copy.deepcopy(output_layer)
-
         self._hidden_layers_kwargs = copy.deepcopy(hidden_layers)
-        self._hidden_layers_kwargs = self.parse_repeats(
-            self._hidden_layers_kwargs)
+
+        if self._hidden_layers_kwargs is not None:
+            self._hidden_layers_kwargs = self.parse_repeats(
+                self._hidden_layers_kwargs)
 
         self._add_input_layer()
 
