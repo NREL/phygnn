@@ -8,8 +8,8 @@ import tensorflow as tf
 from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
                                      BatchNormalization)
 
-import phygnn.layers.custom
-from phygnn.layers.custom import SkipConnection
+import phygnn.layers.custom_layers
+from phygnn.layers.custom_layers import SkipConnection
 
 
 logger = logging.getLogger(__name__)
@@ -240,32 +240,33 @@ class HiddenLayers:
             self._layers.append(SkipConnection(name))
 
     def add_layer_by_class(self, class_name, **kwargs):
-        """Add a new layer by the class name, either from phygnn.layers.custom
-        or tf.keras.layers
+        """Add a new layer by the class name, either from
+        phygnn.layers.custom_layers or tf.keras.layers
 
         Parameters
         ----------
         class_name : str
-            Class name from phygnn.layers.custom or tf.keras.layers
+            Class name from phygnn.layers.custom_layers or tf.keras.layers
         kwargs : dict
             Key word arguments to initialize the class.
         """
         layer_class = None
         msg = ('Need layer "class" definition as string to retrieve '
-               'from phygnn.layers.custom or from '
+               'from phygnn.layers.custom_layers or from '
                'tensorflow.keras.layers, but received: {} {}'
                .format(type(class_name), class_name))
         assert isinstance(class_name, str), msg
 
         # prioritize phygnn custom classes
-        layer_class = getattr(phygnn.layers.custom, class_name, None)
+        layer_class = getattr(phygnn.layers.custom_layers, class_name, None)
 
         if layer_class is None:
             layer_class = getattr(tf.keras.layers, class_name, None)
 
         if layer_class is None:
             msg = ('Could not retrieve layer class "{}" from '
-                   'phygnn.layers.custom or from tensorflow.keras.layers.'
+                   'phygnn.layers.custom_layers or from '
+                   'tensorflow.keras.layers'
                    .format(class_name))
             logger.error(msg)
             raise KeyError(msg)

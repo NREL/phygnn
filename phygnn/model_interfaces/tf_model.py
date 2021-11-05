@@ -13,7 +13,7 @@ from tensorflow.keras.optimizers import Adam
 from warnings import warn
 
 from phygnn.model_interfaces.base_model import ModelBase
-from phygnn.layers.layers import Layers
+from phygnn.layers.handlers import Layers
 from phygnn.utilities import TF2
 from phygnn.utilities.pre_processing import PreProcess
 
