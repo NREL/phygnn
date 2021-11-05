@@ -18,9 +18,12 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
         Parameters
         ----------
         spatial_multiplier : int
-            Number of times to multiply the spatial dimensions. For example,
-            if the input layer has shape (123, 5, 5, 24, 2) with multiplier=2
-            the output shape will be (123, 10, 10, 24, 2).
+            Number of times to multiply the spatial dimensions. Note that the
+            spatial expansion is an un-packing of the feature dimension. For
+            example, if the input layer has shape (123, 5, 5, 24, 16) with
+            multiplier=2 the output shape will be (123, 10, 10, 24, 4). The
+            input feature dimension must be divisible by the spatial multiplier
+            squared.
         temporal_multiplier : int
             Number of times to multiply the temporal dimension. For example,
             if the input layer has shape (123, 5, 5, 24, 2) with multiplier=2
@@ -78,6 +81,17 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
 
     def _spatial_expand(self, x):
         """Expand the two spatial dimensions (axis=1,2) of a 5D tensor"""
+        check_shape = x.shape[-1] % self._spatial_mult**2
+        if check_shape != 0:
+            msg = ('Spatial expansion of factor {} is being attempted on '
+                   'input tensor of shape {}, but the last dimension of the '
+                   'input tensor ({}) must be divisible by the spatial '
+                   'factor squared ({}).'
+                   .format(self._spatial_mult, x.shape, x.shape[-1],
+                           self._spatial_mult**2))
+            logger.error(msg)
+            raise RuntimeError(msg)
+
         out = []
         for x_unstack in tf.unstack(x, axis=3):
             out.append(tf.nn.depth_to_space(x_unstack, self._spatial_mult))

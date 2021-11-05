@@ -6,8 +6,8 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from phygnn.layers.custom import SkipConnection
-from phygnn.layers.layers import Layers, HiddenLayers
+from phygnn.layers.custom_layers import SkipConnection, SpatioTemporalExpansion
+from phygnn.layers.handlers import Layers, HiddenLayers
 
 
 @pytest.mark.parametrize(
@@ -118,3 +118,32 @@ def test_skip_connection():
         elif i == 7:  # skip end
             assert layer._cache is None
             assert tf.reduce_all(x == tf.add(x_input, cache))
+
+
+@pytest.mark.parametrize(
+    ('t_mult', 's_mult'),
+    ((1, 1),
+     (2, 1),
+     (1, 2),
+     (2, 2),
+     (3, 2),
+     (5, 3)))
+def test_st_expansion(t_mult, s_mult):
+    """Test the spatiotemporal expansion layer."""
+    layer = SpatioTemporalExpansion(spatial_mult=s_mult, temporal_mult=t_mult)
+    n_filters = 2 * s_mult**2
+    x = np.ones((123, 10, 10, 24, n_filters))
+    y = layer(x)
+    assert y.shape[0] == x.shape[0]
+    assert y.shape[1] == s_mult * x.shape[1]
+    assert y.shape[2] == s_mult * x.shape[2]
+    assert y.shape[3] == t_mult * x.shape[3]
+    assert y.shape[4] == x.shape[4] / (s_mult**2)
+
+
+def test_st_expansion_bad():
+    """Test an illegal spatial expansion request."""
+    layer = SpatioTemporalExpansion(spatial_mult=2, temporal_mult=2)
+    x = np.ones((123, 10, 10, 24, 3))
+    with pytest.raises(RuntimeError):
+        _ = layer(x)
