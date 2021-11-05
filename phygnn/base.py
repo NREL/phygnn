@@ -23,7 +23,7 @@ class CustomNetwork(ABC):
     """
 
     def __init__(self, n_features=None, n_labels=None, hidden_layers=None,
-                 input_layer=None, output_layer=None, layers_obj=None,
+                 input_layer=False, output_layer=False, layers_obj=None,
                  feature_names=None, output_names=None, name=None):
         """
         Parameters
@@ -49,18 +49,16 @@ class CustomNetwork(ABC):
                  ]
         input_layer : None | bool | dict
             Input layer. specification. Can be a dictionary similar to
-            hidden_layers specifying a dense / conv / lstm layer.  Will
-            default to a keras InputLayer with input shape = n_features.
-            Can be False if the input layer will be included in the
+            hidden_layers specifying a dense / conv / lstm layer.
+            Defaults to False so the input layer will be included in the
             hidden_layers input.
         output_layer : None | bool | list | dict
             Output layer specification. Can be a list/dict similar to
             hidden_layers input specifying a dense layer with activation.
             For example, for a classfication problem with a single output,
             output_layer should be [{'units': 1}, {'activation': 'sigmoid'}].
-            This defaults to a single dense layer with no activation
-            (best for regression problems).  Can be False if the output layer
-            will be included in the hidden_layers input.
+            Default is False so the output layer will be included in the
+            hidden_layers input.
         layers_obj : None | phygnn.utilities.tf_layers.Layers
             Optional initialized Layers object to set as the model layers
             including pre-set weights. This option will override the
