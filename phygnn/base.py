@@ -11,7 +11,7 @@ import logging
 import tensorflow as tf
 from tensorflow.keras.layers import BatchNormalization, Dropout, LSTM
 
-from phygnn.layers.layers import Layers
+from phygnn.layers.handlers import Layers
 
 logger = logging.getLogger(__name__)
 
