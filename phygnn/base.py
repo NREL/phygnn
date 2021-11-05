@@ -356,6 +356,11 @@ class CustomNetwork(ABC):
         self._check_shapes(x, y)
         self._check_shapes(x, p)
 
+        if self._n_features is None:
+            self._n_features = x.shape[-1]
+        if self._n_labels is None:
+            self._n_labels = y.shape[-1]
+
         x_msg = ('x data has {} features but expected {}'
                  .format(x.shape[-1], self._n_features))
         y_msg = ('y data has {} features but expected {}'
@@ -400,6 +405,9 @@ class CustomNetwork(ABC):
         x : np.ndarray
             Feature data in a >=2D array
         """
+
+        if self._n_features is None:
+            self._n_features = x.shape[-1]
 
         x_msg = ('x data has {} features but expected {}'
                  .format(x.shape[-1], self._n_features))
