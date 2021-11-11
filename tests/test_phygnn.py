@@ -2,6 +2,7 @@
 Tests for basic phygnn functionality and execution.
 """
 # pylint: disable=W0613
+import types
 import os
 import pytest
 import numpy as np
@@ -525,7 +526,9 @@ def test_validation_split_shuffle():
     """Test the validation split operation with shuffling"""
     out = PhysicsGuidedNeuralNetwork.get_val_split(X, Y, P, shuffle=True,
                                                    validation_split=0.3)
-    x, y, p, x_val, y_val, p_val = out
+    x, x_val = out[0]
+    y, y_val = out[1]
+    p, p_val = out[2]
 
     assert (x_val == p_val).all()
     assert (x == p).all()
@@ -558,7 +561,9 @@ def test_validation_split_no_shuffle():
     """Test the validation split operation without shuffling"""
     out = PhysicsGuidedNeuralNetwork.get_val_split(X, Y, P, shuffle=False,
                                                    validation_split=0.3)
-    x, y, p, x_val, y_val, p_val = out
+    x, x_val = out[0]
+    y, y_val = out[1]
+    p, p_val = out[2]
     assert (x_val == p_val).all()
     assert (x == p).all()
     assert all(np.sqrt(x[:, 0]**2 + x[:, 1]**2).reshape((len(x), 1)) == y)
@@ -568,30 +573,53 @@ def test_validation_split_no_shuffle():
 
 
 def test_validation_split_5D():
-    """Test the validation split with high dimensional data (5D)"""
+    """Test the validation split with high dimensional data (5D) with only two
+    dataset arguments"""
     x0 = np.random.uniform(0, 1, (50, 4, 4, 4, 2))
     y0 = np.random.uniform(0, 1, (50, 4, 1, 1, 1))
-    p0 = x0.copy()
-    out = PhysicsGuidedNeuralNetwork.get_val_split(x0, y0, p0, shuffle=False,
+    out = PhysicsGuidedNeuralNetwork.get_val_split(x0, y0, shuffle=False,
                                                    validation_split=0.3)
-    x, y, p, x_val, y_val, p_val = out
+    x, x_val = out[0]
+    y, y_val = out[1]
     assert len(x0.shape) == 5
     assert len(y0.shape) == 5
-    assert len(p0.shape) == 5
     assert len(x.shape) == 5
     assert len(y.shape) == 5
-    assert len(p.shape) == 5
     assert len(x_val.shape) == 5
     assert len(y_val.shape) == 5
-    assert len(p_val.shape) == 5
-    assert (x_val == p_val).all()
-    assert (x == p).all()
     assert (x == x0[-len(x):]).all()
     assert (y == y0[-len(y):]).all()
-    assert (p == p0[-len(p):]).all()
     assert (x_val == x0[:len(x_val)]).all()
     assert (y_val == y0[:len(y_val)]).all()
-    assert (p_val == p0[:len(p_val)]).all()
+
+
+def test_batching():
+    """Test basic batching operation"""
+    batch_iter = PhysicsGuidedNeuralNetwork.make_batches(
+        X, Y, P, n_batch=4, shuffle=True)
+
+    assert isinstance(batch_iter, types.GeneratorType)
+
+    # unpack generator
+    batch_iter = list(batch_iter)
+    x_batches = [b[0] for b in batch_iter]
+    y_batches = [b[1] for b in batch_iter]
+    p_batches = [b[2] for b in batch_iter]
+
+    assert len(x_batches) == 4
+    assert len(y_batches) == 4
+    assert len(p_batches) == 4
+
+    # test on only two batching datasets with batch size
+    batch_iter = PhysicsGuidedNeuralNetwork.make_batches(
+        X, Y, n_batch=None, batch_size=100, shuffle=False)
+
+    assert isinstance(batch_iter, types.GeneratorType)
+
+    batch_iter = list(batch_iter)
+    for x, y in batch_iter:
+        assert len(x) == 100
+        assert len(y) == 100
 
 
 def test_batching_shuffle():
