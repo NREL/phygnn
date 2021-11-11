@@ -208,6 +208,69 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
         # pylint: disable=W0613
         return tf.math.reduce_mean(tf.math.abs(y_predicted - y_true))
 
+    def preflight_data(self, x, y, p):
+        """Run simple preflight checks on data shapes and data types.
+
+        Parameters
+        ----------
+        x : np.ndarray | pd.DataFrame
+            Feature data in a >=2D array or DataFrame. If this is a DataFrame,
+            the index is ignored, the columns are used with self.feature_names,
+            and the df is converted into a numpy array for batching and passing
+            to the training algorithm. Generally speaking, the data should
+            always have the number of observations in the first axis and the
+            number of features/channels in the last axis. Spatial and temporal
+            dimensions can be used in intermediate axes.
+        y : np.ndarray | pd.DataFrame
+            Known output data in a >=2D array or DataFrame.
+            Same dimension rules as x.
+        p : np.ndarray | pd.DataFrame
+            Supplemental feature data for the physics loss function in >=2D
+            array or DataFrame. Same dimension rules as x.
+
+        Returns
+        ----------
+        x : np.ndarray
+            Feature data
+        y : np.ndarray
+            Known output data
+        p : np.ndarray
+            Supplemental feature data
+        """
+
+        self._check_shapes(x, y)
+        self._check_shapes(x, p)
+
+        if self._n_features is None:
+            self._n_features = x.shape[-1]
+        if self._n_labels is None:
+            self._n_labels = y.shape[-1]
+
+        x_msg = ('x data has {} features but expected {}'
+                 .format(x.shape[-1], self._n_features))
+        y_msg = ('y data has {} features but expected {}'
+                 .format(y.shape[-1], self._n_labels))
+        assert x.shape[-1] == self._n_features, x_msg
+        assert y.shape[-1] == self._n_labels, y_msg
+
+        x = self.preflight_features(x)
+
+        if isinstance(y, pd.DataFrame):
+            y_cols = y.columns.values.tolist()
+            if self.output_names is None:
+                self.output_names = y_cols
+            else:
+                msg = ('Cannot work with input y columns: {}, previously set '
+                       'output names are: {}'
+                       .format(y_cols, self.output_names))
+                assert self.output_names == y_cols, msg
+            y = y.values
+
+        if isinstance(p, pd.DataFrame):
+            p = p.values
+
+        return x, y, p
+
     @property
     def history(self):
         """
@@ -414,9 +477,9 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
         self._optimizer.apply_gradients(zip(grad, self.weights))
         return loss, nn_loss, p_loss
 
-    def fit(self, x, y, p, n_batch=16, n_epoch=10, shuffle=True,
-            validation_split=0.2, p_kwargs=None, run_preflight=True,
-            return_diagnostics=False):
+    def fit(self, x, y, p, n_batch=16, batch_size=None, n_epoch=10,
+            shuffle=True, validation_split=0.2, p_kwargs=None,
+            run_preflight=True, return_diagnostics=False):
         """Fit the neural network to data from x and y.
 
         Parameters
@@ -435,11 +498,14 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
         p : np.ndarray | pd.DataFrame
             Supplemental feature data for the physics loss function in >=2D
             array or DataFrame. Same dimension rules as x.
-        n_batch : int
+        n_batch : int | None
             Number of times to update the NN weights per epoch (number of
             mini-batches). The training data will be split into this many
             mini-batches and the NN will train on each mini-batch, update
             weights, then move onto the next mini-batch.
+        batch_size : int | None
+            Number of training samples per batch. This input is redundant to
+            n_batch and will not be used if n_batch is not None.
         n_epoch : int
             Number of times to iterate on the training data.
         shuffle : bool
@@ -478,8 +544,11 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
         else:
             epochs += self._history.index.values[-1] + 1
 
-        x, y, p, x_val, y_val, p_val = self.get_val_split(
-            x, y, p, shuffle=shuffle, validation_split=validation_split)
+        val_splits = self.get_val_split(x, y, p, shuffle=shuffle,
+                                        validation_split=validation_split)
+        x, x_val = val_splits[0]
+        y, y_val = val_splits[1]
+        p, p_val = val_splits[2]
 
         if self._loss_weights[1] > 0 and run_preflight:
             self.preflight_p_fun(x_val, y_val, p_val, p_kwargs)
@@ -488,6 +557,7 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
         for epoch in epochs:
 
             batch_iter = self.make_batches(x, y, p, n_batch=n_batch,
+                                           batch_size=batch_size,
                                            shuffle=shuffle)
 
             for x_batch, y_batch, p_batch in batch_iter:

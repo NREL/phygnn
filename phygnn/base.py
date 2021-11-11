@@ -121,7 +121,7 @@ class CustomNetwork(ABC):
     @property
     def weights(self):
         """
-        Get a list of layer weights for gradient calculations.
+        Get a list of layer weights and bias terms for gradient calculations.
 
         Returns
         -------
@@ -191,7 +191,6 @@ class CustomNetwork(ABC):
                'shapes {} and {} where the 0-axis should match and be the '
                'number of observations'.format(x.shape, y.shape))
         assert x.shape[0] == y.shape[0], msg
-
         return True
 
     @staticmethod
@@ -208,19 +207,15 @@ class CustomNetwork(ABC):
         tf.random.set_seed(s)
 
     @classmethod
-    def get_val_split(cls, x, y, p, shuffle=True, validation_split=0.2):
+    def get_val_split(cls, *args, shuffle=True, validation_split=0.2):
         """Get a validation split and remove from from the training data.
         This applies the split along the 1st data dimension.
 
         Parameters
         ----------
-        x : np.ndarray
-            Feature data in a >=2D array
-        y : np.ndarray
-            Known output data in a >=2D array.
-        p : np.ndarray
-            Supplemental feature data for the physics loss function
-            in a >=2D array.
+        args : np.ndarray
+            This is one or more positional arguments that are numpy arrays
+            to be split. They must have the same length.
         shuffle : bool
             Flag to randomly subset the validation data from x and y.
             shuffle=False will take the first entries in x and y.
@@ -229,162 +224,92 @@ class CustomNetwork(ABC):
 
         Returns
         -------
-        x : np.ndarray
-            Feature data for model training as >=2D array. Length of this
-            will be the length of the input x multiplied by one minus
-            the split fraction
-        y : np.ndarray
-            Known output data for model training as >=2D array. Length of this
-            will be the length of the input y multiplied by one minus
-            the split fraction
-        p : np.ndarray
-            Supplemental feature data for physics loss function to be used
-            in model training as >=2D array. Length of this will be the length
-            of the input p multiplied by one minus the split fraction
-        x_val : np.ndarray
-            Feature data for model validation as >=2D array. Length of this
-            will be the length of the input x multiplied by the split fraction
-        y_val : np.ndarray
-            Known output data for model validation as >=2D array. Length of
-            this will be the length of the input y multiplied by the split
-            fraction
-        p_val : np.ndarray
-            Supplemental feature data for physics loss function to be used in
-            model validation as >=2D array. Length of this will be the length
-            of the input p multiplied by the split fraction
+        out : list
+            List with the same length as the number of positional input
+            arguments. Each list entry is itself a list with two entries.
+            For example, the first entry in the output is of the format:
+            [the training split, and the validation split] and corresponds to
+            the first positional input argument.
         """
 
-        L = x.shape[0]
+        L = args[0].shape[0]
         n = int(L * validation_split)
 
-        # get the validation dataset indices, i
+        # get the validation dataset indices, vi
         if shuffle:
-            i = np.random.choice(L, replace=False, size=(n,))
+            vi = np.random.choice(L, replace=False, size=(n,))
         else:
-            i = np.arange(n)
+            vi = np.arange(n)
 
-        # get the training dataset indices, j
-        j = np.array(list(set(range(L)) - set(i)))
+        # get the training dataset indices, ti
+        ti = np.array(list(set(range(L)) - set(vi)))
 
-        assert len(set(i)) == len(i)
-        assert len(set(list(i) + list(j))) == L
+        assert len(set(vi)) == len(vi)
+        assert len(set(list(vi) + list(ti))) == L
 
-        x_val, y_val, p_val = x[i], y[i], p[i]
-        x, y, p = x[j], y[j], p[j]
+        out = []
+        for arg in args:
+            out.append([arg[ti], arg[vi]])
 
-        cls._check_shapes(x_val, y_val)
-        cls._check_shapes(x_val, p_val)
-        cls._check_shapes(x, y)
-        cls._check_shapes(x, p)
+        for out_sub in out[1:]:
+            cls._check_shapes(out[0][0], out_sub[0])
+            cls._check_shapes(out[0][1], out_sub[1])
 
         logger.debug('Validation feature data has shape {} and training '
                      'feature data has shape {} (split of {})'
-                     .format(x_val.shape, x.shape, validation_split))
+                     .format(out[0][1].shape, out[0][0].shape,
+                             validation_split))
 
-        return x, y, p, x_val, y_val, p_val
+        return out
 
     @staticmethod
-    def make_batches(x, y, p, n_batch=16, shuffle=True):
+    def make_batches(*args, n_batch=16, batch_size=None, shuffle=True):
         """Make lists of unique data batches by splitting x and y along the
         1st data dimension.
 
         Parameters
         ----------
-        x : np.ndarray
-            Feature data for training
-        y : np.ndarray
-            Known output data for training
-        p : np.ndarray
-            Supplemental feature data
-        n_batch : int
+        args : np.ndarray
+            This is one or more positional arguments that are numpy arrays
+            to be batched. They must have the same length.
+        n_batch : int | None
             Number of times to update the NN weights per epoch. The training
             data will be split into this many batches and the NN will train on
             each batch, update weights, then move onto the next batch.
+        batch_size : int | None
+            Number of training samples per batch. This input is redundant to
+            n_batch and will not be used if n_batch is not None.
         shuffle : bool
             Flag to randomly subset the validation data from x and y.
 
         Returns
         -------
-        batches : generator
-            Generator (iterator) that has [x_batch, y_batch, p_batch] where
-            each entry is an ND array with the same original dimensions just
-            batched along the 0 axis
+        batches : GeneratorType
+            Generator of batches, each iteration of the generator has as many
+            entries as are input in the positional arguments. Each entry in the
+            iteration is an ND array with the same original dimensions as the
+            input just with a subset batch of the 0 axis
         """
 
-        L = x.shape[0]
+        L = args[0].shape[0]
         if shuffle:
             i = np.random.choice(L, replace=False, size=(L,))
             assert len(set(i)) == L
         else:
             i = np.arange(L)
 
+        for arg in args:
+            msg = ('Received arrays to be batched of multiple lengths: {} {}'
+                   .format(L, len(arg)))
+            assert len(arg) == L, msg
+
+        if n_batch is None and isinstance(batch_size, int):
+            n_batch = int(np.ceil(L / batch_size))
+
         batch_indexes = np.array_split(i, n_batch)
 
         for batch_index in batch_indexes:
-            yield x[batch_index], y[batch_index], p[batch_index]
-
-    def preflight_data(self, x, y, p):
-        """Run simple preflight checks on data shapes and data types.
-
-        Parameters
-        ----------
-        x : np.ndarray | pd.DataFrame
-            Feature data in a >=2D array or DataFrame. If this is a DataFrame,
-            the index is ignored, the columns are used with self.feature_names,
-            and the df is converted into a numpy array for batching and passing
-            to the training algorithm. Generally speaking, the data should
-            always have the number of observations in the first axis and the
-            number of features/channels in the last axis. Spatial and temporal
-            dimensions can be used in intermediate axes.
-        y : np.ndarray | pd.DataFrame
-            Known output data in a >=2D array or DataFrame.
-            Same dimension rules as x.
-        p : np.ndarray | pd.DataFrame
-            Supplemental feature data for the physics loss function in >=2D
-            array or DataFrame. Same dimension rules as x.
-
-        Returns
-        ----------
-        x : np.ndarray
-            Feature data
-        y : np.ndarray
-            Known output data
-        p : np.ndarray
-            Supplemental feature data
-        """
-
-        self._check_shapes(x, y)
-        self._check_shapes(x, p)
-
-        if self._n_features is None:
-            self._n_features = x.shape[-1]
-        if self._n_labels is None:
-            self._n_labels = y.shape[-1]
-
-        x_msg = ('x data has {} features but expected {}'
-                 .format(x.shape[-1], self._n_features))
-        y_msg = ('y data has {} features but expected {}'
-                 .format(y.shape[-1], self._n_labels))
-        assert x.shape[-1] == self._n_features, x_msg
-        assert y.shape[-1] == self._n_labels, y_msg
-
-        x = self.preflight_features(x)
-
-        if isinstance(y, pd.DataFrame):
-            y_cols = y.columns.values.tolist()
-            if self.output_names is None:
-                self.output_names = y_cols
-            else:
-                msg = ('Cannot work with input y columns: {}, previously set '
-                       'output names are: {}'
-                       .format(y_cols, self.output_names))
-                assert self.output_names == y_cols, msg
-            y = y.values
-
-        if isinstance(p, pd.DataFrame):
-            p = p.values
-
-        return x, y, p
+            yield [arg[batch_index] for arg in args]
 
     def preflight_features(self, x):
         """Run preflight checks and data conversions on feature data.
