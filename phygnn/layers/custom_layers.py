@@ -3,8 +3,47 @@
 import logging
 import tensorflow as tf
 
-
 logger = logging.getLogger(__name__)
+
+
+class ReflectionPadding(tf.keras.layers.Layer):
+    """Class to perform reflection padding on tensors
+    """
+    def __init__(self, paddings):
+        """
+        Parameters
+        ----------
+        paddings : int array
+            Integer array with shape [n,2] where n is the
+            rank of the tensor and elements give the number
+            of leading and trailing pads
+        """
+        super(ReflectionPadding, self).__init__()
+        self.paddings = paddings
+        self.rank = paddings.shape[0]
+
+    def compute_output_shape(self, input_shape):
+        """computes output shape after padding
+
+        Parameters
+        ----------
+        input_shape : tuple
+            shape of input tensor
+        """
+        output_shape = [0] * self.rank
+        for d in range(self.rank):
+            output_shape[d] = sum(self.paddings[d]) + input_shape[d]
+        return output_shape
+
+    def call(self, input_tensor):
+        """calls the padding routine
+
+        Parameters
+        ----------
+        input_tensor : tf.Tensor
+            tensor on which to perform padding
+        """
+        return tf.pad(input_tensor, tf.constant(self.paddings), mode="REFLECT")
 
 
 class SpatioTemporalExpansion(tf.keras.layers.Layer):
