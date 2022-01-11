@@ -18,7 +18,7 @@ class ReflectionPadding(tf.keras.layers.Layer):
             rank of the tensor and elements give the number
             of leading and trailing pads
         """
-        super(ReflectionPadding, self).__init__()
+        super().__init__()
         self.paddings = paddings
         self.rank = paddings.shape[0]
 
