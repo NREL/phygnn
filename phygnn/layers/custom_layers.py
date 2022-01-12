@@ -23,7 +23,7 @@ class FlexiblePadding(tf.keras.layers.Layer):
         """
         super().__init__()
         self.paddings = paddings
-        self.rank = paddings.shape[0]
+        self.rank = len(paddings)
         self.mode = mode
 
     def compute_output_shape(self, input_shape):
@@ -39,15 +39,15 @@ class FlexiblePadding(tf.keras.layers.Layer):
             output_shape[d] = sum(self.paddings[d]) + input_shape[d]
         return tf.TensorShape(output_shape)
 
-    def call(self, input_tensor):
+    def call(self, x):
         """calls the padding routine
 
         Parameters
         ----------
-        input_tensor : tf.Tensor
+        x : tf.Tensor
             tensor on which to perform padding
         """
-        return tf.pad(input_tensor, tf.constant(self.paddings),
+        return tf.pad(x, tf.constant(self.paddings),
                       mode=self.mode)
 
 

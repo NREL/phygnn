@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
+from phygnn.layers.custom_layers import FlexiblePadding
 from phygnn.layers.custom_layers import SkipConnection, SpatioTemporalExpansion
 from phygnn.layers.handlers import Layers, HiddenLayers
 
@@ -147,3 +148,31 @@ def test_st_expansion_bad():
     x = np.ones((123, 10, 10, 24, 3))
     with pytest.raises(RuntimeError):
         _ = layer(x)
+
+
+@pytest.mark.parametrize(
+    ('paddings', 'mode'),
+    (([[1, 1], [2, 2]], 'REFLECT'),
+     ([[1, 1], [2, 2]], 'CONSTANT'),
+     ([[1, 1], [2, 2]], 'SYMMETRIC')))
+def test_flexible_padding(paddings, mode):
+    """Test flexible padding routine"""
+    layer = FlexiblePadding(paddings, mode)
+    t = tf.constant([[1, 2, 3],
+                     [4, 5, 6]])
+    if mode == 'CONSTANT':
+        t_check = tf.constant([[0, 0, 0, 0, 0, 0, 0],
+                               [0, 0, 1, 2, 3, 0, 0],
+                               [0, 0, 4, 5, 6, 0, 0],
+                               [0, 0, 0, 0, 0, 0, 0]])
+    elif mode == 'REFLECT':
+        t_check = tf.constant([[6, 5, 4, 5, 6, 5, 4],
+                               [3, 2, 1, 2, 3, 2, 1],
+                               [6, 5, 4, 5, 6, 5, 4],
+                               [3, 2, 1, 2, 3, 2, 1]])
+    elif mode == 'SYMMETRIC':
+        t_check = tf.constant([[2, 1, 1, 2, 3, 3, 2],
+                               [2, 1, 1, 2, 3, 3, 2],
+                               [5, 4, 4, 5, 6, 6, 5],
+                               [5, 4, 4, 5, 6, 6, 5]])
+    tf.assert_equal(layer(t), t_check)
