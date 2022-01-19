@@ -1,7 +1,6 @@
 """
 Test the custom tensorflow utilities
 """
-import copy
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -107,9 +106,11 @@ def test_skip_connection():
 
     for i, layer in enumerate(layers):
         if i == 3:  # skip start
-            cache = copy.deepcopy(x)
+            cache = tf.identity(x)
+            assert id(cache) != id(x)
         elif i == 7:  # skip end
-            x_input = copy.deepcopy(x)
+            x_input = tf.identity(x)
+            assert id(x_input) != id(x)
 
         x = layer(x)
 
@@ -117,7 +118,7 @@ def test_skip_connection():
             assert layer._cache is not None
         elif i == 7:  # skip end
             assert layer._cache is None
-            assert tf.reduce_all(x == tf.add(x_input, cache))
+            tf.assert_equal(x, tf.add(x_input, cache))
 
 
 @pytest.mark.parametrize(
