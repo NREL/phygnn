@@ -22,7 +22,7 @@ class FlexiblePadding(tf.keras.layers.Layer):
             or SYMMETRIC
         """
         super().__init__()
-        self.paddings = paddings
+        self.paddings = tf.constant(paddings)
         self.rank = len(paddings)
         self.mode = mode
 
@@ -33,6 +33,11 @@ class FlexiblePadding(tf.keras.layers.Layer):
         ----------
         input_shape : tuple
             shape of input tensor
+
+        Returns
+        -------
+        output_shape : tf.TensorShape
+            shape of padded tensor
         """
         output_shape = [0] * self.rank
         for d in range(self.rank):
@@ -46,8 +51,15 @@ class FlexiblePadding(tf.keras.layers.Layer):
         ----------
         x : tf.Tensor
             tensor on which to perform padding
+
+        Returns
+        -------
+        x : tf.Tensor
+            padded tensor with shape given
+            by compute_output_shape
+
         """
-        return tf.pad(x, tf.constant(self.paddings),
+        return tf.pad(x, self.paddings,
                       mode=self.mode)
 
 
