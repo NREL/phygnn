@@ -32,5 +32,5 @@ jobs:
         python -m pytest ./tests/test_base_model.py -v
         python -m pytest ./tests/test_pre_processing.py -v
         python -m pytest ./tests/test_random_forest_model.py -v
-        python -m pytest ./tests/test_tf_layers.py -v
+        python -m pytest ./tests/test_layers.py -v
         python -m pytest ./tests/test_tf_model.py -v

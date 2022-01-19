@@ -6,51 +6,8 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from phygnn.layers.custom_layers import FlexiblePadding
 from phygnn.layers.custom_layers import SkipConnection, SpatioTemporalExpansion
 from phygnn.layers.handlers import Layers, HiddenLayers
-
-
-def test_padding_layers():
-    """Test integrating padding with skip connection"""
-    hidden_layers = [
-        {'units': 64, 'activation': 'relu', 'dropout': 0.01},
-        {'class': 'SkipConnection', 'name': 'a'},
-        {'units': 64, 'activation': 'relu', 'dropout': 0.01},
-        {'class': 'SkipConnection', 'name': 'a'}]
-    layers = HiddenLayers(hidden_layers)
-    assert len(layers.layers) == 8
-
-    skip_layers = [x for x in layers.layers if isinstance(x, SkipConnection)]
-    assert len(skip_layers) == 2
-    assert id(skip_layers[0]) == id(skip_layers[1])
-
-    x = [[1, 2, 3], [4, 5, 6]]
-    padded_layer = FlexiblePadding([[1, 1], [2, 2]], 'REFLECT')
-    x = padded_layer(x)
-
-    t_check = tf.constant([[6, 5, 4, 5, 6, 5, 4],
-                           [3, 2, 1, 2, 3, 2, 1],
-                           [6, 5, 4, 5, 6, 5, 4],
-                           [3, 2, 1, 2, 3, 2, 1]])
-    tf.assert_equal(x, t_check)
-
-    cache = None
-    x_input = None
-
-    for i, layer in enumerate(layers):
-        if i == 3:  # skip start
-            cache = copy.deepcopy(x)
-        elif i == 7:  # skip end
-            x_input = copy.deepcopy(x)
-
-        x = layer(x)
-
-        if i == 3:  # skip start
-            assert layer._cache is not None
-        elif i == 7:  # skip end
-            assert layer._cache is None
-            assert tf.reduce_all(x == tf.add(x_input, cache))
 
 
 @pytest.mark.parametrize(
@@ -193,26 +150,29 @@ def test_st_expansion_bad():
 
 
 @pytest.mark.parametrize(
-    ('paddings', 'mode'),
-    (([[1, 1], [2, 2]], 'REFLECT'),
-     ([[1, 1], [2, 2]], 'CONSTANT'),
-     ([[1, 1], [2, 2]], 'SYMMETRIC')))
-def test_flexible_padding(paddings, mode):
+    ('hidden_layers'),
+    (([{'class': 'FlexiblePadding', 'paddings': [[1, 1], [2, 2]],
+        'mode': 'REFLECT'}]),
+     ([{'class': 'FlexiblePadding', 'paddings': [[1, 1], [2, 2]],
+        'mode': 'CONSTANT'}]),
+     ([{'class': 'FlexiblePadding', 'paddings': [[1, 1], [2, 2]],
+        'mode': 'SYMMETRIC'}])))
+def test_flexible_padding(hidden_layers):
     """Test flexible padding routine"""
-    layer = FlexiblePadding(paddings, mode)
+    layer = HiddenLayers(hidden_layers).layers[0]
     t = tf.constant([[1, 2, 3],
                      [4, 5, 6]])
-    if mode == 'CONSTANT':
+    if layer.mode == 'CONSTANT':
         t_check = tf.constant([[0, 0, 0, 0, 0, 0, 0],
                                [0, 0, 1, 2, 3, 0, 0],
                                [0, 0, 4, 5, 6, 0, 0],
                                [0, 0, 0, 0, 0, 0, 0]])
-    elif mode == 'REFLECT':
+    elif layer.mode == 'REFLECT':
         t_check = tf.constant([[6, 5, 4, 5, 6, 5, 4],
                                [3, 2, 1, 2, 3, 2, 1],
                                [6, 5, 4, 5, 6, 5, 4],
                                [3, 2, 1, 2, 3, 2, 1]])
-    elif mode == 'SYMMETRIC':
+    elif layer.mode == 'SYMMETRIC':
         t_check = tf.constant([[2, 1, 1, 2, 3, 3, 2],
                                [2, 1, 1, 2, 3, 3, 2],
                                [5, 4, 4, 5, 6, 6, 5],
