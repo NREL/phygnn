@@ -4,13 +4,17 @@ Custom Neural Network Infrastructure.
 """
 from abc import ABC, abstractmethod
 import os
+import sys
 import pickle
+import pprint
 import numpy as np
 import pandas as pd
 import logging
+import sklearn
 import tensorflow as tf
 from tensorflow.keras.layers import BatchNormalization, Dropout, LSTM
 
+from phygnn.version import __version__
 from phygnn.layers.handlers import Layers
 
 logger = logging.getLogger(__name__)
@@ -24,7 +28,8 @@ class CustomNetwork(ABC):
 
     def __init__(self, n_features=None, n_labels=None, hidden_layers=None,
                  input_layer=False, output_layer=False, layers_obj=None,
-                 feature_names=None, output_names=None, name=None):
+                 feature_names=None, output_names=None, name=None,
+                 version_record=None):
         """
         Parameters
         ----------
@@ -75,6 +80,10 @@ class CustomNetwork(ABC):
             if phygnn is trained on a DataFrame.
         name : None | str
             Optional model name for debugging.
+        version_record : dict | None
+            Optional record of import package versions. None (default) will
+            save active environment versions. A dictionary will be interpreted
+            as versions from a loaded model and will be saved as an attribute.
         """
 
         self._n_features = n_features
@@ -82,6 +91,7 @@ class CustomNetwork(ABC):
         self.feature_names = feature_names
         self.output_names = output_names
         self.name = name if isinstance(name, str) else 'CustomNetwork'
+        self._version_record = self._parse_versions(version_record)
 
         self._layers = layers_obj
         if layers_obj is None:
@@ -94,6 +104,59 @@ class CustomNetwork(ABC):
                    'a phygnn Layers object'.format(type(layers_obj)))
             logger.error(msg)
             raise TypeError(msg)
+
+        logger.info('Successfully initialized model with {} layers'
+                    .format(len(self.layers)))
+
+    @staticmethod
+    def _parse_versions(version_record):
+        """Parse version record if not provided by init.
+
+        Parameters
+        ----------
+        version_record : dict | None
+            Optional record of import package versions. None (default) will
+            save active environment versions. A dictionary will be interpreted
+            as versions from a loaded model and will be saved as an attribute.
+
+        Returns
+        -------
+        version_record : dict
+            A record of important versions that this model was built with.
+        """
+        active_versions = {'phygnn': __version__,
+                           'tensorflow': tf.__version__,
+                           'sklearn': sklearn.__version__,
+                           'pandas': pd.__version__,
+                           'numpy': np.__version__,
+                           'python': sys.version,
+                           }
+        logger.info('Active python environment versions: \n{}'
+                    .format(pprint.pformat(active_versions, indent=4)))
+
+        if version_record is None:
+            version_record = active_versions
+
+        return version_record
+
+    @staticmethod
+    def _check_shapes(x, y):
+        """Check the shape of two input arrays for usage in this NN."""
+        msg = ('Number of input observations dont match! Received arrays of '
+               'shapes {} and {} where the 0-axis should match and be the '
+               'number of observations'.format(x.shape, y.shape))
+        assert x.shape[0] == y.shape[0], msg
+        return True
+
+    @property
+    def version_record(self):
+        """A record of important versions that this model was built with.
+
+        Returns
+        -------
+        dict
+        """
+        return self._version_record
 
     @property
     def layers(self):
@@ -180,18 +243,10 @@ class CustomNetwork(ABC):
                         'feature_names': self.feature_names,
                         'output_names': self.output_names,
                         'name': self.name,
+                        'version_record': self.version_record,
                         }
 
         return model_params
-
-    @staticmethod
-    def _check_shapes(x, y):
-        """Check the shape of two input arrays for usage in this NN."""
-        msg = ('Number of input observations dont match! Received arrays of '
-               'shapes {} and {} where the 0-axis should match and be the '
-               'number of observations'.format(x.shape, y.shape))
-        assert x.shape[0] == y.shape[0], msg
-        return True
 
     @staticmethod
     def seed(s=0):
@@ -420,6 +475,8 @@ class CustomNetwork(ABC):
         with open(fpath, 'wb') as f:
             pickle.dump(model_params, f)
 
+        logger.info('Saved model to: {}'.format(fpath))
+
     @classmethod
     def load(cls, fpath):
         """Load a phygnn model that has been saved to a pickle file.
@@ -435,6 +492,8 @@ class CustomNetwork(ABC):
             Instantiated phygnn model
         """
 
+        logger.info('Loading saved model: {}'.format(fpath))
+
         if not os.path.exists(fpath):
             e = 'Could not load file, does not exist: {}'.format(fpath)
             logger.error(e)
@@ -448,9 +507,15 @@ class CustomNetwork(ABC):
         with open(fpath, 'rb') as f:
             model_params = pickle.load(f)
 
+        if 'version_record' in model_params:
+            logger.info('Loading model from disk that was created with the '
+                        'following package versions: \n{}'
+                        .format(pprint.pformat(model_params['version_record'],
+                                               indent=4)))
+
         model = cls(**model_params)
-        logger.debug('Initialized phygnn model from disk with {} layers: {}'
-                     .format(len(model.layers), model.layers))
+        logger.info('Successfully initialized model from file: {}'
+                    .format(fpath))
 
         return model
 

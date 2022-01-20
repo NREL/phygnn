@@ -71,7 +71,7 @@ Engineers and researchers can use the phygnn framework to:
 Here are additional examples of similar architectures from the literature which
 are related to or inspired this work:
 
-    * Buster, Grant, Mike Bannister, Aron Habte, Dylan Hettinger, Galen Maclaurin, Michael Rossol, Manajit Sengupta, and Yu Xie. 2021. Physics-Guided Machine Learning for Prediction of Cloud Properties in Satellite-Derived Solar Data: Preprint. Golden, CO: National Renewable Energy Laboratory. NREL/CP-6A20-79705 https://www.nrel.gov/docs/fy21osti/79705.pdf
+    * Buster, Grant, Mike Bannister, Aron Habte, Dylan Hettinger, Galen Maclaurin, Michael Rossol, Manajit Sengupta, and Yu Xie. “Physics-Guided Machine Learning for Improved Accuracy of the National Solar Radiation Database.” Solar Energy 232 (January 15, 2022): 483–92. https://doi.org/10.1016/j.solener.2022.01.004.
     * Jared Willard, Xiaowei Jia, Shaoming Xu, Michael Steinbach, and Vipin Kumar, “Integrating Physics-Based Modeling with Machine Learning: A Survey.” ArXiv abs/2003.04919 (2020).
     * Forssell, U. and P. Lindskog. “Combining Semi-Physical and Neural Network Modeling: An Example ofIts Usefulness.” IFAC Proceedings Volumes 30 (1997): 767-770.
     * Xinyue Hu, Haoji Hu, Saurabh Verma, and Zhi-Li Zhang, “Physics-Guided Deep Neural Networks for PowerFlow Analysis”, arXiv:2002.00097v1 (2020).
