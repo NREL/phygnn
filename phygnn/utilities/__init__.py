@@ -5,7 +5,6 @@ import tensorflow as tf
 from packaging import version
 
 from .pre_processing import PreProcess
-from .tf_layers import Layers, HiddenLayers
 from .tf_utilities import tf_isin, tf_log10
 
 TF_VERSION = version.parse(tf.__version__)
