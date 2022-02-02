@@ -121,6 +121,46 @@ def test_skip_connection():
             tf.assert_equal(x, tf.add(x_input, cache))
 
 
+def test_double_skip():
+    """Test two skip connections (4 layers total) with the same name. Gotta
+    make sure the 1st skip data != 2nd skip data."""
+    hidden_layers = [
+        {'units': 64, 'activation': 'relu', 'dropout': 0.01},
+        {'class': 'SkipConnection', 'name': 'a'},
+        {'units': 64, 'activation': 'relu', 'dropout': 0.01},
+        {'class': 'SkipConnection', 'name': 'a'},
+        {'units': 64, 'activation': 'relu', 'dropout': 0.01},
+        {'class': 'SkipConnection', 'name': 'a'},
+        {'units': 64, 'activation': 'relu', 'dropout': 0.01},
+        {'class': 'SkipConnection', 'name': 'a'}]
+    layers = HiddenLayers(hidden_layers)
+    assert len(layers.layers) == 16
+
+    skip_layers = [x for x in layers.layers if isinstance(x, SkipConnection)]
+    assert len(skip_layers) == 4
+    assert len(set(id(layer) for layer in skip_layers)) == 1
+
+    x = np.ones((5, 3))
+    cache = None
+    x_input = None
+
+    for i, layer in enumerate(layers):
+        if i in (3, 11):  # skip start
+            cache = tf.identity(x)
+            assert id(cache) != id(x)
+        elif i in (7, 15):  # skip end
+            x_input = tf.identity(x)
+            assert id(x_input) != id(x)
+
+        x = layer(x)
+
+        if i in (3, 11):  # skip start
+            assert layer._cache is not None
+        elif i in (7, 15):  # skip end
+            assert layer._cache is None
+            tf.assert_equal(x, tf.add(x_input, cache))
+
+
 @pytest.mark.parametrize(
     ('t_mult', 's_mult'),
     ((1, 1),
