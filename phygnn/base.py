@@ -93,6 +93,9 @@ class CustomNetwork(ABC):
         self.name = name if isinstance(name, str) else 'CustomNetwork'
         self._version_record = self._parse_versions(version_record)
 
+        # iterator counter
+        self._i = 0
+
         self._layers = layers_obj
         if layers_obj is None:
             self._layers = Layers(n_features, n_labels=n_labels,
@@ -107,6 +110,21 @@ class CustomNetwork(ABC):
 
         logger.info('Successfully initialized model with {} layers'
                     .format(len(self.layers)))
+
+    def __iter__(self):
+        """Iterate through the layers in this CustomNetwork object."""
+        return self
+
+    def __next__(self):
+        """Iterate through the layers in this CustomNetwork object."""
+        if self._i >= len(self.layers):
+            self._i = 0
+            raise StopIteration
+
+        layer = self.layers[self._i]
+        self._i += 1
+
+        return layer
 
     @staticmethod
     def _parse_versions(version_record):

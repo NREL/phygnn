@@ -63,6 +63,90 @@ class FlexiblePadding(tf.keras.layers.Layer):
                       mode=self.mode)
 
 
+class SpatialExpansion(tf.keras.layers.Layer):
+    """Class to expand the spatial dimensions of tensors with shape:
+    (n_observations, n_spatial_0, n_spatial_1, n_features)
+    """
+
+    def __init__(self, spatial_mult=1):
+        """
+        Parameters
+        ----------
+        spatial_multiplier : int
+            Number of times to multiply the spatial dimensions. Note that the
+            spatial expansion is an un-packing of the feature dimension. For
+            example, if the input layer has shape (123, 5, 5, 16) with
+            multiplier=2 the output shape will be (123, 10, 10, 4). The
+            input feature dimension must be divisible by the spatial multiplier
+            squared.
+        """
+        super().__init__()
+        self._spatial_mult = int(spatial_mult)
+        self._n_spatial_1 = None
+
+    @staticmethod
+    def _check_shape(input_shape):
+        """Assert that the shape of the input tensor is the expected 4D
+        spatiotemporal shape
+
+        Parameters
+        ----------
+        input_shape : tuple
+            Shape tuple of the input
+        """
+        msg = ('Input to SpatialExpansion must be 4D with dimensions: '
+               '(n_observations, n_spatial_0, n_spatial_1, n_features), '
+               'but received shape: {}'.format(input_shape))
+        assert len(input_shape) == 4, msg
+
+    def build(self, input_shape):
+        """Custom implementation of the tf layer build method.
+
+        Parameters
+        ----------
+        input_shape : tuple
+            Shape tuple of the input
+        """
+        self._check_shape(input_shape)
+
+    def _spatial_expand(self, x):
+        """Expand the two spatial dimensions (axis=1,2) of a 4D tensor using
+        data from the last axes"""
+        check_shape = x.shape[-1] % self._spatial_mult**2
+        if check_shape != 0:
+            msg = ('Spatial expansion of factor {} is being attempted on '
+                   'input tensor of shape {}, but the last dimension of the '
+                   'input tensor ({}) must be divisible by the spatial '
+                   'factor squared ({}).'
+                   .format(self._spatial_mult, x.shape, x.shape[-1],
+                           self._spatial_mult**2))
+            logger.error(msg)
+            raise RuntimeError(msg)
+
+        return tf.nn.depth_to_space(x, self._spatial_mult)
+
+    def call(self, x):
+        """Call the custom SpatialExpansion layer
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            4D spatial tensor
+            (n_observations, n_spatial_0, n_spatial_1, n_features)
+
+        Returns
+        -------
+        x : tf.Tensor
+            4D spatiotemporal tensor with axes 1,2 expanded (if spatial_mult>1)
+        """
+        self._check_shape(x.shape)
+
+        if self._spatial_mult > 1:
+            x = self._spatial_expand(x)
+
+        return x
+
+
 class SpatioTemporalExpansion(tf.keras.layers.Layer):
     """Class to expand the spatiotemporal dimensions of tensors with shape:
     (n_observations, n_spatial_0, n_spatial_1, n_temporal, n_features)
@@ -136,7 +220,8 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
         return tf.stack(out, axis=1)
 
     def _spatial_expand(self, x):
-        """Expand the two spatial dimensions (axis=1,2) of a 5D tensor"""
+        """Expand the two spatial dimensions (axis=1,2) of a 5D tensor using
+        data from the last axes"""
         check_shape = x.shape[-1] % self._spatial_mult**2
         if check_shape != 0:
             msg = ('Spatial expansion of factor {} is being attempted on '
