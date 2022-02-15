@@ -117,6 +117,16 @@ class PhygnnModel(ModelBase):
         """
         return self.model.history
 
+    @property
+    def version_record(self):
+        """A record of important versions that this model was built with.
+
+        Returns
+        -------
+        dict
+        """
+        return self.model.version_record
+
     def train_model(self, features, labels, p, n_batch=16, n_epoch=10,
                     shuffle=True, validation_split=0.2, run_preflight=True,
                     return_diagnostics=False, p_kwargs=None,
