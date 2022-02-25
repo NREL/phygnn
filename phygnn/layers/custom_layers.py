@@ -63,6 +63,56 @@ class FlexiblePadding(tf.keras.layers.Layer):
                       mode=self.mode)
 
 
+class UnpackTemporal(tf.keras.layers.Layer):
+    """Layer to unpack a temporal dimension into axis-0 observations."""
+
+    def __init__(self, temporal_axis=3):
+        """
+        Parameters
+        ----------
+        temporal_axis : int
+            Axis that holds the temporal dimension to be unpacked into the
+            axis-0 dimension. Default is axis 3 based on the default
+            spatiotemporal shape of:
+            (n_observations, n_spatial_0, n_spatial_1, n_temporal, n_features)
+        """
+        super().__init__()
+        self._taxis = temporal_axis
+
+    @staticmethod
+    def _check_shape(input_shape):
+        """Assert that the shape of the input tensor is the expected 5D
+        spatiotemporal shape
+
+        Parameters
+        ----------
+        input_shape : tuple
+            Shape tuple of the input
+        """
+        msg = ('Input to UnpackTemporal must be 5D with dimensions: '
+               '(n_observations, n_spatial_0, n_spatial_1, n_temporal, '
+               'n_features), but received shape: {}'.format(input_shape))
+        assert len(input_shape) == 5, msg
+
+    def call(self, x):
+        """calls the padding routine
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            5D spatiotemporal tensor with dimensions:
+            (n_observations, n_spatial_0, n_spatial_1, n_temporal, n_features)
+
+        Returns
+        -------
+        x : tf.Tensor
+            4D spatiotemporal tensor with dimensions:
+            (n_observations+n_temporal, n_spatial_0, n_spatial_1, n_temporal)
+        """
+        self._check_shape(x.shape)
+        return tf.concat(tf.unstack(x, axis=self._taxis), axis=0)
+
+
 class SpatialExpansion(tf.keras.layers.Layer):
     """Class to expand the spatial dimensions of tensors with shape:
     (n_observations, n_spatial_0, n_spatial_1, n_features)
