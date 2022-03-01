@@ -7,7 +7,7 @@ import tensorflow as tf
 
 from phygnn.layers.custom_layers import (SkipConnection,
                                          SpatioTemporalExpansion,
-                                         UnpackTemporal)
+                                         FlattenAxis)
 from phygnn.layers.handlers import Layers, HiddenLayers
 
 
@@ -223,11 +223,11 @@ def test_flexible_padding(hidden_layers):
     tf.assert_equal(layer(t), t_check)
 
 
-def test_unpacktemporal():
-    """Test the layer to unpack the temporal dimension into the axis-0
+def test_flatten_axis():
+    """Test the layer to flatten the temporal dimension into the axis-0
     observation dimension.
     """
-    layer = UnpackTemporal()
+    layer = FlattenAxis(axis=3)
     x = np.ones((5, 10, 10, 4, 2))
     y = layer(x)
     assert len(y.shape) == 4
