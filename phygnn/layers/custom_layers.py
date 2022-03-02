@@ -63,6 +63,56 @@ class FlexiblePadding(tf.keras.layers.Layer):
                       mode=self.mode)
 
 
+class FlattenAxis(tf.keras.layers.Layer):
+    """Layer to flatten an axis from a 5D spatiotemporal Tensor into axis-0
+    observations."""
+
+    def __init__(self, axis=3):
+        """
+        Parameters
+        ----------
+        axis : int
+            Target axis that holds the dimension to be flattened into the
+            axis-0 dimension. Default is axis 3 based on flatteneing the
+            temporal axis of the default spatiotemporal shape of:
+            (n_observations, n_spatial_0, n_spatial_1, n_temporal, n_features)
+        """
+        super().__init__()
+        self._axis = axis
+
+    @staticmethod
+    def _check_shape(input_shape):
+        """Assert that the shape of the input tensor is the expected 5D
+        spatiotemporal shape
+
+        Parameters
+        ----------
+        input_shape : tuple
+            Shape tuple of the input
+        """
+        msg = ('Input to FlattenAxis must be 5D with dimensions: '
+               '(n_observations, n_spatial_0, n_spatial_1, n_temporal, '
+               'n_features), but received shape: {}'.format(input_shape))
+        assert len(input_shape) == 5, msg
+
+    def call(self, x):
+        """calls the flatten axis operation
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            5D spatiotemporal tensor with dimensions:
+            (n_observations, n_spatial_0, n_spatial_1, n_temporal, n_features)
+
+        Returns
+        -------
+        x : tf.Tensor
+            4D spatiotemporal tensor with target axis flattened into axis 0
+        """
+        self._check_shape(x.shape)
+        return tf.concat(tf.unstack(x, axis=self._axis), axis=0)
+
+
 class SpatialExpansion(tf.keras.layers.Layer):
     """Class to expand the spatial dimensions of tensors with shape:
     (n_observations, n_spatial_0, n_spatial_1, n_features)

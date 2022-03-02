@@ -5,7 +5,9 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from phygnn.layers.custom_layers import SkipConnection, SpatioTemporalExpansion
+from phygnn.layers.custom_layers import (SkipConnection,
+                                         SpatioTemporalExpansion,
+                                         FlattenAxis)
 from phygnn.layers.handlers import Layers, HiddenLayers
 
 
@@ -219,3 +221,17 @@ def test_flexible_padding(hidden_layers):
                                [5, 4, 4, 5, 6, 6, 5],
                                [5, 4, 4, 5, 6, 6, 5]])
     tf.assert_equal(layer(t), t_check)
+
+
+def test_flatten_axis():
+    """Test the layer to flatten the temporal dimension into the axis-0
+    observation dimension.
+    """
+    layer = FlattenAxis(axis=3)
+    x = np.ones((5, 10, 10, 4, 2))
+    y = layer(x)
+    assert len(y.shape) == 4
+    assert y.shape[0] == 5 * 4
+    assert y.shape[1] == 10
+    assert y.shape[2] == 10
+    assert y.shape[3] == 2
