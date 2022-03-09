@@ -300,7 +300,7 @@ class TfModel(ModelBase):
             testing, by default ('mae', 'mse')
         optimizer_class : tf.keras.optimizers, optional
             Optional explicit request of optimizer. This should be a class
-            that will be instantated in the TfModel._compile_model() method
+            that will be instantated in the TfModel.compile_model() method
             The default is the Adam optimizer
         kwargs : dict
             kwargs for tensorflow.keras.models.compile
@@ -351,14 +351,14 @@ class TfModel(ModelBase):
         early_stop : bool
             Flag to stop training when it stops improving
         parse_kwargs : dict
-            kwargs for cls._parse_features
+            kwargs for cls.parse_features
         fit_kwargs : dict
             kwargs for tensorflow.keras.models.fit
         """
         if parse_kwargs is None:
             parse_kwargs = {}
 
-        features = self._parse_features(features, **parse_kwargs)
+        features = self.parse_features(features, **parse_kwargs)
         labels = self._parse_labels(labels)
 
         if self._history is not None:
@@ -514,7 +514,7 @@ class TfModel(ModelBase):
             testing, by default ('mae', 'mse')
         optimizer_class : tf.keras.optimizers, optional
             Optional explicit request of optimizer. This should be a class
-            that will be instantated in the TfModel._compile_model() method
+            that will be instantated in the TfModel.compile_model() method
             The default is the Adam optimizer
         kwargs : dict
             kwargs for tensorflow.keras.models.compile
@@ -588,7 +588,7 @@ class TfModel(ModelBase):
             testing, by default ('mae', 'mse')
         optimizer_class : tf.keras.optimizers, optional
             Optional explicit request of optimizer. This should be a class
-            that will be instantated in the TfModel._compile_model() method
+            that will be instantated in the TfModel.compile_model() method
             The default is the Adam optimizer
         epochs : int, optional
             Number of epochs to train the model, by default 100
@@ -607,7 +607,7 @@ class TfModel(ModelBase):
         compile_kwargs : dict
             kwargs for tensorflow.keras.models.compile
         parse_kwargs : dict
-            kwargs for cls._parse_features
+            kwargs for cls.parse_features
         fit_kwargs : dict
             kwargs for tensorflow.keras.models.fit
 

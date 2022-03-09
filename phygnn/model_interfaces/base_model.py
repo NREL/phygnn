@@ -856,9 +856,11 @@ class ModelBase(ABC):
                                                 feature_names=check_names)
             self._feature_names = one_hot_feature_names
 
-    def _parse_features(self, features, names=None, **kwargs):
-        """
-        Parse features
+    def parse_features(self, features, names=None, **kwargs):
+        """Parse features - preprocessing of feature data before training or
+        prediction. This will do one-hot encoding based on
+        self.one_hot_categories, and feature normalization based on
+        self.normalize_features
 
         Parameters
         ----------
@@ -961,8 +963,8 @@ class ModelBase(ABC):
         table : bool, optional
             Return pandas DataFrame
         parse_kwargs : dict
-            kwargs for cls._parse_features
-        predict_wargs : dict
+            kwargs for cls.parse_features
+        predict_kwargs : dict
             kwargs for tensorflow.*.predict
 
         Returns
@@ -993,7 +995,7 @@ class ModelBase(ABC):
 
             parse_kwargs.update(kwargs)
 
-        features = self._parse_features(features, **parse_kwargs)
+        features = self.parse_features(features, **parse_kwargs)
 
         if predict_kwargs is None:
             predict_kwargs = {}

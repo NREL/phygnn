@@ -163,13 +163,13 @@ class PhygnnModel(ModelBase):
         validation_split : float
             Fraction of features and labels to use for validation.
         p_kwargs : None | dict
-            Optional kwargs for the physical loss function self._p_fun.
+            Optional kwargs for the physical loss function p_fun.
         run_preflight : bool
             Flag to run preflight checks.
         return_diagnostics : bool
             Flag to return training diagnostics dictionary.
         parse_kwargs : dict
-            kwargs for cls._parse_features
+            kwargs for cls.parse_features
         norm_labels : bool, optional
             Flag to normalize label, by default True
 
@@ -181,7 +181,7 @@ class PhygnnModel(ModelBase):
         if parse_kwargs is None:
             parse_kwargs = {}
 
-        x = self._parse_features(features, **parse_kwargs)
+        x = self.parse_features(features, **parse_kwargs)
         y = self._parse_labels(labels)
 
         diagnostics = self.model.fit(x, y, p,
@@ -552,9 +552,9 @@ class PhygnnModel(ModelBase):
             Flag to return training diagnostics dictionary.
             Fraction of features and labels to use for validation.
         p_kwargs : None | dict
-            Optional kwargs for the physical loss function self._p_fun.
+            Optional kwargs for the physical loss function p_fun.
         parse_kwargs : dict
-            kwargs for cls._parse_features
+            kwargs for cls.parse_features
         norm_labels : bool, optional
             Flag to normalize label, by default True
         save_path : str, optional

@@ -137,14 +137,14 @@ class RandomForestModel(ModelBase):
             Flag to randomly subset the validation data and batch selection
             from features and labels.
         parse_kwargs : dict
-            kwargs for cls._parse_features
+            kwargs for cls.parse_features
         fit_kwargs : dict
             kwargs for sklearn.ensemble.RandomForestRegressor.fit
         """
         if parse_kwargs is None:
             parse_kwargs = {}
 
-        features = self._parse_features(features, **parse_kwargs)
+        features = self.parse_features(features, **parse_kwargs)
 
         label = self._parse_labels(label)
 
@@ -224,7 +224,7 @@ class RandomForestModel(ModelBase):
         compile_kwargs : dict
             kwargs for sklearn.ensemble.RandomForestRegressor
         parse_kwargs : dict
-            kwargs for cls._parse_features
+            kwargs for cls.parse_features
         fit_kwargs : dict
             kwargs for sklearn.ensemble.RandomForestRegressor.fit
 
