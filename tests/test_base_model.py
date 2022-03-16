@@ -28,7 +28,7 @@ def test_norm_df():
                       label_names=LABELS.columns, normalize=True)
 
     baseline, means, stdevs = PreProcess.normalize(FEATURES)
-    test = model._parse_features(FEATURES)
+    test = model.parse_features(FEATURES)
     assert np.allclose(baseline.values, test)
     assert np.allclose(means, model.feature_means)
     assert np.allclose(stdevs, model.feature_stdevs)
@@ -50,7 +50,7 @@ def test_norm_arr():
                       label_names=label_names, normalize=True)
 
     baseline, means, stdevs = PreProcess.normalize(features)
-    test = model._parse_features(features, names=feature_names)
+    test = model.parse_features(features, names=feature_names)
     assert np.allclose(baseline, test)
     assert np.allclose(means, model.feature_means)
     assert np.allclose(stdevs, model.feature_stdevs)
@@ -77,7 +77,7 @@ def test_OHE():
 
     baseline, means, stdevs = \
         PreProcess.normalize(FEATURES.values.astype('float32'))
-    test = model._parse_features(ohe_features)
+    test = model.parse_features(ohe_features)
 
     assert np.allclose(baseline, test[:, :2])
     assert np.allclose(means,

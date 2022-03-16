@@ -184,8 +184,33 @@ def test_st_expansion(t_mult, s_mult):
     assert y.shape[4] == x.shape[4] / (s_mult**2)
 
 
+def test_st_expansion_new_shape():
+    """Test that the spatiotemporal expansion layer can expand multiple shapes
+    and is not bound to the shape it was built on (bug found on 3/16/2022.)"""
+    s_mult = 3
+    t_mult = 6
+    layer = SpatioTemporalExpansion(spatial_mult=s_mult, temporal_mult=t_mult)
+    n_filters = 2 * s_mult**2
+    x = np.ones((32, 10, 10, 24, n_filters))
+    y = layer(x)
+    assert y.shape[0] == x.shape[0]
+    assert y.shape[1] == s_mult * x.shape[1]
+    assert y.shape[2] == s_mult * x.shape[2]
+    assert y.shape[3] == t_mult * x.shape[3]
+    assert y.shape[4] == x.shape[4] / (s_mult**2)
+
+    x = np.ones((32, 11, 11, 36, n_filters))
+    y = layer(x)
+    assert y.shape[0] == x.shape[0]
+    assert y.shape[1] == s_mult * x.shape[1]
+    assert y.shape[2] == s_mult * x.shape[2]
+    assert y.shape[3] == t_mult * x.shape[3]
+    assert y.shape[4] == x.shape[4] / (s_mult**2)
+
+
 def test_st_expansion_bad():
-    """Test an illegal spatial expansion request."""
+    """Test an illegal spatial expansion request due to number of channels not
+    able to unpack into spatiotemporal dimensions."""
     layer = SpatioTemporalExpansion(spatial_mult=2, temporal_mult=2)
     x = np.ones((123, 10, 10, 24, 3))
     with pytest.raises(RuntimeError):

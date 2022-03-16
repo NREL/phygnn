@@ -132,7 +132,6 @@ class SpatialExpansion(tf.keras.layers.Layer):
         """
         super().__init__()
         self._spatial_mult = int(spatial_mult)
-        self._n_spatial_1 = None
 
     @staticmethod
     def _check_shape(input_shape):
@@ -225,9 +224,6 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
         self._spatial_mult = int(spatial_mult)
         self._temporal_mult = int(temporal_mult)
         self._temporal_meth = temporal_method
-        self._n_spatial_1 = None
-        self._n_temporal = None
-        self._temp_expand_shape = None
 
     @staticmethod
     def _check_shape(input_shape):
@@ -254,17 +250,13 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
         """
         self._check_shape(input_shape)
 
-        # desired final shape of the 2nd and 3rd axes for temporal expansion
-        self._n_spatial_1 = input_shape[2]
-        self._n_temporal = input_shape[3]
-        self._temp_expand_shape = tf.stack([
-            self._n_spatial_1, self._n_temporal * self._temporal_mult])
-
     def _temporal_expand(self, x):
         """Expand the temporal dimension (axis=3) of a 5D tensor"""
+        temp_expand_shape = tf.stack(
+            [x.shape[2], x.shape[3] * self._temporal_mult])
         out = []
         for x_unstack in tf.unstack(x, axis=1):
-            out.append(tf.image.resize(x_unstack, self._temp_expand_shape,
+            out.append(tf.image.resize(x_unstack, temp_expand_shape,
                        method=self._temporal_meth))
 
         return tf.stack(out, axis=1)
