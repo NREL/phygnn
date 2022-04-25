@@ -95,7 +95,7 @@ class ExpandDims(tf.keras.layers.Layer):
         return tf.expand_dims(x, axis=self._axis)
 
 
-class TileTensor(tf.keras.layers.Layer):
+class TileLayer(tf.keras.layers.Layer):
     """Layer to tile (repeat) data across a given axis."""
 
     def __init__(self, multiples):
