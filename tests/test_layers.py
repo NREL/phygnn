@@ -7,7 +7,9 @@ import tensorflow as tf
 
 from phygnn.layers.custom_layers import (SkipConnection,
                                          SpatioTemporalExpansion,
-                                         FlattenAxis)
+                                         FlattenAxis,
+                                         ExpandDims,
+                                         TileLayer)
 from phygnn.layers.handlers import Layers, HiddenLayers
 
 
@@ -260,3 +262,30 @@ def test_flatten_axis():
     assert y.shape[1] == 10
     assert y.shape[2] == 10
     assert y.shape[3] == 2
+
+
+def test_expand_dims():
+    """Test the layer to expand a new dimension
+    """
+    layer = ExpandDims(axis=3)
+    x = np.ones((5, 10, 10, 2))
+    y = layer(x)
+    assert len(y.shape) == 5
+    assert y.shape[0] == 5
+    assert y.shape[1] == 10
+    assert y.shape[2] == 10
+    assert y.shape[3] == 1
+    assert y.shape[4] == 2
+
+
+def test_tile():
+    """Test the layer to tile (repeat) an existing dimension
+    """
+    layer = TileLayer(multiples=[1, 0, 2, 3])
+    x = np.ones((5, 10, 10, 2))
+    y = layer(x)
+    assert len(y.shape) == 4
+    assert y.shape[0] == 5
+    assert y.shape[1] == 0
+    assert y.shape[2] == 20
+    assert y.shape[3] == 6

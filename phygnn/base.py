@@ -459,11 +459,17 @@ class CustomNetwork(ABC):
         # run x through the input layer to get y
         y = self.layers[0](x)
 
-        for layer in self.layers[1:]:
-            if isinstance(layer, training_layers):
-                y = layer(y, training=training)
-            else:
-                y = layer(y)
+        for i, layer in enumerate(self.layers[1:]):
+            try:
+                if isinstance(layer, training_layers):
+                    y = layer(y, training=training)
+                else:
+                    y = layer(y)
+            except Exception as e:
+                msg = ('Could not run layer #{} "{}" on tensor of shape {}'
+                       .format(i + 1, layer, y.shape))
+                logger.error(msg)
+                raise RuntimeError(msg) from e
 
         if to_numpy:
             y = y.numpy()

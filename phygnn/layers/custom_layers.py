@@ -63,6 +63,70 @@ class FlexiblePadding(tf.keras.layers.Layer):
                       mode=self.mode)
 
 
+class ExpandDims(tf.keras.layers.Layer):
+    """Layer to add an extra dimension to a tensor."""
+
+    def __init__(self, axis=3):
+        """
+        Parameters
+        ----------
+        axis : int
+            Target axis at which to expand the shape of the input. Default is
+            axis 3 based on creating a new temporal axis of the default
+            spatiotemporal shape of: (n_observations, n_spatial_0, n_spatial_1,
+            n_temporal, n_features)
+        """
+        super().__init__()
+        self._axis = axis
+
+    def call(self, x):
+        """calls the expand dims operation
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor with an extra dimension based on the init axes arg
+        """
+        return tf.expand_dims(x, axis=self._axis)
+
+
+class TileLayer(tf.keras.layers.Layer):
+    """Layer to tile (repeat) data across a given axis."""
+
+    def __init__(self, multiples):
+        """
+        Parameters
+        ----------
+        multiples : list
+            This is a list with the same length as number of dimensions in the
+            input tensor. Each entry in the list determines how many times to
+            tile each axis in the tensor.
+        """
+        super().__init__()
+        self._mult = tf.constant(multiples, tf.int32)
+
+    def call(self, x):
+        """calls the tile operation
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor with the specified axes tiled into larger shapes
+            based on the multiples initialization argument.
+        """
+        return tf.tile(x, self._mult)
+
+
 class FlattenAxis(tf.keras.layers.Layer):
     """Layer to flatten an axis from a 5D spatiotemporal Tensor into axis-0
     observations."""
