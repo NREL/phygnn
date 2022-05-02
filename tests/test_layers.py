@@ -9,7 +9,8 @@ from phygnn.layers.custom_layers import (SkipConnection,
                                          SpatioTemporalExpansion,
                                          FlattenAxis,
                                          ExpandDims,
-                                         TileLayer)
+                                         TileLayer,
+                                         GaussianNoiseAxis)
 from phygnn.layers.handlers import Layers, HiddenLayers
 
 
@@ -289,3 +290,22 @@ def test_tile():
     assert y.shape[1] == 0
     assert y.shape[2] == 20
     assert y.shape[3] == 6
+
+
+def test_noise_axis():
+    """Test the custom noise layer on a single axis"""
+    layer = GaussianNoiseAxis(axis=3)
+    x = np.ones((16, 4, 4, 12, 8))
+    y = layer(x)
+
+    rand_axis = y[0, 0, 0, :, 0].numpy()
+
+    assert len(set(rand_axis)) == len(rand_axis)
+
+    for i in range(4):
+        for axis in (0, 1, 2, 4):
+            slice_tuple = [i] * 5
+            slice_tuple[axis] = slice(None)
+            slice_tuple = tuple(slice_tuple)
+
+            assert all(y[slice_tuple] == rand_axis[i])
