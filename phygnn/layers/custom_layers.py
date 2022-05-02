@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Custom tf layers."""
+import numpy as np
 import logging
 import tensorflow as tf
 
@@ -148,9 +149,9 @@ class GaussianNoiseAxis(tf.keras.layers.Layer):
 
         super().__init__()
         self._axis = axis
-        self._axis_len = None
-        self._mean = mean
-        self._stddev = stddev
+        self._rand_shape = None
+        self._mean = tf.constant(mean, dtype=tf.dtypes.float32)
+        self._stddev = tf.constant(stddev, dtype=tf.dtypes.float32)
 
     def build(self, input_shape):
         """Custom implementation of the tf layer build method.
@@ -162,7 +163,9 @@ class GaussianNoiseAxis(tf.keras.layers.Layer):
         input_shape : tuple
             Shape tuple of the input
         """
-        self._axis_len = input_shape[self._axis]
+        shape = np.ones(len(input_shape), dtype=np.int32)
+        shape[self._axis] = input_shape[self._axis]
+        self._rand_shape = tf.constant(shape, dtype=tf.dtypes.int32)
 
     def call(self, x):
         """calls the tile operation
@@ -178,11 +181,10 @@ class GaussianNoiseAxis(tf.keras.layers.Layer):
             Output tensor with noise applied to the requested axis.
         """
 
-        rand_tensor = tf.random.normal(self._axis_len,
+        rand_tensor = tf.random.normal(self._rand_shape,
                                        mean=self._mean,
                                        stddev=self._stddev,
                                        dtype=tf.dtypes.float32)
-        rand_tensor = tf.expand_dims(rand_tensor, axis=-1)
         return x * rand_tensor
 
 
