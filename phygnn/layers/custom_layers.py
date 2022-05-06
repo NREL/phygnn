@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Custom tf layers."""
+import numpy as np
 import logging
 import tensorflow as tf
 
@@ -9,6 +10,7 @@ logger = logging.getLogger(__name__)
 class FlexiblePadding(tf.keras.layers.Layer):
     """Class to perform padding on tensors
     """
+
     def __init__(self, paddings, mode='REFLECT'):
         """
         Parameters
@@ -125,6 +127,65 @@ class TileLayer(tf.keras.layers.Layer):
             based on the multiples initialization argument.
         """
         return tf.tile(x, self._mult)
+
+
+class GaussianNoiseAxis(tf.keras.layers.Layer):
+    """Layer to apply random noise along a given axis."""
+
+    def __init__(self, axis, mean=1, stddev=0.1):
+        """
+        Parameters
+        ----------
+        axis : int
+            Axis to apply random noise across. All other axis will have the
+            same noise. For example, for a 5D spatiotemporal tensor with axis=3
+            (the time axis), this layer will apply a single random number to
+            every unique index of axis=3.
+        mean : float
+            The mean of the normal distribution.
+        stddev : float
+            The standard deviation of the normal distribution.
+        """
+
+        super().__init__()
+        self._axis = axis
+        self._rand_shape = None
+        self._mean = tf.constant(mean, dtype=tf.dtypes.float32)
+        self._stddev = tf.constant(stddev, dtype=tf.dtypes.float32)
+
+    def build(self, input_shape):
+        """Custom implementation of the tf layer build method.
+
+        Sets the shape of the random noise along the specified axis
+
+        Parameters
+        ----------
+        input_shape : tuple
+            Shape tuple of the input
+        """
+        shape = np.ones(len(input_shape), dtype=np.int32)
+        shape[self._axis] = input_shape[self._axis]
+        self._rand_shape = tf.constant(shape, dtype=tf.dtypes.int32)
+
+    def call(self, x):
+        """calls the tile operation
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor with noise applied to the requested axis.
+        """
+
+        rand_tensor = tf.random.normal(self._rand_shape,
+                                       mean=self._mean,
+                                       stddev=self._stddev,
+                                       dtype=tf.dtypes.float32)
+        return x * rand_tensor
 
 
 class FlattenAxis(tf.keras.layers.Layer):
