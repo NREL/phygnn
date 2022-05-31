@@ -469,14 +469,14 @@ class SkipConnection(tf.keras.layers.Layer):
             self._cache = x
             return x
         else:
-            if x.shape != self._cache.shape:
-                msg = ('The endpoint input tensor for SkipConnection "{}" had '
-                       'shape {} but the cached data from the start of the '
-                       'skip connection had shape {}.'
-                       .format(self._name, x.shape, self._cache.shape))
+            try:
+                out = tf.add(x, self._cache)
+            except Exception as e:
+                msg = ('Could not add SkipConnection "{}" data cache of '
+                       'shape {} to input of shape {}.'
+                       .format(self._name, self._cache.shape, x.shape))
                 logger.error(msg)
-                raise RuntimeError(msg)
-
-            out = tf.add(x, self._cache)
-            self._cache = None
-            return out
+                raise RuntimeError(msg) from e
+            else:
+                self._cache = None
+                return out
