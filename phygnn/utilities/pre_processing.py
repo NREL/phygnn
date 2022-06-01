@@ -74,13 +74,13 @@ class PreProcess:
         return stdev
 
     @staticmethod
-    def normalize(native_arr, mean=None, stdev=None):
+    def normalize(arr, mean=None, stdev=None):
         """
         Normalize features with mean at 0 and stdev of 1.
 
         Parameters
         ----------
-        native_arr : ndarray
+        arr : ndarray
             native data
         mean : float | None
             mean to use for normalization
@@ -91,23 +91,27 @@ class PreProcess:
         -------
         norm_arr : ndarray
             normalized data
-        mean : float
-            mean used for normalization
+        mean : np.ndarray
+            1D array of mean values used for normalization with length equal to
+            number of features
         stdev : float
-            stdev used for normalization
+            1D array of stdev values used for normalization with length equal
+            to number of features
         """
 
         if mean is None:
-            mean = np.nanmean(native_arr, axis=0)
+            mean = [np.nanmean(arr[..., f])
+                    for f in range(arr.shape[-1])]
 
         if stdev is None:
-            stdev = np.nanstd(native_arr, axis=0)
+            stdev = [np.nanstd(arr[..., f])
+                     for f in range(arr.shape[-1])]
             stdev = PreProcess._check_stdev(stdev)
 
-        norm_arr = native_arr - mean
-        norm_arr /= stdev
+        for f in range(arr.shape[-1]):
+            arr[..., f] = (arr[..., f] - mean[f]) / stdev[f]
 
-        return norm_arr, mean, stdev
+        return arr, mean, stdev
 
     @staticmethod
     def unnormalize(norm_arr, mean, stdev):

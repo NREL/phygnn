@@ -537,15 +537,14 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
         epochs = list(range(n_epoch))
 
         if self._history is None:
-            self._history = pd.DataFrame(
-                columns=['elapsed_time',
-                         'training_nn_loss',
-                         'validation_nn_loss',
-                         'training_p_loss',
-                         'validation_p_loss',
-                         'training_loss',
-                         'validation_loss',
-                         ])
+            self._history = pd.DataFrame(columns=['elapsed_time',
+                                                  'training_nn_loss',
+                                                  'validation_nn_loss',
+                                                  'training_p_loss',
+                                                  'validation_p_loss',
+                                                  'training_loss',
+                                                  'validation_loss',
+                                                  ])
             self._history.index.name = 'epoch'
         else:
             epochs += self._history.index.values[-1] + 1
@@ -566,21 +565,35 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
                                            batch_size=batch_size,
                                            shuffle=shuffle)
 
-            for x_batch, y_batch, p_batch in batch_iter:
-                tr_loss, tr_nn_loss, tr_p_loss = self.run_gradient_descent(
-                    x_batch, y_batch, p_batch, p_kwargs)
+            e_tr_loss = []
+            e_tr_nn_loss = []
+            e_tr_p_loss = []
+
+            for b, (x_batch, y_batch, p_batch) in enumerate(batch_iter):
+                b_out = self.run_gradient_descent(x_batch, y_batch,
+                                                  p_batch, p_kwargs)
+                b_tr_loss, b_tr_nn_loss, b_tr_p_loss = b_out
+                e_tr_loss.append(b_tr_loss.numpy())
+                e_tr_nn_loss.append(b_tr_nn_loss.numpy())
+                e_tr_p_loss.append(b_tr_p_loss.numpy())
+                logger.debug('Epoch {} batch {} train loss: {:.2e} for "{}"'
+                             .format(epoch, b, b_tr_loss, self.name))
+
+            e_tr_loss = np.mean(e_tr_loss)
+            e_tr_nn_loss = np.mean(e_tr_nn_loss)
+            e_tr_p_loss = np.mean(e_tr_p_loss)
 
             y_val_pred = self.predict(x_val, to_numpy=False)
-            val_loss, val_nn_loss, val_p_loss = self.calc_loss(
-                y_val, y_val_pred, p_val, p_kwargs)
+            out = self.calc_loss(y_val, y_val_pred, p_val, p_kwargs)
+            val_loss, val_nn_loss, val_p_loss = out
             logger.info('Epoch {} train loss: {:.2e} '
                         'val loss: {:.2e} for "{}"'
-                        .format(epoch, tr_loss, val_loss, self.name))
+                        .format(epoch, e_tr_loss, val_loss, self.name))
 
             self._history.at[epoch, 'elapsed_time'] = time.time() - t0
-            self._history.at[epoch, 'training_loss'] = tr_loss.numpy()
-            self._history.at[epoch, 'training_nn_loss'] = tr_nn_loss.numpy()
-            self._history.at[epoch, 'training_p_loss'] = tr_p_loss.numpy()
+            self._history.at[epoch, 'training_loss'] = e_tr_loss.numpy()
+            self._history.at[epoch, 'training_nn_loss'] = e_tr_nn_loss.numpy()
+            self._history.at[epoch, 'training_p_loss'] = e_tr_p_loss.numpy()
             self._history.at[epoch, 'validation_loss'] = val_loss.numpy()
             self._history.at[epoch, 'validation_nn_loss'] = val_nn_loss.numpy()
             self._history.at[epoch, 'validation_p_loss'] = val_p_loss.numpy()

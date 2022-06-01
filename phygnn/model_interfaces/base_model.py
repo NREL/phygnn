@@ -460,12 +460,6 @@ class ModelBase(ABC):
         elif isinstance(data, dict):
             names = list(data.keys())
             data = np.dstack(list(data.values()))[0]
-        elif isinstance(data, np.ndarray):
-            if names is None:
-                msg = ('Names of items must be supplied to parse data '
-                       'arrays')
-                logger.error(msg)
-                raise RuntimeError(msg)
 
         return data, names
 
@@ -487,7 +481,7 @@ class ModelBase(ABC):
         if len(arr.shape) == 1:
             n = 1
         else:
-            n = arr.shape[1]
+            n = arr.shape[-1]
 
         return n
 
@@ -880,22 +874,24 @@ class ModelBase(ABC):
         features, feature_names = self._parse_data(features, names=names)
 
         if len(features.shape) != 2:
-            msg = ('{} can only use 2D data as input!'
+            msg = ('{} has not been tested with training data > 2D.'
                    .format(self.__class__.__name__))
-            logger.error(msg)
-            raise RuntimeError(msg)
+            logger.warning(msg)
+            warn(msg)
 
         if self.feature_names is None:
             self._feature_names = feature_names
 
         check = (self.one_hot_categories is not None
+                 and not isinstance(features, np.ndarray)
                  and all(np.isin(feature_names, self.input_feature_names)))
         if check:
             self._check_one_hot_feature_names(feature_names)
             kwargs.update({'feature_names': feature_names,
                            'categories': self.one_hot_categories})
             features = PreProcess.one_hot(features, **kwargs)
-        elif self.feature_names != feature_names:
+        elif (not isinstance(features, np.ndarray)
+                and self.feature_names != feature_names):
             msg = ('Expecting features with names: {}, but was provided with: '
                    '{}!'.format(self.feature_names, feature_names))
             logger.error(msg)
@@ -904,7 +900,7 @@ class ModelBase(ABC):
         if self.normalize_features:
             features = self.normalize(features, names=self.feature_names)
 
-        if features.shape[1] != self.feature_dims:
+        if features.shape[-1] != self.feature_dims:
             msg = ('data has {} features but expected {}'
                    .format(features.shape[1], self.feature_dims))
             logger.error(msg)
@@ -940,9 +936,10 @@ class ModelBase(ABC):
 
         if self._label_names is None:
             self._label_names = label_names
-        elif self.label_names != label_names:
+        elif (not isinstance(labels, np.ndarray)
+                and self.label_names != label_names):
             msg = ('Expecting labels with names: {}, but was provided with: '
-                   '{}!'.format(label_names, self.label_names))
+                   '{}!'.format(self.label_names, label_names))
             logger.error(msg)
             raise RuntimeError(msg)
 
