@@ -95,7 +95,7 @@ class RandomForestModel(ModelBase):
 
         return prediction
 
-    def _parse_labels(self, label, name=None):
+    def parse_labels(self, label, name=None):
         """
         Parse labels and normalize if desired
 
@@ -112,7 +112,7 @@ class RandomForestModel(ModelBase):
             Parsed labels array, normalized if desired
         """
         if self.normalize_labels:
-            label = super()._parse_labels(label, names=name)
+            label = super().parse_labels(label, names=name)
 
         if len(self.label_names) > 1:
             msg = ("Only a single label can be supplied to {}, but {} were"
@@ -146,7 +146,7 @@ class RandomForestModel(ModelBase):
 
         features = self.parse_features(features, **parse_kwargs)
 
-        label = self._parse_labels(label)
+        label = self.parse_labels(label)
 
         if fit_kwargs is None:
             fit_kwargs = {}
@@ -236,8 +236,8 @@ class RandomForestModel(ModelBase):
         if compile_kwargs is None:
             compile_kwargs = {}
 
-        _, feature_names = cls._parse_data(features)
-        _, label_name = cls._parse_data(label)
+        _, feature_names = cls._parse_data_names(features, fallback_prefix='F')
+        _, label_name = cls._parse_data_names(label, fallback_prefix='L')
 
         model = cls.compile_model(**compile_kwargs)
         if one_hot_categories is not None:

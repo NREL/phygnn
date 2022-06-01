@@ -436,7 +436,7 @@ class ModelBase(ABC):
             tf.random.set_random_seed(s)
 
     @staticmethod
-    def _parse_data(data, names=None):
+    def _parse_data_names(data, names=None, fallback_prefix=''):
         """
         Parse data array and names from input data
 
@@ -446,6 +446,10 @@ class ModelBase(ABC):
             Features/labels to parse
         names : list, optional
             List of data item names, by default None
+        fallback_prefix : str
+            If data is provided as a numpy array without associated labels, the
+            fallback_prefix will be used to name the enumerated feature
+            dimension
 
         Returns
         -------
@@ -460,6 +464,8 @@ class ModelBase(ABC):
         elif isinstance(data, dict):
             names = list(data.keys())
             data = np.dstack(list(data.values()))[0]
+        elif isinstance(data, np.ndarray) and names is None:
+            names = [fallback_prefix + str(i) for i in range(data.shape[-1])]
 
         return data, names
 
@@ -871,7 +877,9 @@ class ModelBase(ABC):
             Parsed features array normalized and with str columns converted
             to one hot vectors if desired
         """
-        features, feature_names = self._parse_data(features, names=names)
+
+        features, feature_names = self._parse_data_names(features, names=names,
+                                                         fallback_prefix='F')
 
         if len(features.shape) != 2:
             msg = ('{} has not been thoroughly tested with training data > 2D.'
@@ -882,7 +890,7 @@ class ModelBase(ABC):
         if self.feature_names is None:
             self._feature_names = feature_names
 
-        check = (self.one_hot_categories is not None
+        check = (bool(self.one_hot_categories)
                  and feature_names is not None
                  and all(np.isin(feature_names, self.input_feature_names)))
         if check:
@@ -900,7 +908,8 @@ class ModelBase(ABC):
         if self.normalize_features:
             features = self.normalize(features, names=self.feature_names)
 
-        if features.shape[-1] != self.feature_dims:
+        if (self.feature_dims is not None
+                and features.shape[-1] != self.feature_dims):
             msg = ('data has {} features but expected {}'
                    .format(features.shape[1], self.feature_dims))
             logger.error(msg)
@@ -908,7 +917,7 @@ class ModelBase(ABC):
 
         return features
 
-    def _parse_labels(self, labels, names=None):
+    def parse_labels(self, labels, names=None):
         """
         Parse labels and normalize if desired
 
@@ -924,7 +933,9 @@ class ModelBase(ABC):
         labels : ndarray
             Parsed labels array, normalized if desired
         """
-        labels, label_names = self._parse_data(labels, names=names)
+
+        labels, label_names = self._parse_data_names(labels, names=names,
+                                                     fallback_prefix='L')
 
         if self.label_names is not None:
             n_labels = self._get_item_number(labels)

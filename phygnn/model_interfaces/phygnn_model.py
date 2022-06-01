@@ -182,7 +182,7 @@ class PhygnnModel(ModelBase):
             parse_kwargs = {}
 
         x = self.parse_features(features, **parse_kwargs)
-        y = self._parse_labels(labels)
+        y = self.parse_labels(labels)
 
         diagnostics = self.model.fit(x, y, p,
                                      n_batch=n_batch,
@@ -375,10 +375,13 @@ class PhygnnModel(ModelBase):
             feature_names = cls.make_one_hot_feature_names(feature_names,
                                                            one_hot_categories)
 
+        n_features = None if feature_names is None else len(feature_names)
+        n_labels = None if label_names is None else len(label_names)
+
         model = PhysicsGuidedNeuralNetwork(p_fun,
                                            loss_weights=loss_weights,
-                                           n_features=len(feature_names),
-                                           n_labels=len(label_names),
+                                           n_features=n_features,
+                                           n_labels=n_labels,
                                            hidden_layers=hidden_layers,
                                            input_layer=input_layer,
                                            output_layer=output_layer,
@@ -571,8 +574,9 @@ class PhygnnModel(ModelBase):
         diagnostics : dict, optional
             Namespace of training parameters that can be used for diagnostics.
         """
-        _, feature_names = cls._parse_data(features)
-        _, label_names = cls._parse_data(labels)
+
+        _, feature_names = cls._parse_data_names(features, fallback_prefix='F')
+        _, label_names = cls._parse_data_names(labels, fallback_prefix='L')
 
         model = cls.build(p_fun, feature_names, label_names,
                           normalize=normalize,

@@ -34,7 +34,7 @@ def test_norm_df():
     assert np.allclose(stdevs, model.feature_stdevs)
 
     baseline, means, stdevs = PreProcess.normalize(LABELS.copy())
-    test = model._parse_labels(LABELS.copy())
+    test = model.parse_labels(LABELS.copy())
     np.allclose(baseline, test)
     assert np.allclose(means, model.label_means)
     assert np.allclose(stdevs, model.label_stdevs)
@@ -56,7 +56,7 @@ def test_norm_arr():
     assert np.allclose(stdevs, model.feature_stdevs)
 
     baseline, means, stdevs = PreProcess.normalize(labels.copy())
-    test = model._parse_labels(labels.copy(), names=label_names)
+    test = model.parse_labels(labels.copy(), names=label_names)
     assert np.allclose(baseline, test)
     assert np.allclose(means, model.label_means)
     assert np.allclose(stdevs, model.label_stdevs)
