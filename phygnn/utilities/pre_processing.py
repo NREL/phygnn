@@ -80,8 +80,8 @@ class PreProcess:
 
         Parameters
         ----------
-        arr : ndarray
-            native data
+        arr : ndarray | pd.DataFrame
+            native data, dataframes are converted to arrays.
         mean : float | None
             mean to use for normalization
         stdev : float | None
@@ -94,18 +94,21 @@ class PreProcess:
         mean : np.ndarray
             1D array of mean values used for normalization with length equal to
             number of features
-        stdev : float
+        stdev : np.ndarray
             1D array of stdev values used for normalization with length equal
             to number of features
         """
 
+        if isinstance(arr, pd.DataFrame):
+            arr = arr.values.copy()
+
         if mean is None:
-            mean = [np.nanmean(arr[..., f])
-                    for f in range(arr.shape[-1])]
+            mean = np.array([np.nanmean(arr[..., f])
+                             for f in range(arr.shape[-1])])
 
         if stdev is None:
-            stdev = [np.nanstd(arr[..., f])
-                     for f in range(arr.shape[-1])]
+            stdev = np.array([np.nanstd(arr[..., f])
+                              for f in range(arr.shape[-1])])
             stdev = PreProcess._check_stdev(stdev)
 
         for f in range(arr.shape[-1]):

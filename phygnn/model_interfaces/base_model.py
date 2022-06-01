@@ -874,7 +874,7 @@ class ModelBase(ABC):
         features, feature_names = self._parse_data(features, names=names)
 
         if len(features.shape) != 2:
-            msg = ('{} has not been tested with training data > 2D.'
+            msg = ('{} has not been thoroughly tested with training data > 2D.'
                    .format(self.__class__.__name__))
             logger.warning(msg)
             warn(msg)
@@ -883,7 +883,7 @@ class ModelBase(ABC):
             self._feature_names = feature_names
 
         check = (self.one_hot_categories is not None
-                 and not isinstance(features, np.ndarray)
+                 and feature_names is not None
                  and all(np.isin(feature_names, self.input_feature_names)))
         if check:
             self._check_one_hot_feature_names(feature_names)

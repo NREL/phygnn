@@ -30,7 +30,7 @@ LABELS = pd.DataFrame(Y_NOISE, columns=['c'])
 
 def test_random_forest():
     """Test the RandomForestModel """
-    model = RandomForestModel.build_trained(FEATURES, LABELS)
+    model = RandomForestModel.build_trained(FEATURES.copy(), LABELS.copy())
 
     test_mae = np.mean(np.abs(model[X].values.ravel() - Y))
     assert test_mae < 0.4
@@ -38,12 +38,12 @@ def test_random_forest():
 
 def test_save_load():
     """Test the save/load operations of RandomForestModel"""
-    model = RandomForestModel.build_trained(FEATURES, LABELS,
+    model = RandomForestModel.build_trained(FEATURES.copy(), LABELS.copy(),
                                             save_path=FPATH)
     y_pred = model[X]
 
     loaded = RandomForestModel.load(FPATH)
-    loaded.train_model(FEATURES, LABELS)
+    loaded.train_model(FEATURES.copy(), LABELS.copy())
     y_pred_loaded = loaded[X]
     np.allclose(y_pred.values, y_pred_loaded.values)
     assert loaded.feature_names == ['a', 'b']

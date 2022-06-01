@@ -591,9 +591,9 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
                         .format(epoch, e_tr_loss, val_loss, self.name))
 
             self._history.at[epoch, 'elapsed_time'] = time.time() - t0
-            self._history.at[epoch, 'training_loss'] = e_tr_loss.numpy()
-            self._history.at[epoch, 'training_nn_loss'] = e_tr_nn_loss.numpy()
-            self._history.at[epoch, 'training_p_loss'] = e_tr_p_loss.numpy()
+            self._history.at[epoch, 'training_loss'] = e_tr_loss
+            self._history.at[epoch, 'training_nn_loss'] = e_tr_nn_loss
+            self._history.at[epoch, 'training_p_loss'] = e_tr_p_loss
             self._history.at[epoch, 'validation_loss'] = val_loss.numpy()
             self._history.at[epoch, 'validation_nn_loss'] = val_nn_loss.numpy()
             self._history.at[epoch, 'validation_p_loss'] = val_p_loss.numpy()
