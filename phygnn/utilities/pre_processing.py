@@ -188,8 +188,8 @@ class PreProcess:
         feature_names : [type], optional
             Feature names, by default None
         """
-        one_hot_features_names = [i for l in one_hot_categories.values()
-                                  for i in l]
+        one_hot_features_names = [i for sub in one_hot_categories.values()
+                                  for i in sub]
         names, feature_counts = np.unique(one_hot_features_names,
                                           return_counts=True)
         if any(feature_counts > 1):
