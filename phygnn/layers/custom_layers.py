@@ -521,7 +521,7 @@ class SqueezeAndExcitation(tf.keras.layers.Layer):
         """
 
         self._n_channels = input_shape[-1]
-        self._dense_units = self._n_channels // self._ratio
+        self._dense_units = int(np.ceil(self._n_channels / self._ratio))
 
         if len(input_shape) == 4:
             pool_layer = tf.keras.layers.GlobalAveragePooling2D()
