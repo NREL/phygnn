@@ -323,14 +323,13 @@ def test_squeeze_excite_2d():
     hidden_layers = [
         {'class': 'Conv2D', 'filters': 8, 'kernel_size': 3},
         {'activation': 'relu'},
-        {'class': 'SqueezeAndExcitation'},
-        ]
+        {'class': 'SqueezeAndExcitation'}]
     layers = HiddenLayers(hidden_layers)
     assert len(layers.layers) == 3
 
     x = np.random.normal(0, 1, size=(1, 4, 4, 3))
 
-    for i, layer in enumerate(layers):
+    for layer in layers:
         x_in = x
         x = layer(x)
         with pytest.raises(tf.errors.InvalidArgumentError):
@@ -342,14 +341,13 @@ def test_squeeze_excite_3d():
     hidden_layers = [
         {'class': 'Conv3D', 'filters': 8, 'kernel_size': 3},
         {'activation': 'relu'},
-        {'class': 'SqueezeAndExcitation'},
-        ]
+        {'class': 'SqueezeAndExcitation'}]
     layers = HiddenLayers(hidden_layers)
     assert len(layers.layers) == 3
 
     x = np.random.normal(0, 1, size=(1, 4, 4, 6, 3))
 
-    for i, layer in enumerate(layers):
+    for layer in layers:
         x_in = x
         x = layer(x)
         with pytest.raises(tf.errors.InvalidArgumentError):

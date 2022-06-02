@@ -538,8 +538,7 @@ class SqueezeAndExcitation(tf.keras.layers.Layer):
             pool_layer,
             tf.keras.layers.Dense(self._dense_units, activation='relu'),
             tf.keras.layers.Dense(self._n_channels, activation='sigmoid'),
-            tf.keras.layers.Multiply(),
-            ]
+            tf.keras.layers.Multiply()]
 
     def call(self, x):
         """Call the custom SqueezeAndExcitation layer
