@@ -480,3 +480,87 @@ class SkipConnection(tf.keras.layers.Layer):
             else:
                 self._cache = None
                 return out
+
+
+class SqueezeAndExcitation(tf.keras.layers.Layer):
+    """Custom layer for squeeze and excitation block for convolutional networks
+
+    Note that this is only set up to take a channels-last conv output
+
+    References
+    ----------
+    1. Hu, Jie, et al. Squeeze-and-Excitation Networks. arXiv:1709.01507,
+       arXiv, 16 May 2019, http://arxiv.org/abs/1709.01507.
+    2. Pröve, Paul-Louis. “Squeeze-and-Excitation Networks.” Medium, 18 Oct.
+       2017,
+    https://towardsdatascience.com/squeeze-and-excitation-networks-9ef5e71eacd7
+    """
+
+    def __init__(self, ratio=16):
+        """
+        Parameters
+        ----------
+        ratio : int
+            Number of convolutional channels/filters divided by the number of
+            dense connections in the SE block.
+        """
+
+        super().__init__()
+        self._ratio = ratio
+        self._n_channels = None
+        self._dense_units = None
+        self._hidden_layers = None
+
+    def build(self, input_shape):
+        """Build the SqueezeAndExcitation layer based on an input shape
+
+        Parameters
+        ----------
+        input_shape : tuple
+            Shape tuple of the input tensor
+        """
+
+        self._n_channels = input_shape[-1]
+        self._dense_units = self._n_channels // self._ratio
+
+        if len(input_shape) == 4:
+            pool_layer = tf.keras.layers.GlobalAveragePooling2D()
+        elif len(input_shape) == 5:
+            pool_layer = tf.keras.layers.GlobalAveragePooling3D()
+        else:
+            msg = ('SqueezeAndExcitation layer can only accept 4D or 5D data '
+                   'for image or video input but received input shape: {}'
+                   .format(input_shape))
+            logger.error(msg)
+            raise RuntimeError(msg)
+
+        self._hidden_layers = [
+            pool_layer,
+            tf.keras.layers.Dense(self._dense_units, activation='relu'),
+            tf.keras.layers.Dense(self._n_channels, activation='sigmoid'),
+            tf.keras.layers.Multiply(),
+            ]
+
+    def call(self, x):
+        """Call the custom SqueezeAndExcitation layer
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor.
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor, this is the squeeze-and-excitation weights
+            multiplied by the original input tensor x
+        """
+
+        t_in = x
+        for layer in self._hidden_layers[:-1]:
+            x = layer(x)
+
+        # multiply layer
+        x = self._hidden_layers[-1]([t_in, x])
+
+        return x
