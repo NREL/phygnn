@@ -984,7 +984,7 @@ class ModelBase(ABC):
             parse_kwargs = {}
 
         if isinstance(features, np.ndarray):
-            n_features = features.shape[1]
+            n_features = features.shape[-1]
             if n_features == self.feature_dims:
                 kwargs = {"names": self.feature_names}
                 logger.debug('Parsing features with feature_names: {}'
