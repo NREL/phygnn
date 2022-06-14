@@ -232,3 +232,40 @@ def test_bad_categories():
                                       n_epoch=20)
     with pytest.raises(RuntimeError):
         model.predict(x)
+
+
+def test_train_conv_model():
+    """Test a convolutional model with 5D training data."""
+    train_y = np.random.uniform(0, 1, (50, 1))
+    train_x = np.random.uniform(0, 1, (50, 12, 7, 7, 3))
+    train_x[..., 0] *= 2
+    train_x[..., 1] *= 4
+    train_x[..., 2] *= 6
+
+    input_layer = {'class': 'Conv3D', 'filters': 2, 'kernel_size': 3,
+                   'activation': 'relu'}
+    hidden_layers = [{'units': 64, 'activation': 'relu'},
+                     {'class': 'Flatten'}]
+    output_layer = {'units': 1}
+
+    model = PhygnnModel.build_trained(None, train_x.copy(), train_y, train_y,
+                                      normalize=True,
+                                      input_layer=input_layer,
+                                      hidden_layers=hidden_layers,
+                                      output_layer=output_layer,
+                                      loss_weights=(1, 0),
+                                      n_batch=4,
+                                      n_epoch=20)
+
+    assert len(model.history) == 20
+    improvements = (np.diff(model.history['training_nn_loss']) < 0).sum()
+    assert improvements > 10
+
+    assert np.allclose(model.means['F0'], 1, atol=0.01)
+    assert np.allclose(model.means['F1'], 2, atol=0.01)
+    assert np.allclose(model.means['F2'], 3, atol=0.01)
+    assert np.allclose(model.means['L0'], 0.5, atol=0.1)
+
+    new_x = model.parse_features(train_x)
+    for f in range(new_x.shape[-1]):
+        assert np.allclose(np.mean(new_x[..., f]), 0, atol=1e-8)

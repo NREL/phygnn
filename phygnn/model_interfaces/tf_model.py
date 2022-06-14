@@ -359,7 +359,7 @@ class TfModel(ModelBase):
             parse_kwargs = {}
 
         features = self.parse_features(features, **parse_kwargs)
-        labels = self._parse_labels(labels)
+        labels = self.parse_labels(labels)
 
         if self._history is not None:
             msg = 'Model has already been trained and will be re-fit!'
@@ -619,8 +619,8 @@ class TfModel(ModelBase):
         if compile_kwargs is None:
             compile_kwargs = {}
 
-        _, feature_names = cls._parse_data(features)
-        _, label_names = cls._parse_data(labels)
+        _, feature_names = cls._parse_data_names(features, fallback_prefix='F')
+        _, label_names = cls._parse_data_names(labels, fallback_prefix='L')
 
         model = cls.build(feature_names, label_names,
                           normalize=normalize,

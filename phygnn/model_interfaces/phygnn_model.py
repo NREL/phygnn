@@ -127,7 +127,8 @@ class PhygnnModel(ModelBase):
         """
         return self.model.version_record
 
-    def train_model(self, features, labels, p, n_batch=16, n_epoch=10,
+    def train_model(self, features, labels, p,
+                    n_batch=16, batch_size=None, n_epoch=10,
                     shuffle=True, validation_split=0.2, run_preflight=True,
                     return_diagnostics=False, p_kwargs=None,
                     parse_kwargs=None):
@@ -155,6 +156,9 @@ class PhygnnModel(ModelBase):
             mini-batches). The training data will be split into this many
             mini-batches and the NN will train on each mini-batch, update
             weights, then move onto the next mini-batch.
+        batch_size : int | None
+            Number of training samples per batch. This input is redundant to
+            n_batch and will not be used if n_batch is not None.
         n_epoch : int
             Number of times to iterate on the training data.
         shuffle : bool
@@ -182,10 +186,11 @@ class PhygnnModel(ModelBase):
             parse_kwargs = {}
 
         x = self.parse_features(features, **parse_kwargs)
-        y = self._parse_labels(labels)
+        y = self.parse_labels(labels)
 
         diagnostics = self.model.fit(x, y, p,
                                      n_batch=n_batch,
+                                     batch_size=batch_size,
                                      n_epoch=n_epoch,
                                      shuffle=shuffle,
                                      validation_split=validation_split,
@@ -375,10 +380,13 @@ class PhygnnModel(ModelBase):
             feature_names = cls.make_one_hot_feature_names(feature_names,
                                                            one_hot_categories)
 
+        n_features = None if feature_names is None else len(feature_names)
+        n_labels = None if label_names is None else len(label_names)
+
         model = PhysicsGuidedNeuralNetwork(p_fun,
                                            loss_weights=loss_weights,
-                                           n_features=len(feature_names),
-                                           n_labels=len(label_names),
+                                           n_features=n_features,
+                                           n_labels=n_labels,
                                            hidden_layers=hidden_layers,
                                            input_layer=input_layer,
                                            output_layer=output_layer,
@@ -421,6 +429,7 @@ class PhygnnModel(ModelBase):
                       bias_reg_rate=0.0,
                       bias_reg_power=1,
                       n_batch=16,
+                      batch_size=None,
                       n_epoch=10,
                       shuffle=True,
                       validation_split=0.2,
@@ -540,6 +549,9 @@ class PhygnnModel(ModelBase):
             mini-batches). The training data will be split into this many
             mini-batches and the NN will train on each mini-batch, update
             weights, then move onto the next mini-batch.
+        batch_size : int | None
+            Number of training samples per batch. This input is redundant to
+            n_batch and will not be used if n_batch is not None.
         n_epoch : int
             Number of times to iterate on the training data.
         shuffle : bool
@@ -571,8 +583,9 @@ class PhygnnModel(ModelBase):
         diagnostics : dict, optional
             Namespace of training parameters that can be used for diagnostics.
         """
-        _, feature_names = cls._parse_data(features)
-        _, label_names = cls._parse_data(labels)
+
+        _, feature_names = cls._parse_data_names(features, fallback_prefix='F')
+        _, label_names = cls._parse_data_names(labels, fallback_prefix='L')
 
         model = cls.build(p_fun, feature_names, label_names,
                           normalize=normalize,
@@ -595,6 +608,7 @@ class PhygnnModel(ModelBase):
 
         diagnostics = model.train_model(features, labels, p,
                                         n_batch=n_batch,
+                                        batch_size=batch_size,
                                         n_epoch=n_epoch,
                                         shuffle=shuffle,
                                         validation_split=validation_split,

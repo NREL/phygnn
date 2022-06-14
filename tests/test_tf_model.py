@@ -39,7 +39,7 @@ LABELS = pd.DataFrame(Y, columns=['c'])
        {'units': 64, 'activation': 'relu', 'name': 'relu2'}], 0.03)])
 def test_nn(hidden_layers, loss):
     """Test TfModel """
-    model = TfModel.build_trained(FEATURES, LABELS,
+    model = TfModel.build_trained(FEATURES.copy(), LABELS.copy(),
                                   hidden_layers=hidden_layers,
                                   epochs=10,
                                   fit_kwargs={"batch_size": 16},
@@ -66,7 +66,7 @@ def test_normalize(normalize, loss):
     """Test TfModel """
     hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
                      {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
-    model = TfModel.build_trained(FEATURES, LABELS,
+    model = TfModel.build_trained(FEATURES.copy(), LABELS.copy(),
                                   normalize=normalize,
                                   hidden_layers=hidden_layers,
                                   epochs=10, fit_kwargs={"batch_size": 16},
@@ -84,7 +84,7 @@ def test_complex_nn():
                      {'batch_normalization': {'axis': -1}},
                      {'activation': 'relu'},
                      {'dropout': 0.01}]
-    model = TfModel.build_trained(FEATURES, LABELS,
+    model = TfModel.build_trained(FEATURES.copy(), LABELS.copy(),
                                   hidden_layers=hidden_layers,
                                   epochs=10, fit_kwargs={"batch_size": 16},
                                   early_stop=False)
@@ -107,12 +107,12 @@ def test_dropout():
                        {'units': 64}, {'activation': 'relu'},
                        {'dropout': 0.05}]
     TfModel.seed()
-    model_1 = TfModel.build_trained(FEATURES, LABELS,
+    model_1 = TfModel.build_trained(FEATURES.copy(), LABELS.copy(),
                                     hidden_layers=hidden_layers_1,
                                     epochs=10, fit_kwargs={"batch_size": 16},
                                     early_stop=False)
     TfModel.seed()
-    model_2 = TfModel.build_trained(FEATURES, LABELS,
+    model_2 = TfModel.build_trained(FEATURES.copy(), LABELS.copy(),
                                     hidden_layers=hidden_layers_2,
                                     epochs=10, fit_kwargs={"batch_size": 16},
                                     early_stop=False)
@@ -128,7 +128,7 @@ def test_save_load():
         model_fpath = os.path.join(td, 'test_model/')
         hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
                          {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
-        model = TfModel.build_trained(FEATURES, LABELS,
+        model = TfModel.build_trained(FEATURES.copy(), LABELS.copy(),
                                       hidden_layers=hidden_layers,
                                       epochs=10, fit_kwargs={"batch_size": 16},
                                       early_stop=False,

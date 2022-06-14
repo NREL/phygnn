@@ -74,14 +74,14 @@ class PreProcess:
         return stdev
 
     @staticmethod
-    def normalize(native_arr, mean=None, stdev=None):
+    def normalize(arr, mean=None, stdev=None):
         """
         Normalize features with mean at 0 and stdev of 1.
 
         Parameters
         ----------
-        native_arr : ndarray
-            native data
+        arr : ndarray | pd.DataFrame
+            native data, dataframes are converted to arrays.
         mean : float | None
             mean to use for normalization
         stdev : float | None
@@ -91,23 +91,30 @@ class PreProcess:
         -------
         norm_arr : ndarray
             normalized data
-        mean : float
-            mean used for normalization
-        stdev : float
-            stdev used for normalization
+        mean : np.ndarray
+            1D array of mean values used for normalization with length equal to
+            number of features
+        stdev : np.ndarray
+            1D array of stdev values used for normalization with length equal
+            to number of features
         """
 
+        if isinstance(arr, pd.DataFrame):
+            arr = arr.values.copy()
+
         if mean is None:
-            mean = np.nanmean(native_arr, axis=0)
+            mean = np.array([np.nanmean(arr[..., f])
+                             for f in range(arr.shape[-1])])
 
         if stdev is None:
-            stdev = np.nanstd(native_arr, axis=0)
+            stdev = np.array([np.nanstd(arr[..., f])
+                              for f in range(arr.shape[-1])])
             stdev = PreProcess._check_stdev(stdev)
 
-        norm_arr = native_arr - mean
-        norm_arr /= stdev
+        for f in range(arr.shape[-1]):
+            arr[..., f] = (arr[..., f] - mean[f]) / stdev[f]
 
-        return norm_arr, mean, stdev
+        return arr, mean, stdev
 
     @staticmethod
     def unnormalize(norm_arr, mean, stdev):
@@ -181,8 +188,8 @@ class PreProcess:
         feature_names : [type], optional
             Feature names, by default None
         """
-        one_hot_features_names = [i for l in one_hot_categories.values()
-                                  for i in l]
+        one_hot_features_names = [i for sub in one_hot_categories.values()
+                                  for i in sub]
         names, feature_counts = np.unique(one_hot_features_names,
                                           return_counts=True)
         if any(feature_counts > 1):

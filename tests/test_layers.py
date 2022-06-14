@@ -12,7 +12,6 @@ from phygnn.layers.custom_layers import (SkipConnection,
                                          TileLayer,
                                          GaussianNoiseAxis)
 from phygnn.layers.handlers import Layers, HiddenLayers
-from phygnn.utilities import TF2
 
 
 @pytest.mark.parametrize(
@@ -301,18 +300,51 @@ def test_noise_axis():
     x = np.ones((16, 4, 4, 12, 8), dtype=np.float32)
     y = layer(x)
 
-    # tf1 is weird about len(tensor) and .numpy()
-    if TF2:
+    # axis=3 should all have unique random values
+    rand_axis = y[0, 0, 0, :, 0].numpy()
+    assert len(set(rand_axis)) == len(rand_axis)
 
-        # axis=3 should all have unique random values
-        rand_axis = y[0, 0, 0, :, 0].numpy()
-        assert len(set(rand_axis)) == len(rand_axis)
+    # slices along other axis should be the same random number
+    for i in range(4):
+        for axis in (0, 1, 2, 4):
+            slice_tuple = [i] * 5
+            slice_tuple[axis] = slice(None)
+            slice_tuple = tuple(slice_tuple)
 
-        # slices along other axis should be the same random number
-        for i in range(4):
-            for axis in (0, 1, 2, 4):
-                slice_tuple = [i] * 5
-                slice_tuple[axis] = slice(None)
-                slice_tuple = tuple(slice_tuple)
+            assert all(y[slice_tuple] == rand_axis[i])
 
-                assert all(y[slice_tuple] == rand_axis[i])
+
+def test_squeeze_excite_2d():
+    """Test the SqueezeAndExcitation layer with 2D data (4D tensor input)"""
+    hidden_layers = [
+        {'class': 'Conv2D', 'filters': 8, 'kernel_size': 3},
+        {'activation': 'relu'},
+        {'class': 'SqueezeAndExcitation'}]
+    layers = HiddenLayers(hidden_layers)
+    assert len(layers.layers) == 3
+
+    x = np.random.normal(0, 1, size=(1, 4, 4, 3))
+
+    for layer in layers:
+        x_in = x
+        x = layer(x)
+        with pytest.raises(tf.errors.InvalidArgumentError):
+            tf.assert_equal(x_in, x)
+
+
+def test_squeeze_excite_3d():
+    """Test the SqueezeAndExcitation layer with 3D data (5D tensor input)"""
+    hidden_layers = [
+        {'class': 'Conv3D', 'filters': 8, 'kernel_size': 3},
+        {'activation': 'relu'},
+        {'class': 'SqueezeAndExcitation'}]
+    layers = HiddenLayers(hidden_layers)
+    assert len(layers.layers) == 3
+
+    x = np.random.normal(0, 1, size=(1, 4, 4, 6, 3))
+
+    for layer in layers:
+        x_in = x
+        x = layer(x)
+        with pytest.raises(tf.errors.InvalidArgumentError):
+            tf.assert_equal(x_in, x)

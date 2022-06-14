@@ -537,15 +537,14 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
         epochs = list(range(n_epoch))
 
         if self._history is None:
-            self._history = pd.DataFrame(
-                columns=['elapsed_time',
-                         'training_nn_loss',
-                         'validation_nn_loss',
-                         'training_p_loss',
-                         'validation_p_loss',
-                         'training_loss',
-                         'validation_loss',
-                         ])
+            self._history = pd.DataFrame(columns=['elapsed_time',
+                                                  'training_loss',
+                                                  'training_nn_loss',
+                                                  'training_p_loss',
+                                                  'validation_loss',
+                                                  'validation_nn_loss',
+                                                  'validation_p_loss',
+                                                  ])
             self._history.index.name = 'epoch'
         else:
             epochs += self._history.index.values[-1] + 1
@@ -562,28 +561,59 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
         t0 = time.time()
         for epoch in epochs:
 
-            batch_iter = self.make_batches(x, y, p, n_batch=n_batch,
-                                           batch_size=batch_size,
-                                           shuffle=shuffle)
+            t_batch_iter = self.make_batches(x, y, p, n_batch=n_batch,
+                                             batch_size=batch_size,
+                                             shuffle=shuffle)
 
-            for x_batch, y_batch, p_batch in batch_iter:
-                tr_loss, tr_nn_loss, tr_p_loss = self.run_gradient_descent(
-                    x_batch, y_batch, p_batch, p_kwargs)
+            v_batch_iter = self.make_batches(x_val, y_val, p_val,
+                                             n_batch=n_batch,
+                                             batch_size=batch_size,
+                                             shuffle=False)
 
-            y_val_pred = self.predict(x_val, to_numpy=False)
-            val_loss, val_nn_loss, val_p_loss = self.calc_loss(
-                y_val, y_val_pred, p_val, p_kwargs)
+            e_tr_loss = []
+            e_tr_nn_loss = []
+            e_tr_p_loss = []
+
+            e_val_loss = []
+            e_val_nn_loss = []
+            e_val_p_loss = []
+
+            for b, (x_batch, y_batch, p_batch) in enumerate(t_batch_iter):
+                b_out = self.run_gradient_descent(x_batch, y_batch,
+                                                  p_batch, p_kwargs)
+                b_tr_loss, b_tr_nn_loss, b_tr_p_loss = b_out
+                e_tr_loss.append(b_tr_loss.numpy())
+                e_tr_nn_loss.append(b_tr_nn_loss.numpy())
+                e_tr_p_loss.append(b_tr_p_loss.numpy())
+                logger.debug('Epoch {} batch {} train loss: {:.2e} for "{}"'
+                             .format(epoch, b, b_tr_loss, self.name))
+
+            for b, (x_batch, y_batch, p_batch) in enumerate(v_batch_iter):
+                y_val_pred = self.predict(x_batch, to_numpy=False)
+                out = self.calc_loss(y_batch, y_val_pred, p_batch, p_kwargs)
+                b_val_loss, b_val_nn_loss, b_val_p_loss = out
+                e_val_loss.append(b_val_loss.numpy())
+                e_val_nn_loss.append(b_val_nn_loss.numpy())
+                e_val_p_loss.append(b_val_p_loss.numpy())
+
+            e_tr_loss = np.mean(e_tr_loss)
+            e_tr_nn_loss = np.mean(e_tr_nn_loss)
+            e_tr_p_loss = np.mean(e_tr_p_loss)
+            e_val_loss = np.mean(e_val_loss)
+            e_val_nn_loss = np.mean(e_val_nn_loss)
+            e_val_p_loss = np.mean(e_val_p_loss)
+
             logger.info('Epoch {} train loss: {:.2e} '
                         'val loss: {:.2e} for "{}"'
-                        .format(epoch, tr_loss, val_loss, self.name))
+                        .format(epoch, e_tr_loss, e_val_loss, self.name))
 
             self._history.at[epoch, 'elapsed_time'] = time.time() - t0
-            self._history.at[epoch, 'training_loss'] = tr_loss.numpy()
-            self._history.at[epoch, 'training_nn_loss'] = tr_nn_loss.numpy()
-            self._history.at[epoch, 'training_p_loss'] = tr_p_loss.numpy()
-            self._history.at[epoch, 'validation_loss'] = val_loss.numpy()
-            self._history.at[epoch, 'validation_nn_loss'] = val_nn_loss.numpy()
-            self._history.at[epoch, 'validation_p_loss'] = val_p_loss.numpy()
+            self._history.at[epoch, 'training_loss'] = e_tr_loss
+            self._history.at[epoch, 'training_nn_loss'] = e_tr_nn_loss
+            self._history.at[epoch, 'training_p_loss'] = e_tr_p_loss
+            self._history.at[epoch, 'validation_loss'] = e_val_loss
+            self._history.at[epoch, 'validation_nn_loss'] = e_val_nn_loss
+            self._history.at[epoch, 'validation_p_loss'] = e_val_p_loss
 
         diagnostics = {'x': x, 'y': y, 'p': p,
                        'x_val': x_val, 'y_val': y_val, 'p_val': p_val,

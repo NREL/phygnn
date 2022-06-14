@@ -27,15 +27,15 @@ def test_norm_df():
     model = ModelBase(None, feature_names=FEATURES.columns,
                       label_names=LABELS.columns, normalize=True)
 
-    baseline, means, stdevs = PreProcess.normalize(FEATURES)
-    test = model.parse_features(FEATURES)
-    assert np.allclose(baseline.values, test)
+    baseline, means, stdevs = PreProcess.normalize(FEATURES.copy())
+    test = model.parse_features(FEATURES.copy())
+    assert np.allclose(baseline, test)
     assert np.allclose(means, model.feature_means)
     assert np.allclose(stdevs, model.feature_stdevs)
 
-    baseline, means, stdevs = PreProcess.normalize(LABELS)
-    test = model._parse_labels(LABELS)
-    np.allclose(baseline.values, test)
+    baseline, means, stdevs = PreProcess.normalize(LABELS.copy())
+    test = model.parse_labels(LABELS.copy())
+    np.allclose(baseline, test)
     assert np.allclose(means, model.label_means)
     assert np.allclose(stdevs, model.label_stdevs)
 
@@ -49,14 +49,14 @@ def test_norm_arr():
     model = ModelBase(None, feature_names=feature_names,
                       label_names=label_names, normalize=True)
 
-    baseline, means, stdevs = PreProcess.normalize(features)
-    test = model.parse_features(features, names=feature_names)
+    baseline, means, stdevs = PreProcess.normalize(features.copy())
+    test = model.parse_features(features.copy(), names=feature_names)
     assert np.allclose(baseline, test)
     assert np.allclose(means, model.feature_means)
     assert np.allclose(stdevs, model.feature_stdevs)
 
-    baseline, means, stdevs = PreProcess.normalize(labels)
-    test = model._parse_labels(labels, names=label_names)
+    baseline, means, stdevs = PreProcess.normalize(labels.copy())
+    test = model.parse_labels(labels.copy(), names=label_names)
     assert np.allclose(baseline, test)
     assert np.allclose(means, model.label_means)
     assert np.allclose(stdevs, model.label_stdevs)
