@@ -19,6 +19,7 @@ class ModelBase(ABC):
     """
     Base Model Interface
     """
+
     def __init__(self, model, feature_names=None, label_names=None,
                  norm_params=None, normalize=(True, False),
                  one_hot_categories=None):
@@ -980,6 +981,7 @@ class ModelBase(ABC):
         prediction : ndarray | pandas.DataFrame
             label prediction
         """
+
         if parse_kwargs is None:
             parse_kwargs = {}
 
@@ -1012,7 +1014,7 @@ class ModelBase(ABC):
         if self.normalize_labels:
             prediction = self.unnormalize(prediction, names=self.label_names)
 
-        if table:
+        if table and len(prediction.shape) in (1, 2):
             prediction = pd.DataFrame(prediction, columns=self.label_names)
 
         return prediction

@@ -2,6 +2,7 @@
 """
 TensorFlow Model
 """
+import numpy as np
 import json
 import logging
 import os
@@ -185,8 +186,17 @@ class PhygnnModel(ModelBase):
         if parse_kwargs is None:
             parse_kwargs = {}
 
+        if (isinstance(features, np.ndarray)
+                and features.shape[-1] == self.feature_dims):
+            parse_kwargs['names'] = self.feature_names
+
+        label_names = None
+        if (isinstance(labels, np.ndarray)
+                and labels.shape[-1] == self.label_dims):
+            label_names = self.label_names
+
         x = self.parse_features(features, **parse_kwargs)
-        y = self.parse_labels(labels)
+        y = self.parse_labels(labels, names=label_names)
 
         diagnostics = self.model.fit(x, y, p,
                                      n_batch=n_batch,

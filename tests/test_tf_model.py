@@ -77,6 +77,26 @@ def test_normalize(normalize, loss):
     assert test_mae < loss
 
 
+def test_normalize_build_separate():
+    """Annoying case of building and training separately with numpy array
+    input."""
+    hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
+                     {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
+    model = TfModel.build(list(FEATURES.columns.values),
+                          list(LABELS.columns.values),
+                          normalize=(True, True),
+                          hidden_layers=hidden_layers)
+    model.train_model(FEATURES.values.copy(), LABELS.values.copy(),
+                      epochs=10, fit_kwargs={"batch_size": 16},
+                      early_stop=False)
+    y = model.predict(FEATURES.values.copy())
+    mse = np.mean((y.values - LABELS.values)**2)
+    mbe = np.abs(np.mean(y.values - LABELS.values))
+    assert mse < 1e-5
+    assert mbe < 1e-3
+    assert 'c' in model._norm_params
+
+
 def test_complex_nn():
     """Test complex TfModel """
     hidden_layers = [{'units': 64, 'activation': 'relu', 'dropout': 0.01},

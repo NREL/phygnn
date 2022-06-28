@@ -131,6 +131,31 @@ def test_normalize():
     assert test_mae < loss
 
 
+def test_normalize_build_separate():
+    """Annoying case of building and training separately with numpy array
+    input."""
+    PhysicsGuidedNeuralNetwork.seed(0)
+    hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
+                     {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
+    model = PhygnnModel.build(p_fun_pythag,
+                              list(FEATURES.columns.values),
+                              list(LABELS.columns.values),
+                              loss_weights=(1, 0),
+                              normalize=(True, True),
+                              hidden_layers=hidden_layers,
+                              learning_rate=0.001)
+    model.train_model(FEATURES.values.copy(), Y.copy(),
+                      FEATURES.values.copy(), n_epoch=10,
+                      n_batch=None, batch_size=32,
+                      validation_split=0.001, shuffle=True)
+    y = model.predict(FEATURES.values.copy())
+    mse = np.mean((y.values - Y)**2)
+    mbe = np.mean(y.values - Y)
+    assert mse < 3e-5
+    assert mbe < 1e-3
+    assert 'c' in model._norm_params
+
+
 def test_save_load():
     """Test the save/load operations of PhygnnModel"""
     PhysicsGuidedNeuralNetwork.seed(0)
