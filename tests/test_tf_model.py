@@ -92,8 +92,8 @@ def test_normalize_build_separate():
     y = model.predict(FEATURES.values.copy())
     mse = np.mean((y.values - LABELS.values)**2)
     mbe = np.abs(np.mean(y.values - LABELS.values))
-    assert mse < 1e-5
-    assert mbe < 1e-3
+    assert mse < 3e-5
+    assert mbe < 3e-3
     assert 'c' in model._norm_params
 
 
