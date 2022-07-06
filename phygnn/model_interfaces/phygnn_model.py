@@ -3,6 +3,7 @@
 TensorFlow Model
 """
 import numpy as np
+import pprint
 import json
 import logging
 import os
@@ -237,7 +238,9 @@ class PhygnnModel(ModelBase):
                         'norm_params': self.normalization_parameters,
                         'normalize': (self.normalize_features,
                                       self.normalize_labels),
-                        'one_hot_categories': self.one_hot_categories}
+                        'version_record': self.version_record,
+                        'one_hot_categories': self.one_hot_categories,
+                        }
 
         model_params = self.dict_json_convert(model_params)
         with open(path, 'w') as f:
@@ -672,6 +675,12 @@ class PhygnnModel(ModelBase):
 
         with open(json_path, 'r') as f:
             model_params = json.load(f)
+
+        if 'version_record' in model_params:
+            version_record = model_params.pop('version_record')
+            logger.info('Loading model from disk that was created with the '
+                        'following package versions: \n{}'
+                        .format(pprint.pformat(version_record, indent=4)))
 
         model = cls(loaded, **model_params)
 

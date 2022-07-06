@@ -14,7 +14,7 @@ import sklearn
 import tensorflow as tf
 from tensorflow.keras.layers import BatchNormalization, Dropout, LSTM
 
-from phygnn.version import __version__
+from phygnn.utilities import VERSION_RECORD
 from phygnn.layers.handlers import Layers
 
 logger = logging.getLogger(__name__)
@@ -28,8 +28,7 @@ class CustomNetwork(ABC):
 
     def __init__(self, n_features=None, n_labels=None, hidden_layers=None,
                  input_layer=False, output_layer=False, layers_obj=None,
-                 feature_names=None, output_names=None, name=None,
-                 version_record=None):
+                 feature_names=None, output_names=None, name=None):
         """
         Parameters
         ----------
@@ -80,10 +79,6 @@ class CustomNetwork(ABC):
             if phygnn is trained on a DataFrame.
         name : None | str
             Optional model name for debugging.
-        version_record : dict | None
-            Optional record of import package versions. None (default) will
-            save active environment versions. A dictionary will be interpreted
-            as versions from a loaded model and will be saved as an attribute.
         """
 
         self._n_features = n_features
@@ -91,7 +86,10 @@ class CustomNetwork(ABC):
         self.feature_names = feature_names
         self.output_names = output_names
         self.name = name if isinstance(name, str) else 'CustomNetwork'
-        self._version_record = self._parse_versions(version_record)
+
+        self._version_record = VERSION_RECORD
+        logger.info('Active python environment versions: \n{}'
+                    .format(pprint.pformat(self._version_record, indent=4)))
 
         # iterator counter
         self._i = 0
@@ -125,37 +123,6 @@ class CustomNetwork(ABC):
         self._i += 1
 
         return layer
-
-    @staticmethod
-    def _parse_versions(version_record):
-        """Parse version record if not provided by init.
-
-        Parameters
-        ----------
-        version_record : dict | None
-            Optional record of import package versions. None (default) will
-            save active environment versions. A dictionary will be interpreted
-            as versions from a loaded model and will be saved as an attribute.
-
-        Returns
-        -------
-        version_record : dict
-            A record of important versions that this model was built with.
-        """
-        active_versions = {'phygnn': __version__,
-                           'tensorflow': tf.__version__,
-                           'sklearn': sklearn.__version__,
-                           'pandas': pd.__version__,
-                           'numpy': np.__version__,
-                           'python': sys.version,
-                           }
-        logger.info('Active python environment versions: \n{}'
-                    .format(pprint.pformat(active_versions, indent=4)))
-
-        if version_record is None:
-            version_record = active_versions
-
-        return version_record
 
     @staticmethod
     def _check_shapes(x, y):
@@ -532,10 +499,10 @@ class CustomNetwork(ABC):
             model_params = pickle.load(f)
 
         if 'version_record' in model_params:
+            version_record = model_params.pop('version_record')
             logger.info('Loading model from disk that was created with the '
                         'following package versions: \n{}'
-                        .format(pprint.pformat(model_params['version_record'],
-                                               indent=4)))
+                        .format(pprint.pformat(version_record, indent=4)))
 
         model = cls(**model_params)
         logger.info('Successfully initialized model from file: {}'

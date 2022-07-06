@@ -4,13 +4,14 @@ Base Model Interface
 """
 from abc import ABC
 import copy
+import pprint
 import logging
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from warnings import warn
 
-from phygnn.utilities import TF2
+from phygnn.utilities import TF2, VERSION_RECORD
 from phygnn.utilities.pre_processing import PreProcess
 
 logger = logging.getLogger(__name__)
@@ -72,6 +73,10 @@ class ModelBase(ABC):
 
         self._one_hot_categories = one_hot_categories
 
+        self._version_record = VERSION_RECORD
+        logger.info('Active python environment versions: \n{}'
+                    .format(pprint.pformat(self._version_record, indent=4)))
+
     def __repr__(self):
         msg = "{}:\n{}".format(self.__class__.__name__, self.model_summary)
 
@@ -92,6 +97,16 @@ class ModelBase(ABC):
             label prediction
         """
         return self.predict(features)
+
+    @property
+    def version_record(self):
+        """A record of important versions that this model was built with.
+
+        Returns
+        -------
+        dict
+        """
+        return self._version_record
 
     @property
     def model_summary(self):

@@ -5,6 +5,7 @@ TensorFlow Model
 import json
 import logging
 import numpy as np
+import pprint
 import os
 import pandas as pd
 import tensorflow as tf
@@ -466,7 +467,9 @@ class TfModel(ModelBase):
                         'norm_params': self.normalization_parameters,
                         'normalize': (self.normalize_features,
                                       self.normalize_labels),
-                        'one_hot_categories': self.one_hot_categories}
+                        'one_hot_categories': self.one_hot_categories,
+                        'version_record': self.version_record,
+                        }
 
         json_path = path + 'model.json'
         model_params = self.dict_json_convert(model_params)
@@ -507,6 +510,12 @@ class TfModel(ModelBase):
         json_path = path + 'model.json'
         with open(json_path, 'r') as f:
             model_params = json.load(f)
+
+        if 'version_record' in model_params:
+            version_record = model_params.pop('version_record')
+            logger.info('Loading model from disk that was created with the '
+                        'following package versions: \n{}'
+                        .format(pprint.pformat(version_record, indent=4)))
 
         model = cls(loaded, **model_params)
 
