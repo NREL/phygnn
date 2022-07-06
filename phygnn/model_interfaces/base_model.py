@@ -3,6 +3,7 @@
 Base Model Interface
 """
 from abc import ABC
+import copy
 import logging
 import numpy as np
 import pandas as pd
@@ -678,6 +679,7 @@ class ModelBase(ABC):
         data : dict | pandas.DataFrame | ndarray
             Normalized data in same format as input
         """
+        data = copy.deepcopy(data)
         if isinstance(data, dict):
             data = self._normalize_dict(data)
         elif isinstance(data, pd.DataFrame):
@@ -881,12 +883,6 @@ class ModelBase(ABC):
 
         features, feature_names = self._parse_data_names(features, names=names,
                                                          fallback_prefix='F')
-
-        if len(features.shape) != 2:
-            msg = ('{} has not been thoroughly tested with training data > 2D.'
-                   .format(self.__class__.__name__))
-            logger.warning(msg)
-            warn(msg)
 
         if self.feature_names is None:
             self._feature_names = feature_names
