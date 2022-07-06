@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 class TfModel(ModelBase):
     """
-    TensorFlow Keras Model interface
+    TensorFlow Keras Sequential Model interface
     """
 
     def __init__(self, model, feature_names=None, label_names=None,

@@ -244,30 +244,11 @@ def test_bad_categories():
         model.predict(x)
 
 
-def test_1D_conv():
-    """Test a 1D convolutional model with data shape
-    (n_obs, n_time, n_features)"""
+def _test_conv_models(hidden_layers, features, labels):
+    """Basic evaluation of 1/2/3D convolutional model."""
 
-    hidden_layers = [
-        {"class": "FlexiblePadding", "paddings": [[0, 0], [3, 3], [0, 0]],
-         "mode": "REFLECT"},
-        {'class': 'Conv1D', 'filters': 16, 'kernel_size': 3,
-         'padding': 'valid', 'activation': None},
-        {"class": "LeakyReLU", "alpha": 0.1},
-        {"class": "Cropping1D", "cropping": 2},
-
-        {"class": "FlexiblePadding", "paddings": [[0, 0], [3, 3], [0, 0]],
-         "mode": "REFLECT"},
-        {'class': 'Conv1D', 'filters': 4, 'kernel_size': 3,
-         'padding': 'valid', 'activation': None},
-        {"class": "Cropping1D", "cropping": 2},
-    ]
-
-    features = np.random.normal(100, 10, (8, 24, 2))
-    labels = np.random.normal(50, 10, (8, 24, 4))
-
-    feature_names = ['F0', 'F1']
-    label_names = ['L0', 'L1', 'L2', 'L3']
+    feature_names = [f'F{i}' for i in range(features.shape[-1])]
+    label_names = [f'L{i}' for i in range(labels.shape[-1])]
 
     dummy = TfModel.build(feature_names, label_names,
                           hidden_layers=hidden_layers,
@@ -301,3 +282,82 @@ def test_1D_conv():
 
     assert not np.allclose(dummy_out, model_out, atol=1)
     assert np.allclose(model_out, loaded_out)
+
+
+def test_1D_conv():
+    """Test a 1D convolutional model with data shape
+    (n_obs, n_time, n_features)"""
+
+    hidden_layers = [
+        {"class": "FlexiblePadding", "paddings": [[0, 0], [3, 3], [0, 0]],
+         "mode": "REFLECT"},
+        {'class': 'Conv1D', 'filters': 16, 'kernel_size': 3,
+         'padding': 'valid', 'activation': None},
+        {"class": "LeakyReLU", "alpha": 0.1},
+        {"class": "Cropping1D", "cropping": 2},
+
+        {"class": "FlexiblePadding", "paddings": [[0, 0], [3, 3], [0, 0]],
+         "mode": "REFLECT"},
+        {'class': 'Conv1D', 'filters': 4, 'kernel_size': 3,
+         'padding': 'valid', 'activation': None},
+        {"class": "Cropping1D", "cropping": 2},
+    ]
+
+    features = np.random.normal(100, 10, (8, 24, 2))
+    labels = np.random.normal(50, 10, (8, 24, 4))
+
+    _test_conv_models(hidden_layers, features, labels)
+
+
+def test_2D_conv():
+    """Test a 2D convolutional model with data shape
+    (n_obs, n_spatial_1, n_spatial_2, n_features)"""
+
+    hidden_layers = [
+        {"class": "FlexiblePadding",
+         "paddings": [[0, 0], [3, 3], [3, 3], [0, 0]],
+         "mode": "REFLECT"},
+        {'class': 'Conv2D', 'filters': 16, 'kernel_size': 3,
+         'padding': 'valid', 'activation': None},
+        {"class": "LeakyReLU", "alpha": 0.1},
+        {"class": "Cropping2D", "cropping": 2},
+
+        {"class": "FlexiblePadding",
+         "paddings": [[0, 0], [3, 3], [3, 3], [0, 0]],
+         "mode": "REFLECT"},
+        {'class': 'Conv2D', 'filters': 4, 'kernel_size': 3,
+         'padding': 'valid', 'activation': None},
+        {"class": "Cropping2D", "cropping": 2},
+    ]
+
+    features = np.random.normal(100, 10, (8, 10, 10, 2))
+    labels = np.random.normal(50, 10, (8, 10, 10, 4))
+
+    _test_conv_models(hidden_layers, features, labels)
+
+
+def test_3D_conv():
+    """Test a 3D convolutional model with data shape
+    (n_obs, n_spatial_1, n_spatial_2, n_temporal, n_features)"""
+
+    hidden_layers = [
+        {"class": "FlexiblePadding",
+         "paddings": [[0, 0], [3, 3], [3, 3], [3, 3], [0, 0]],
+         "mode": "REFLECT"},
+        {'class': 'Conv3D', 'filters': 16, 'kernel_size': 3,
+         'padding': 'valid', 'activation': None},
+        {"class": "LeakyReLU", "alpha": 0.1},
+        {"class": "Cropping3D", "cropping": 2},
+
+        {"class": "FlexiblePadding",
+         "paddings": [[0, 0], [3, 3], [3, 3], [3, 3], [0, 0]],
+         "mode": "REFLECT"},
+        {'class': 'Conv3D', 'filters': 4, 'kernel_size': 3,
+         'padding': 'valid', 'activation': None},
+        {"class": "Cropping3D", "cropping": 2},
+    ]
+
+    features = np.random.normal(100, 10, (8, 10, 10, 6, 2))
+    labels = np.random.normal(50, 10, (8, 10, 10, 6, 4))
+
+    _test_conv_models(hidden_layers, features, labels)
