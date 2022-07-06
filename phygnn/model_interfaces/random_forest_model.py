@@ -5,6 +5,7 @@ Random Forest Model
 import json
 import logging
 import numpy as np
+import pprint
 import os
 from sklearn.ensemble import RandomForestRegressor
 
@@ -184,7 +185,9 @@ class RandomForestModel(ModelBase):
                         'normalize': (self.normalize_features,
                                       self.normalize_labels),
                         'one_hot_categories': self.one_hot_categories,
-                        'model_params': self.model.get_params()}
+                        'version_record': self.version_record,
+                        'model_params': self.model.get_params(),
+                        }
 
         model_params = self.dict_json_convert(model_params)
         with open(path, 'w') as f:
@@ -283,6 +286,12 @@ class RandomForestModel(ModelBase):
 
         with open(path, 'r') as f:
             model_params = json.load(f)
+
+        if 'version_record' in model_params:
+            version_record = model_params.pop('version_record')
+            logger.info('Loading model from disk that was created with the '
+                        'following package versions: \n{}'
+                        .format(pprint.pformat(version_record, indent=4)))
 
         loaded = RandomForestRegressor()
         rf_params = model_params.pop('model_params')

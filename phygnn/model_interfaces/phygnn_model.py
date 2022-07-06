@@ -2,6 +2,8 @@
 """
 TensorFlow Model
 """
+import numpy as np
+import pprint
 import json
 import logging
 import os
@@ -185,8 +187,17 @@ class PhygnnModel(ModelBase):
         if parse_kwargs is None:
             parse_kwargs = {}
 
+        if (isinstance(features, np.ndarray)
+                and features.shape[-1] == self.feature_dims):
+            parse_kwargs['names'] = self.feature_names
+
+        label_names = None
+        if (isinstance(labels, np.ndarray)
+                and labels.shape[-1] == self.label_dims):
+            label_names = self.label_names
+
         x = self.parse_features(features, **parse_kwargs)
-        y = self.parse_labels(labels)
+        y = self.parse_labels(labels, names=label_names)
 
         diagnostics = self.model.fit(x, y, p,
                                      n_batch=n_batch,
@@ -207,17 +218,22 @@ class PhygnnModel(ModelBase):
         Parameters
         ----------
         path : str
-            Save phygnn model
+            Target model save path. Can be a target .json, .pkl, or a directory
+            that will be created+populated with a pkl model file and json
+            parameters file.
         """
 
-        path = os.path.abspath(path)
-        if path.endswith(('.json', '.pkl')):
-            dir_path = os.path.dirname(path)
-            if path.endswith('.pkl'):
-                path = path.replace('.pkl', '.json')
+        json_path = os.path.abspath(path)
+        if json_path.endswith(('.json', '.pkl')):
+            dir_path = os.path.dirname(json_path)
+            if json_path.endswith('.pkl'):
+                json_path = json_path.replace('.pkl', '.json')
         else:
-            dir_path = path
-            path = os.path.join(dir_path, os.path.basename(path) + '.json')
+            dir_path = json_path
+            fn = os.path.basename(json_path) + '.json'
+            json_path = os.path.join(dir_path, fn)
+
+        pkl_path = json_path.replace('.json', '.pkl')
 
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
@@ -227,14 +243,15 @@ class PhygnnModel(ModelBase):
                         'norm_params': self.normalization_parameters,
                         'normalize': (self.normalize_features,
                                       self.normalize_labels),
-                        'one_hot_categories': self.one_hot_categories}
+                        'version_record': self.version_record,
+                        'one_hot_categories': self.one_hot_categories,
+                        }
 
         model_params = self.dict_json_convert(model_params)
-        with open(path, 'w') as f:
+        with open(json_path, 'w') as f:
             json.dump(model_params, f, indent=2, sort_keys=True)
 
-        path = path.replace('.json', '.pkl')
-        self.model.save(path)
+        self.model.save(pkl_path)
 
     def set_loss_weights(self, loss_weights):
         """Set new loss weights
@@ -633,13 +650,16 @@ class PhygnnModel(ModelBase):
         Parameters
         ----------
         path : str
-            Load phygnn model from pickle file.
+            Directory path for PhygnnModel to load model from. There should be
+            a saved model directory with json and pickle files for the
+            PhygnnModel framework.
 
         Returns
         -------
         model : PhygnnModel
             Loaded PhygnnModel from disk.
         """
+        path = os.path.abspath(path)
         if not path.endswith(('.json', '.pkl')):
             pkl_path = os.path.join(path, os.path.basename(path) + '.pkl')
         elif path.endswith('.json'):
@@ -654,7 +674,7 @@ class PhygnnModel(ModelBase):
 
         loaded = cls.MODEL_CLASS.load(pkl_path)
 
-        json_path = path.replace('.pkl', '.json')
+        json_path = pkl_path.replace('.pkl', '.json')
         if not os.path.exists(json_path):
             e = ('{} does not exist'.format(json_path))
             logger.error(e)
@@ -662,6 +682,12 @@ class PhygnnModel(ModelBase):
 
         with open(json_path, 'r') as f:
             model_params = json.load(f)
+
+        if 'version_record' in model_params:
+            version_record = model_params.pop('version_record')
+            logger.info('Loading model from disk that was created with the '
+                        'following package versions: \n{}'
+                        .format(pprint.pformat(version_record, indent=4)))
 
         model = cls(loaded, **model_params)
 

@@ -3,13 +3,15 @@
 Base Model Interface
 """
 from abc import ABC
+import copy
+import pprint
 import logging
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from warnings import warn
 
-from phygnn.utilities import TF2
+from phygnn.utilities import TF2, VERSION_RECORD
 from phygnn.utilities.pre_processing import PreProcess
 
 logger = logging.getLogger(__name__)
@@ -19,6 +21,7 @@ class ModelBase(ABC):
     """
     Base Model Interface
     """
+
     def __init__(self, model, feature_names=None, label_names=None,
                  norm_params=None, normalize=(True, False),
                  one_hot_categories=None):
@@ -70,6 +73,10 @@ class ModelBase(ABC):
 
         self._one_hot_categories = one_hot_categories
 
+        self._version_record = VERSION_RECORD
+        logger.info('Active python environment versions: \n{}'
+                    .format(pprint.pformat(self._version_record, indent=4)))
+
     def __repr__(self):
         msg = "{}:\n{}".format(self.__class__.__name__, self.model_summary)
 
@@ -90,6 +97,16 @@ class ModelBase(ABC):
             label prediction
         """
         return self.predict(features)
+
+    @property
+    def version_record(self):
+        """A record of important versions that this model was built with.
+
+        Returns
+        -------
+        dict
+        """
+        return self._version_record
 
     @property
     def model_summary(self):
@@ -677,6 +694,7 @@ class ModelBase(ABC):
         data : dict | pandas.DataFrame | ndarray
             Normalized data in same format as input
         """
+        data = copy.deepcopy(data)
         if isinstance(data, dict):
             data = self._normalize_dict(data)
         elif isinstance(data, pd.DataFrame):
@@ -881,12 +899,6 @@ class ModelBase(ABC):
         features, feature_names = self._parse_data_names(features, names=names,
                                                          fallback_prefix='F')
 
-        if len(features.shape) != 2:
-            msg = ('{} has not been thoroughly tested with training data > 2D.'
-                   .format(self.__class__.__name__))
-            logger.warning(msg)
-            warn(msg)
-
         if self.feature_names is None:
             self._feature_names = feature_names
 
@@ -980,6 +992,7 @@ class ModelBase(ABC):
         prediction : ndarray | pandas.DataFrame
             label prediction
         """
+
         if parse_kwargs is None:
             parse_kwargs = {}
 
@@ -1012,7 +1025,7 @@ class ModelBase(ABC):
         if self.normalize_labels:
             prediction = self.unnormalize(prediction, names=self.label_names)
 
-        if table:
+        if table and len(prediction.shape) in (1, 2):
             prediction = pd.DataFrame(prediction, columns=self.label_names)
 
         return prediction

@@ -347,6 +347,38 @@ class PreProcess:
 
         return col_labels
 
+    @staticmethod
+    def update_names(names, categories):
+        """Update feature names with the OHE categories.
+
+        Parameters
+        ----------
+        names : list | None
+            Feature or label names
+        categories : dict
+            Categories to use for one hot encoding where a key is the original
+            column name in the feature dataframe and value is a list of the
+            possible unique values of the feature column. The value list must
+            have as many or more entries as unique values in the feature
+            column. This will name the feature column headers for the new
+            one-hot-encoding if features is a dataframe. Empty dict or None
+            results in category names being determined automatically. Format:
+                {'col_name1' : ['cat1', 'cat2', 'cat3'],
+                 'col_name2' : ['other_cat1', 'other_cat2']}
+
+        Returns
+        -------
+        names : list | None
+            Names updated with categories
+        """
+        if names is not None:
+            for category, replacements in categories.items():
+                if category in names:
+                    i = names.index(category)
+                    names[i] = replacements
+            names = [entry for sublist in names for entry in sublist]
+        return names
+
     def process_one_hot(self, convert_int=False, categories=None,
                         return_ind=False):
         """Process str and int columns in the feature data to one-hot vectors.

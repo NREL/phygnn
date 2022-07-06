@@ -5,6 +5,7 @@ TensorFlow Model
 import json
 import logging
 import numpy as np
+import pprint
 import os
 import pandas as pd
 import tensorflow as tf
@@ -22,8 +23,9 @@ logger = logging.getLogger(__name__)
 
 class TfModel(ModelBase):
     """
-    TensorFlow Keras Model interface
+    TensorFlow Keras Sequential Model interface
     """
+
     def __init__(self, model, feature_names=None, label_names=None,
                  norm_params=None, normalize=(True, False),
                  one_hot_categories=None):
@@ -277,6 +279,7 @@ class TfModel(ModelBase):
 
     @staticmethod
     def compile_model(n_features, n_labels=1, hidden_layers=None,
+                      input_layer=None, output_layer=None,
                       learning_rate=0.001, loss="mean_squared_error",
                       metrics=('mae', 'mse'), optimizer_class=Adam, **kwargs):
         """
@@ -288,9 +291,31 @@ class TfModel(ModelBase):
             Number of features (inputs) to train the model on
         n_labels : int, optional
             Number of labels (outputs) to the model, by default 1
-        hidden_layers : list, optional
-            List of tensorflow layers.Dense kwargs (dictionaries)
-            if None use a single linear layer, by default None
+        hidden_layers : list | None, optional
+            List of dictionaries of key word arguments for each hidden
+            layer in the NN. Dense linear layers can be input with their
+            activations or separately for more explicit control over the layer
+            ordering. For example, this is a valid input for hidden_layers that
+            will yield 7 hidden layers (9 layers total):
+                [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
+                 {'units': 64},
+                 {'batch_normalization': {'axis': -1}},
+                 {'activation': 'relu'},
+                 {'dropout': 0.01}]
+            by default None which will lead to a single linear layer
+        input_layer : None | bool | InputLayer
+            Keras input layer. Will default to an InputLayer with
+            input shape = n_features.
+            Can be False if the input layer will be included in the
+            hidden_layers input.
+        output_layer : None | bool | list | dict
+            Output layer specification. Can be a list/dict similar to
+            hidden_layers input specifying a dense layer with activation.
+            For example, for a classfication problem with a single output,
+            output_layer should be [{'units': 1}, {'activation': 'sigmoid'}]
+            This defaults to a single dense layer with no activation
+            (best for regression problems).  Can be False if the output layer
+            will be included in the hidden_layers input.
         learning_rate : float, optional
             tensorflow optimizer learning rate, by default 0.001
         loss : str, optional
@@ -312,7 +337,9 @@ class TfModel(ModelBase):
         """
         model = tf.keras.models.Sequential()
         model = Layers.compile(model, n_features, n_labels=n_labels,
-                               hidden_layers=hidden_layers)
+                               hidden_layers=hidden_layers,
+                               input_layer=input_layer,
+                               output_layer=output_layer)
 
         if isinstance(metrics, tuple):
             metrics = list(metrics)
@@ -358,8 +385,17 @@ class TfModel(ModelBase):
         if parse_kwargs is None:
             parse_kwargs = {}
 
+        if (isinstance(features, np.ndarray)
+                and features.shape[-1] == self.feature_dims):
+            parse_kwargs['names'] = self.feature_names
+
+        label_names = None
+        if (isinstance(labels, np.ndarray)
+                and labels.shape[-1] == self.label_dims):
+            label_names = self.label_names
+
         features = self.parse_features(features, **parse_kwargs)
-        labels = self.parse_labels(labels)
+        labels = self.parse_labels(labels, names=label_names)
 
         if self._history is not None:
             msg = 'Model has already been trained and will be re-fit!'
@@ -431,7 +467,9 @@ class TfModel(ModelBase):
                         'norm_params': self.normalization_parameters,
                         'normalize': (self.normalize_features,
                                       self.normalize_labels),
-                        'one_hot_categories': self.one_hot_categories}
+                        'one_hot_categories': self.one_hot_categories,
+                        'version_record': self.version_record,
+                        }
 
         json_path = path + 'model.json'
         model_params = self.dict_json_convert(model_params)
@@ -446,9 +484,9 @@ class TfModel(ModelBase):
         Parameters
         ----------
         path : str
-            Directory path to TfModel to load model from. There should be a
-            tensorflow saved model directory with a parallel pickle file for
-            the TfModel framework.
+            Directory path for TfModel to load model from. There should be a
+            saved model directory with json and pickle files for the TfModel
+            framework.
 
         Returns
         -------
@@ -473,15 +511,28 @@ class TfModel(ModelBase):
         with open(json_path, 'r') as f:
             model_params = json.load(f)
 
+        if 'version_record' in model_params:
+            version_record = model_params.pop('version_record')
+            logger.info('Loading model from disk that was created with the '
+                        'following package versions: \n{}'
+                        .format(pprint.pformat(version_record, indent=4)))
+
         model = cls(loaded, **model_params)
 
         return model
 
     @classmethod
-    def build(cls, feature_names, label_names, normalize=(True, False),
-              one_hot_categories=None, hidden_layers=None, learning_rate=0.001,
-              loss="mean_squared_error", metrics=('mae', 'mse'),
-              optimizer_class=Adam, **kwargs):
+    def build(cls, feature_names, label_names,
+              normalize=(True, False),
+              one_hot_categories=None,
+              hidden_layers=None,
+              input_layer=None,
+              output_layer=None,
+              learning_rate=0.001,
+              loss="mean_squared_error",
+              metrics=('mae', 'mse'),
+              optimizer_class=Adam,
+              **kwargs):
         """
         Build tensorflow sequential model from given features, layers and
         kwargs
@@ -502,9 +553,31 @@ class TfModel(ModelBase):
         one_hot_categories : dict, optional
             Features to one-hot encode using given categories, if None do
             not run one-hot encoding, by default None
-        hidden_layers : list, optional
-            List of tensorflow layers.Dense kwargs (dictionaries)
-            if None use a single linear layer, by default None
+        hidden_layers : list | None, optional
+            List of dictionaries of key word arguments for each hidden
+            layer in the NN. Dense linear layers can be input with their
+            activations or separately for more explicit control over the layer
+            ordering. For example, this is a valid input for hidden_layers that
+            will yield 7 hidden layers (9 layers total):
+                [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
+                 {'units': 64},
+                 {'batch_normalization': {'axis': -1}},
+                 {'activation': 'relu'},
+                 {'dropout': 0.01}]
+            by default None which will lead to a single linear layer
+        input_layer : None | bool | InputLayer
+            Keras input layer. Will default to an InputLayer with
+            input shape = n_features.
+            Can be False if the input layer will be included in the
+            hidden_layers input.
+        output_layer : None | bool | list | dict
+            Output layer specification. Can be a list/dict similar to
+            hidden_layers input specifying a dense layer with activation.
+            For example, for a classfication problem with a single output,
+            output_layer should be [{'units': 1}, {'activation': 'sigmoid'}]
+            This defaults to a single dense layer with no activation
+            (best for regression problems).  Can be False if the output layer
+            will be included in the hidden_layers input.
         learning_rate : float, optional
             tensorflow optimizer learning rate, by default 0.001
         loss : str, optional
@@ -537,6 +610,8 @@ class TfModel(ModelBase):
         model = cls.compile_model(len(feature_names),
                                   n_labels=len(label_names),
                                   hidden_layers=hidden_layers,
+                                  input_layer=input_layer,
+                                  output_layer=output_layer,
                                   learning_rate=learning_rate, loss=loss,
                                   metrics=metrics,
                                   optimizer_class=optimizer_class,
@@ -551,6 +626,7 @@ class TfModel(ModelBase):
     @classmethod
     def build_trained(cls, features, labels, normalize=(True, False),
                       one_hot_categories=None, hidden_layers=None,
+                      input_layer=None, output_layer=None,
                       learning_rate=0.001, loss="mean_squared_error",
                       metrics=('mae', 'mse'), optimizer_class=Adam, epochs=100,
                       shuffle=True, validation_split=0.2, early_stop=True,
@@ -576,9 +652,31 @@ class TfModel(ModelBase):
         one_hot_categories : dict, optional
             Features to one-hot encode using given categories, if None do
             not run one-hot encoding, by default None
-        hidden_layers : list, optional
-            List of tensorflow layers.Dense kwargs (dictionaries)
-            if None use a single linear layer, by default None
+        hidden_layers : list | None, optional
+            List of dictionaries of key word arguments for each hidden
+            layer in the NN. Dense linear layers can be input with their
+            activations or separately for more explicit control over the layer
+            ordering. For example, this is a valid input for hidden_layers that
+            will yield 7 hidden layers (9 layers total):
+                [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
+                 {'units': 64},
+                 {'batch_normalization': {'axis': -1}},
+                 {'activation': 'relu'},
+                 {'dropout': 0.01}]
+            by default None which will lead to a single linear layer
+        input_layer : None | bool | InputLayer
+            Keras input layer. Will default to an InputLayer with
+            input shape = n_features.
+            Can be False if the input layer will be included in the
+            hidden_layers input.
+        output_layer : None | bool | list | dict
+            Output layer specification. Can be a list/dict similar to
+            hidden_layers input specifying a dense layer with activation.
+            For example, for a classfication problem with a single output,
+            output_layer should be [{'units': 1}, {'activation': 'sigmoid'}]
+            This defaults to a single dense layer with no activation
+            (best for regression problems).  Can be False if the output layer
+            will be included in the hidden_layers input.
         learning_rate : float, optional
             tensorflow optimizer learning rate, by default 0.001
         loss : str, optional
@@ -626,6 +724,8 @@ class TfModel(ModelBase):
                           normalize=normalize,
                           one_hot_categories=one_hot_categories,
                           hidden_layers=hidden_layers,
+                          input_layer=input_layer,
+                          output_layer=output_layer,
                           learning_rate=learning_rate,
                           loss=loss,
                           metrics=metrics,
