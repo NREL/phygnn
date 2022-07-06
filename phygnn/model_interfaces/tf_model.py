@@ -484,9 +484,9 @@ class TfModel(ModelBase):
         Parameters
         ----------
         path : str
-            Directory path to TfModel to load model from. There should be a
-            tensorflow saved model directory with a parallel pickle file for
-            the TfModel framework.
+            Directory path for TfModel to load model from. There should be a
+            saved model directory with json and pickle files for the TfModel
+            framework.
 
         Returns
         -------

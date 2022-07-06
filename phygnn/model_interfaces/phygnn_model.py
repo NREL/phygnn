@@ -218,17 +218,22 @@ class PhygnnModel(ModelBase):
         Parameters
         ----------
         path : str
-            Save phygnn model
+            Target model save path. Can be a target .json, .pkl, or a directory
+            that will be created+populated with a pkl model file and json
+            parameters file.
         """
 
-        path = os.path.abspath(path)
-        if path.endswith(('.json', '.pkl')):
-            dir_path = os.path.dirname(path)
-            if path.endswith('.pkl'):
-                path = path.replace('.pkl', '.json')
+        json_path = os.path.abspath(path)
+        if json_path.endswith(('.json', '.pkl')):
+            dir_path = os.path.dirname(json_path)
+            if json_path.endswith('.pkl'):
+                json_path = json_path.replace('.pkl', '.json')
         else:
-            dir_path = path
-            path = os.path.join(dir_path, os.path.basename(path) + '.json')
+            dir_path = json_path
+            fn = os.path.basename(json_path) + '.json'
+            json_path = os.path.join(dir_path, fn)
+
+        pkl_path = json_path.replace('.json', '.pkl')
 
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
@@ -243,11 +248,10 @@ class PhygnnModel(ModelBase):
                         }
 
         model_params = self.dict_json_convert(model_params)
-        with open(path, 'w') as f:
+        with open(json_path, 'w') as f:
             json.dump(model_params, f, indent=2, sort_keys=True)
 
-        path = path.replace('.json', '.pkl')
-        self.model.save(path)
+        self.model.save(pkl_path)
 
     def set_loss_weights(self, loss_weights):
         """Set new loss weights
@@ -646,13 +650,16 @@ class PhygnnModel(ModelBase):
         Parameters
         ----------
         path : str
-            Load phygnn model from pickle file.
+            Directory path for PhygnnModel to load model from. There should be
+            a saved model directory with json and pickle files for the
+            PhygnnModel framework.
 
         Returns
         -------
         model : PhygnnModel
             Loaded PhygnnModel from disk.
         """
+        path = os.path.abspath(path)
         if not path.endswith(('.json', '.pkl')):
             pkl_path = os.path.join(path, os.path.basename(path) + '.pkl')
         elif path.endswith('.json'):
@@ -667,7 +674,7 @@ class PhygnnModel(ModelBase):
 
         loaded = cls.MODEL_CLASS.load(pkl_path)
 
-        json_path = path.replace('.pkl', '.json')
+        json_path = pkl_path.replace('.pkl', '.json')
         if not os.path.exists(json_path):
             e = ('{} does not exist'.format(json_path))
             logger.error(e)

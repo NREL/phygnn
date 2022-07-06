@@ -2,19 +2,18 @@
 Tests for basic phygnn model interface functionality and execution.
 """
 # pylint: disable=W0613
+import tempfile
+import json
 import os
 import numpy as np
 import pandas as pd
 import pytest
 import tensorflow as tf
 from tensorflow.keras.layers import (InputLayer, Dense, Activation)
-import shutil
 
-from phygnn import PhysicsGuidedNeuralNetwork, TESTDATADIR
+from phygnn import PhysicsGuidedNeuralNetwork
 from phygnn.model_interfaces.phygnn_model import PhygnnModel
 
-
-FPATH = os.path.join(TESTDATADIR, '_temp_model', '_temp_model.pkl')
 
 N = 100
 A = np.linspace(-1, 1, N)
@@ -159,21 +158,27 @@ def test_normalize_build_separate():
 def test_save_load():
     """Test the save/load operations of PhygnnModel"""
     PhysicsGuidedNeuralNetwork.seed(0)
-    model = PhygnnModel.build_trained(p_fun_pythag, FEATURES, LABELS, P,
-                                      normalize=False,
-                                      hidden_layers=HIDDEN_LAYERS,
-                                      loss_weights=(0.0, 1.0),
-                                      n_batch=4,
-                                      n_epoch=20,
-                                      save_path=FPATH)
-    y_pred = model[X]
+    with tempfile.TemporaryDirectory() as td:
+        model_fpath = os.path.join(td, 'test_model/')
+        model = PhygnnModel.build_trained(p_fun_pythag, FEATURES, LABELS, P,
+                                          normalize=False,
+                                          hidden_layers=HIDDEN_LAYERS,
+                                          loss_weights=(0.0, 1.0),
+                                          n_batch=4,
+                                          n_epoch=20,
+                                          save_path=model_fpath)
+        y_pred = model[X]
 
-    loaded = PhygnnModel.load(FPATH)
-    y_pred_loaded = loaded[X]
-    np.allclose(y_pred.values, y_pred_loaded.values)
-    assert loaded.feature_names == ['a', 'b']
-    assert loaded.label_names == ['c']
-    shutil.rmtree(os.path.dirname(FPATH))
+        loaded = PhygnnModel.load(model_fpath)
+        y_pred_loaded = loaded[X]
+        np.allclose(y_pred.values, y_pred_loaded.values)
+        assert loaded.feature_names == ['a', 'b']
+        assert loaded.label_names == ['c']
+
+        with open(os.path.join(model_fpath, 'test_model.json'), 'r') as f:
+            params = json.load(f)
+
+        assert 'version_record' in params
 
 
 def test_OHE():

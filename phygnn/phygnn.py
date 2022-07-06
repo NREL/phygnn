@@ -28,8 +28,7 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
                  learning_rate=0.01, history=None,
                  kernel_reg_rate=0.0, kernel_reg_power=1,
                  bias_reg_rate=0.0, bias_reg_power=1,
-                 feature_names=None, output_names=None, name=None,
-                 version_record=None):
+                 feature_names=None, output_names=None, name=None):
         """
         Parameters
         ----------
@@ -128,10 +127,6 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
             if phygnn is trained on a DataFrame.
         name : None | str
             Optional model name for debugging.
-        version_record : dict | None
-            Optional record of import package versions. None (default) will
-            save active environment versions. A dictionary will be interpreted
-            as versions from a loaded model and will be saved as an attribute.
         """
 
         super().__init__(n_features=n_features,
@@ -142,7 +137,7 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
                          layers_obj=layers_obj,
                          feature_names=feature_names,
                          output_names=output_names,
-                         version_record=version_record)
+                         )
 
         self._p_fun = p_fun if p_fun is not None else self.p_fun_dummy
         self._loss_weights = None

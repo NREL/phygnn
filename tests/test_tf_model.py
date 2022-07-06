@@ -3,6 +3,7 @@ Tests for basic tensorflow model functionality and execution.
 """
 # pylint: disable=W0613
 import numpy as np
+import json
 import os
 import pandas as pd
 import pytest
@@ -160,6 +161,11 @@ def test_save_load():
         np.allclose(y_pred.values, y_pred_loaded.values)
         assert loaded.feature_names == ['a', 'b']
         assert loaded.label_names == ['c']
+
+        with open(os.path.join(model_fpath, 'model.json'), 'r') as f:
+            params = json.load(f)
+
+        assert 'version_record' in params
 
 
 def test_OHE():
