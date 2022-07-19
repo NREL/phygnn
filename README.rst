@@ -28,6 +28,10 @@ phygnn
 
 .. image:: https://zenodo.org/badge/276492167.svg
    :target: https://zenodo.org/badge/latestdoi/276492167
+   
+.. image:: https://mybinder.org/badge_logo.svg
+    :target: https://mybinder.org/v2/gh/NREL/PHYGNN/HEAD
+    
 
 **phygnn** (fi-geon | \ ˈfi-jən) noun.
 
@@ -48,8 +52,10 @@ For details on the phygnn class framework see `the phygnn class documentation
 here. <https://nrel.github.io/phygnn/_autosummary/phygnn.phygnn.PhysicsGuidedNeuralNetwork.html>`_
 
 For example notebooks using the phygnn architecture for regression,
-classification, and even GAN applications, see `the example notebooks here.
-<https://github.com/NREL/phygnn/tree/master/examples>`_
+classification, and even GAN applications, see `the example notebooks here
+<https://github.com/NREL/phygnn/tree/master/examples>`_. 
+You can also run the examples using a free cloud-hosted jupyter instance via  
+`Binder <https://mybinder.org/v2/gh/NREL/PHYGNN/HEAD>`_.
 
 At the National Renewable Energy Lab (NREL), we are using the phygnn framework
 to supplement traditional satellite-based cloud property prediction models. We
