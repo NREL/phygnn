@@ -563,3 +563,28 @@ class SqueezeAndExcitation(tf.keras.layers.Layer):
         x = self._hidden_layers[-1]([t_in, x])
 
         return x
+
+
+class Sup3rAdder(tf.keras.layers.Layer):
+    """Layer to add high-resolution data to a sup3r model in the middle of a
+    super resolution forward pass."""
+
+    def call(self, x, hi_res_adder):
+        """adds hi-resolution data to the input tensor x in the middle of a
+        sup3r resolution network.
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+        hi_res_adder : tf.Tensor | np.ndarray
+            This should be a 4D array for spatial enhancement model or 5D array
+            for a spatiotemporal enhancement model (obs, spatial_1, spatial_2,
+            (temporal), features) that can be added to x.
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor with the hi_res_adder added to x.
+        """
+        return x + hi_res_adder
