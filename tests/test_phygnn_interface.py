@@ -125,7 +125,7 @@ def test_normalize():
 
     test_mae = np.mean(np.abs(model.predict(X, table=False) - Y))
 
-    loss = 0.015
+    loss = 0.02
     assert model.history.validation_loss.values[-1] < loss
     assert test_mae < loss
 
@@ -150,8 +150,8 @@ def test_normalize_build_separate():
     y = model.predict(FEATURES.values.copy())
     mse = np.mean((y.values - Y)**2)
     mbe = np.mean(y.values - Y)
-    assert mse < 3e-5
-    assert mbe < 1e-3
+    assert mse < 5e-5
+    assert np.abs(mbe) < 5e-3
     assert 'c' in model._norm_params
 
 
