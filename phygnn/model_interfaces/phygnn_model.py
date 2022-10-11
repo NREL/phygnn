@@ -276,7 +276,6 @@ class PhygnnModel(ModelBase):
               output_layer=None,
               layers_obj=None,
               metric='mae',
-              initializer=None,
               optimizer=None,
               learning_rate=0.01,
               history=None,
@@ -349,8 +348,6 @@ class PhygnnModel(ModelBase):
         metric : str, optional
             Loss metric option for the NN loss function (not the physical
             loss function). Must be a valid key in phygnn.loss_metrics.METRICS
-        initializer : tensorflow.keras.initializers, optional
-            Instantiated initializer object. None defaults to GlorotUniform
         optimizer : tensorflow.keras.optimizers | dict | None
             Instantiated tf.keras.optimizers object or a dict optimizer config
             from tf.keras.optimizers.get_config(). None defaults to Adam.
@@ -409,7 +406,6 @@ class PhygnnModel(ModelBase):
                                            output_layer=output_layer,
                                            layers_obj=layers_obj,
                                            metric=metric,
-                                           initializer=initializer,
                                            optimizer=optimizer,
                                            learning_rate=learning_rate,
                                            history=history,
@@ -437,7 +433,6 @@ class PhygnnModel(ModelBase):
                       output_layer=None,
                       layers_obj=None,
                       metric='mae',
-                      initializer=None,
                       optimizer=None,
                       learning_rate=0.01,
                       history=None,
@@ -531,8 +526,6 @@ class PhygnnModel(ModelBase):
         metric : str, optional
             Loss metric option for the NN loss function (not the physical
             loss function). Must be a valid key in phygnn.loss_metrics.METRICS
-        initializer : tensorflow.keras.initializers, optional
-            Instantiated initializer object. None defaults to GlorotUniform
         optimizer : tensorflow.keras.optimizers | dict | None
             Instantiated tf.keras.optimizers object or a dict optimizer config
             from tf.keras.optimizers.get_config(). None defaults to Adam.
@@ -613,7 +606,6 @@ class PhygnnModel(ModelBase):
                           output_layer=output_layer,
                           layers_obj=layers_obj,
                           metric=metric,
-                          initializer=initializer,
                           optimizer=optimizer,
                           learning_rate=learning_rate,
                           history=history,

@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import logging
 import tensorflow as tf
-from tensorflow.keras import optimizers, initializers
+from tensorflow.keras import optimizers
 
 from phygnn.base import CustomNetwork
 from phygnn.utilities.loss_metrics import METRICS
@@ -24,7 +24,7 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
     def __init__(self, p_fun, loss_weights=(0.5, 0.5),
                  n_features=1, n_labels=1, hidden_layers=None,
                  input_layer=None, output_layer=None, layers_obj=None,
-                 metric='mae', initializer=None, optimizer=None,
+                 metric='mae', optimizer=None,
                  learning_rate=0.01, history=None,
                  kernel_reg_rate=0.0, kernel_reg_power=1,
                  bias_reg_rate=0.0, bias_reg_power=1,
@@ -85,8 +85,6 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
             loss function). Must be a valid key in phygnn.loss_metrics.METRICS
             or a method in tensorflow.keras.losses that takes
             (y_true, y_predicted) as arguments.
-        initializer : tensorflow.keras.initializers, optional
-            Instantiated initializer object. None defaults to GlorotUniform
         optimizer : tensorflow.keras.optimizers | dict | None
             Instantiated tf.keras.optimizers object or a dict optimizer config
             from tf.keras.optimizers.get_config(). None defaults to Adam.
@@ -164,10 +162,6 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
                        .format(self._metric, list(METRICS.keys())))
                 logger.error(msg)
                 raise KeyError(msg) from e
-
-        self._initializer = initializer
-        if initializer is None:
-            self._initializer = initializers.GlorotUniform()
 
         self._optimizer = optimizer
         if isinstance(optimizer, dict):
@@ -321,7 +315,6 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
         model_params.update({'p_fun': self._p_fun,
                              'loss_weights': self._loss_weights,
                              'metric': self._metric,
-                             'initializer': self._initializer,
                              'optimizer': self._optimizer.get_config(),
                              'learning_rate': self._learning_rate,
                              'layers_obj': self.layers_obj,
