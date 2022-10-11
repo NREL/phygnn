@@ -118,8 +118,8 @@ def test_phygnn():
     assert isinstance(model.layers[3], Dense)
     assert isinstance(model.layers[4], Activation)
     assert isinstance(model.layers[5], Dense)
-    assert model.history.validation_loss.values[-1] < 0.03
-    assert test_mae < 0.03
+    assert model.history.validation_loss.values[-1] < 0.05
+    assert test_mae < 0.05
 
 
 def test_df_input():

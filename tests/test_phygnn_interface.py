@@ -99,7 +99,7 @@ def test_phygnn_model():
 
     test_mae = np.mean(np.abs(model.predict(X, table=False) - Y))
 
-    loss = 0.019
+    loss = 0.05
     assert len(model.layers) == 6
     assert len(model.weights) == 6
     assert len(model.history) == 20
