@@ -449,6 +449,7 @@ class ModelBase(ABC):
         np.random.seed(s)
         if TF2:
             tf.random.set_seed(s)
+            tf.keras.utils.set_random_seed(s)
         else:
             tf.random.set_random_seed(s)
 

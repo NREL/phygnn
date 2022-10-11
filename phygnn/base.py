@@ -4,13 +4,11 @@ Custom Neural Network Infrastructure.
 """
 from abc import ABC, abstractmethod
 import os
-import sys
 import pickle
 import pprint
 import numpy as np
 import pandas as pd
 import logging
-import sklearn
 import tensorflow as tf
 from tensorflow.keras.layers import BatchNormalization, Dropout, LSTM
 
@@ -245,6 +243,7 @@ class CustomNetwork(ABC):
         """
         np.random.seed(s)
         tf.random.set_seed(s)
+        tf.keras.utils.set_random_seed(s)
 
     @classmethod
     def get_val_split(cls, *args, shuffle=True, validation_split=0.2):

@@ -99,7 +99,7 @@ def test_phygnn_model():
 
     test_mae = np.mean(np.abs(model.predict(X, table=False) - Y))
 
-    loss = 0.019
+    loss = 0.05
     assert len(model.layers) == 6
     assert len(model.weights) == 6
     assert len(model.history) == 20
@@ -120,12 +120,13 @@ def test_normalize():
                                       normalize=False,
                                       hidden_layers=HIDDEN_LAYERS,
                                       loss_weights=(0.0, 1.0),
-                                      n_batch=4,
-                                      n_epoch=20)
+                                      n_batch=8,
+                                      n_epoch=20,
+                                      learning_rate=0.0005)
 
     test_mae = np.mean(np.abs(model.predict(X, table=False) - Y))
 
-    loss = 0.015
+    loss = 0.02
     assert model.history.validation_loss.values[-1] < loss
     assert test_mae < loss
 
@@ -142,16 +143,16 @@ def test_normalize_build_separate():
                               loss_weights=(1, 0),
                               normalize=(True, True),
                               hidden_layers=hidden_layers,
-                              learning_rate=0.001)
+                              learning_rate=0.0005)
     model.train_model(FEATURES.values.copy(), Y.copy(),
-                      FEATURES.values.copy(), n_epoch=10,
-                      n_batch=None, batch_size=32,
+                      FEATURES.values.copy(), n_epoch=20,
+                      n_batch=None, batch_size=128,
                       validation_split=0.001, shuffle=True)
     y = model.predict(FEATURES.values.copy())
     mse = np.mean((y.values - Y)**2)
     mbe = np.mean(y.values - Y)
-    assert mse < 3e-5
-    assert mbe < 1e-3
+    assert mse < 1e-4
+    assert np.abs(mbe) < 1e-2
     assert 'c' in model._norm_params
 
 
