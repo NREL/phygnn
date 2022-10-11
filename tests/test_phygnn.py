@@ -256,22 +256,28 @@ def test_dummy_p_fun():
     PhysicsGuidedNeuralNetwork.seed(0)
     model_0 = PhysicsGuidedNeuralNetwork(p_fun=None,
                                          hidden_layers=HIDDEN_LAYERS,
-                                         loss_weights=(0.5, 0.5),
-                                         n_features=2, n_labels=1)
-    model_0.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
+                                         loss_weights=(1.0, 0.0),
+                                         metric='mae',
+                                         n_features=2, n_labels=1,
+                                         learning_rate=5e-4)
+    model_0.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20, shuffle=False)
+    pred_0 = model_0.predict(X, to_numpy=True)
 
     PhysicsGuidedNeuralNetwork.seed(0)
     model_1 = PhysicsGuidedNeuralNetwork(p_fun=None,
                                          hidden_layers=HIDDEN_LAYERS,
                                          loss_weights=(1.0, 0.0),
                                          metric='mae',
-                                         n_features=2, n_labels=1)
-    model_1.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20)
+                                         n_features=2, n_labels=1,
+                                         learning_rate=5e-4)
+    model_1.fit(X, Y_NOISE, P, n_batch=4, n_epoch=20, shuffle=False)
+    pred_1 = model_1.predict(X, to_numpy=True)
 
     loss_0 = model_0.history.training_loss.values.astype(float)
     loss_1 = model_1.history.training_loss.values.astype(float)
 
-    assert np.allclose(loss_0[10:], loss_1[10:], rtol=0.01)
+    assert np.allclose(pred_0, pred_1)
+    assert np.allclose(loss_0, loss_1)
 
 
 def test_bad_pfun():
