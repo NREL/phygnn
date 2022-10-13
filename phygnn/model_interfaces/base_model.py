@@ -3,6 +3,7 @@
 Base Model Interface
 """
 from abc import ABC
+import random
 import copy
 import pprint
 import logging
@@ -446,10 +447,10 @@ class ModelBase(ABC):
         s : int
             Random number generator seed
         """
+        random.seed(s)
         np.random.seed(s)
         if TF2:
             tf.random.set_seed(s)
-            tf.keras.utils.set_random_seed(s)
         else:
             tf.random.set_random_seed(s)
 
