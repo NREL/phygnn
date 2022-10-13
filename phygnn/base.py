@@ -3,6 +3,7 @@
 Custom Neural Network Infrastructure.
 """
 from abc import ABC, abstractmethod
+import random
 import os
 import pickle
 import pprint
@@ -241,9 +242,9 @@ class CustomNetwork(ABC):
         s : int
             Random seed
         """
+        random.seed(s)
         np.random.seed(s)
         tf.random.set_seed(s)
-        tf.keras.utils.set_random_seed(s)
 
     @classmethod
     def get_val_split(cls, *args, shuffle=True, validation_split=0.2):
