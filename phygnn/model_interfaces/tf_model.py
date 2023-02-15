@@ -354,8 +354,8 @@ class TfModel(ModelBase):
         return model
 
     def train_model(self, features, labels, epochs=100, shuffle=True,
-                    validation_split=0.2, early_stop=True, parse_kwargs=None,
-                    fit_kwargs=None):
+                    validation_split=0.2, early_stop=True, stop_kwargs=None,
+                    parse_kwargs=None, fit_kwargs=None):
         """
         Train the model with the provided features and label
 
@@ -377,9 +377,12 @@ class TfModel(ModelBase):
             by default 0.2
         early_stop : bool
             Flag to stop training when it stops improving
-        parse_kwargs : dict
+        stop_kwargs : dict | None
+            kwargs for tf.keras.callbacks.EarlyStopping() if early_stop
+            default is: {'monitor': 'val_loss', 'patience': 10}
+        parse_kwargs : dict | None
             kwargs for cls.parse_features
-        fit_kwargs : dict
+        fit_kwargs : dict | None
             kwargs for tensorflow.keras.models.fit
         """
         if parse_kwargs is None:
@@ -406,8 +409,9 @@ class TfModel(ModelBase):
             fit_kwargs = {}
 
         if early_stop:
-            early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss',
-                                                          patience=10)
+            if stop_kwargs is None:
+                stop_kwargs = {'monitor': 'val_loss', 'patience': 10}
+            early_stop = tf.keras.callbacks.EarlyStopping(**stop_kwargs)
             callbacks = fit_kwargs.pop('callbacks', None)
             if callbacks is None:
                 callbacks = [early_stop]
@@ -629,7 +633,8 @@ class TfModel(ModelBase):
                       input_layer=None, output_layer=None,
                       learning_rate=0.001, loss="mean_squared_error",
                       metrics=('mae', 'mse'), optimizer_class=Adam, epochs=100,
-                      shuffle=True, validation_split=0.2, early_stop=True,
+                      shuffle=True, validation_split=0.2,
+                      early_stop=True, stop_kwargs=None,
                       save_path=None, compile_kwargs=None, parse_kwargs=None,
                       fit_kwargs=None):
         """
@@ -698,6 +703,9 @@ class TfModel(ModelBase):
             by default 0.2
         early_stop : bool
             Flag to stop training when it stops improving
+        stop_kwargs : dict | None
+            kwargs for tf.keras.callbacks.EarlyStopping() if early_stop
+            default is: {'monitor': 'val_loss', 'patience': 10}
         save_path : str
             Directory path to save model to. The tensorflow model will be
             saved to the directory while the framework parameters will be
@@ -737,6 +745,7 @@ class TfModel(ModelBase):
                           shuffle=shuffle,
                           validation_split=validation_split,
                           early_stop=early_stop,
+                          stop_kwargs=stop_kwargs,
                           parse_kwargs=parse_kwargs,
                           fit_kwargs=fit_kwargs)
 
