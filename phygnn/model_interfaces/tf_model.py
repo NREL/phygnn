@@ -385,8 +385,10 @@ class TfModel(ModelBase):
         fit_kwargs : dict | None
             kwargs for tensorflow.keras.models.fit
         """
-        if parse_kwargs is None:
-            parse_kwargs = {}
+
+        parse_kwargs = parse_kwargs or {}
+        fit_kwargs = fit_kwargs or {}
+        stop_kwargs = stop_kwargs or {'monitor': 'val_loss', 'patience': 10}
 
         if (isinstance(features, np.ndarray)
                 and features.shape[-1] == self.feature_dims):
@@ -405,12 +407,7 @@ class TfModel(ModelBase):
             logger.warning(msg)
             warn(msg)
 
-        if fit_kwargs is None:
-            fit_kwargs = {}
-
         if early_stop:
-            if stop_kwargs is None:
-                stop_kwargs = {'monitor': 'val_loss', 'patience': 10}
             early_stop = tf.keras.callbacks.EarlyStopping(**stop_kwargs)
             callbacks = fit_kwargs.pop('callbacks', None)
             if callbacks is None:
