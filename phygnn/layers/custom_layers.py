@@ -327,7 +327,7 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
     """
 
     def __init__(self, spatial_mult=1, temporal_mult=1,
-                 temporal_method='nearest'):
+                 temporal_method='nearest', t_roll=0):
         """
         Parameters
         ----------
@@ -343,12 +343,23 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
             if the input layer has shape (123, 5, 5, 24, 2) with multiplier=2
             the output shape will be (123, 5, 5, 48, 2).
         temporal_method : str
-            Interpolation method for tf.image.resize().
+            Interpolation method for tf.image.resize(). Can also be
+            "depth_to_time" for an operation similar to tf.nn.depth_to_space
+            where the feature axis is unpacked into the temporal axis.
+        t_roll : int
+            Option to roll the temporal axis after expanding. When using
+            temporal_method="depth_to_time", the default (t_roll=0) will
+            add temporal steps after the input steps such that if input
+            temporal shape is 3 and the temporal_mult is 24x, the output will
+            have the original timesteps at idt=0,24,48 but if t_roll=12, the
+            output will have the original timesteps at idt=12,36,60
         """
+
         super().__init__()
         self._spatial_mult = int(spatial_mult)
         self._temporal_mult = int(temporal_mult)
         self._temporal_meth = temporal_method
+        self._t_roll = t_roll
 
     @staticmethod
     def _check_shape(input_shape):
@@ -377,14 +388,35 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
 
     def _temporal_expand(self, x):
         """Expand the temporal dimension (axis=3) of a 5D tensor"""
-        temp_expand_shape = tf.stack(
-            [x.shape[2], x.shape[3] * self._temporal_mult])
-        out = []
-        for x_unstack in tf.unstack(x, axis=1):
-            out.append(tf.image.resize(x_unstack, temp_expand_shape,
-                       method=self._temporal_meth))
 
-        return tf.stack(out, axis=1)
+        if self._temporal_meth == 'depth_to_time':
+            check_shape = x.shape[-1] % self._temporal_mult
+            if check_shape != 0:
+                msg = ('Temporal expansion of factor {} is being attempted on '
+                       'input tensor of shape {}, but the last dimension of '
+                       'the input tensor ({}) must be divisible by the '
+                       'temporal factor ({}).'
+                       .format(self._temporal_mult, x.shape, x.shape[-1],
+                               self._temporal_mult))
+                logger.error(msg)
+                raise RuntimeError(msg)
+
+            shape = (x.shape[0], x.shape[1], x.shape[2],
+                     x.shape[3] * self._temporal_mult,
+                     x.shape[4] // self._temporal_mult)
+            out = tf.reshape(x, shape)
+            out = tf.roll(out, self._t_roll, axis=3)
+
+        else:
+            temp_expand_shape = tf.stack([x.shape[2],
+                                          x.shape[3] * self._temporal_mult])
+            out = []
+            for x_unstack in tf.unstack(x, axis=1):
+                out.append(tf.image.resize(x_unstack, temp_expand_shape,
+                           method=self._temporal_meth))
+            out = tf.stack(out, axis=1)
+
+        return out
 
     def _spatial_expand(self, x):
         """Expand the two spatial dimensions (axis=1,2) of a 5D tensor using
