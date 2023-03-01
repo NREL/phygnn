@@ -187,6 +187,45 @@ def test_st_expansion(t_mult, s_mult):
     assert y.shape[4] == x.shape[4] / (s_mult**2)
 
 
+@pytest.mark.parametrize(
+    ('t_mult', 's_mult', 't_roll'),
+    ((2, 1, 0),
+     (2, 1, 1),
+     (1, 2, 0),
+     (2, 2, 0),
+     (2, 2, 1),
+     (5, 3, 0),
+     (5, 1, 0),
+     (5, 1, 2),
+     (5, 1, 3),
+     (5, 2, 3),
+     (24, 1, 12)))
+def test_temporal_depth_to_time(t_mult, s_mult, t_roll):
+    """Test the spatiotemporal expansion layer."""
+    layer = SpatioTemporalExpansion(spatial_mult=s_mult, temporal_mult=t_mult,
+                                    temporal_method='depth_to_time',
+                                    t_roll=t_roll)
+    n_filters = 2 * s_mult**2 * t_mult
+    shape = (1, 4, 4, 3, n_filters)
+    n = np.product(shape)
+    x = np.arange(n).reshape((shape))
+    y = layer(x)
+    assert y.shape[0] == x.shape[0]
+    assert y.shape[1] == s_mult * x.shape[1]
+    assert y.shape[2] == s_mult * x.shape[2]
+    assert y.shape[3] == t_mult * x.shape[3]
+    assert y.shape[4] == x.shape[4] / (t_mult * s_mult**2)
+    if s_mult == 1:
+        for idy in range(y.shape[3]):
+            idx = np.maximum(0, idy - t_roll) // t_mult
+            even = ((idy - t_roll) % t_mult) == 0
+            x1, y1 = x[0, :, :, idx, 0], y[0, :, :, idy, 0]
+            if even:
+                assert np.allclose(x1, y1)
+            else:
+                assert not np.allclose(x1, y1)
+
+
 def test_st_expansion_new_shape():
     """Test that the spatiotemporal expansion layer can expand multiple shapes
     and is not bound to the shape it was built on (bug found on 3/16/2022.)"""
