@@ -10,6 +10,7 @@ import pprint
 import numpy as np
 import pandas as pd
 import logging
+from inspect import signature
 import tensorflow as tf
 from tensorflow.keras.layers import BatchNormalization, Dropout, LSTM
 
@@ -461,7 +462,7 @@ class CustomNetwork(ABC):
         if dirname and not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        model_params = self.model_params
+        model_params = self._history_to_dict(self.model_params)
 
         with open(fpath, 'wb') as f:
             pickle.dump(model_params, f)
@@ -497,6 +498,7 @@ class CustomNetwork(ABC):
 
         with open(fpath, 'rb') as f:
             model_params = pickle.load(f)
+            model_params = cls._history_to_df(model_params)
 
         if 'version_record' in model_params:
             version_record = model_params.pop('version_record')
@@ -504,11 +506,28 @@ class CustomNetwork(ABC):
                         'following package versions: \n{}'
                         .format(pprint.pformat(version_record, indent=4)))
 
+        sig = signature(cls)
+        model_params = {k: v for k, v in model_params.items()
+                        if k in sig.parameters}
         model = cls(**model_params)
         logger.info('Successfully initialized model from file: {}'
                     .format(fpath))
 
         return model
+
+    @classmethod
+    def _history_to_dict(cls, model_params):
+        """Make sure history is a dictionary prior to saving"""
+        if isinstance(model_params.get('history', None), pd.DataFrame):
+            model_params['history'] = model_params['history'].to_dict()
+        return model_params
+
+    @classmethod
+    def _history_to_df(cls, model_params):
+        """Convert history to pandas dataframe after model initialization"""
+        if isinstance(model_params.get('history', None), dict):
+            model_params['history'] = pd.DataFrame(model_params['history'])
+        return model_params
 
 
 class GradientUtils(ABC):
