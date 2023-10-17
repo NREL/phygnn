@@ -610,7 +610,8 @@ class Sup3rAdder(tf.keras.layers.Layer):
             Unique str identifier of the adder layer. Usually the name of the
             hi-resolution feature used in the addition.
         """
-        self.name = name
+        super().__init__()
+        self._name = name
 
     def call(self, x, hi_res_adder):
         """Adds hi-resolution data to the input tensor x in the middle of a
@@ -645,7 +646,8 @@ class Sup3rConcat(tf.keras.layers.Layer):
             Unique str identifier for the concat layer. Usually the name of the
             hi-resolution feature used in the concatenation.
         """
-        self.name = name
+        super().__init__()
+        self._name = name
 
     def call(self, x, hi_res_feature):
         """Concatenates a hi-resolution feature to the input tensor x in the
