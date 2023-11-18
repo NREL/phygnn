@@ -648,14 +648,14 @@ class FNO(tf.keras.layers.Layer):
         input_shape : tuple
             Shape tuple of the input tensor
         """
-        self._n_channels = input_shape[-1] // 2 + 1
+        self._n_channels = input_shape[-1]
 
         if len(input_shape) == 4:
-            self._fft_layer = tf.signal.rfft2d
-            self._ifft_layer = tf.signal.irfft2d
+            self._fft_layer = tf.signal.fft2d
+            self._ifft_layer = tf.signal.ifft2d
         elif len(input_shape) == 5:
-            self._fft_layer = tf.signal.rfft3d
-            self._ifft_layer = tf.signal.irfft3d
+            self._fft_layer = tf.signal.fft3d
+            self._ifft_layer = tf.signal.ifft3d
         else:
             msg = ('FNO layer can only accept 4D or 5D data '
                    'for image or video input but received input shape: {}'
@@ -681,14 +681,13 @@ class FNO(tf.keras.layers.Layer):
             Output tensor, this is the FNO weights added to the original input
             tensor.
         """
-
         t_in = x
-        x = self._fft_layer(x)
+        x = self._fft_layer(tf.cast(x, tf.complex64))
         for layer in self._mlp_layers:
             x = layer(x)
         x = self._softshrink(x, lambd=self._sparsity_threshold)
-        x = tf.cast(x, dtype=tf.complex64)
-        x = self._ifft_layer(x)
+        x = self._ifft_layer(tf.cast(x, tf.complex64))
+        x = tf.cast(x, dtype=t_in.dtype)
 
         return x + t_in
 
