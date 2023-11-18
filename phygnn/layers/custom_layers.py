@@ -608,33 +608,34 @@ class FNO(tf.keras.layers.Layer):
     Adaptive Fourier Neural Operators. http://arxiv.org/abs/2202.11214
     """
 
-    def __init__(self, ratio=16, sparsity_threshold=0.5):
+    def __init__(self, filters, sparsity_threshold=0.5, activation='relu'):
         """
         Parameters
         ----------
-        ratio : int
-            Number of channels/filters divided by the number of
-            dense connections in the FNO block.
+        filters : int
+            Number of dense connections in the FNO block.
         sparsity_threshold : float
             Parameter to control sparsity and shrinkage in the softshrink
             activation function.
+        activation : str
+            Activation function used in the dense layer of the FNO block.
         """
 
         super().__init__()
-        self._ratio = ratio
-        self.fft_layer = None
-        self.ifft_layer = None
-        self.mlp_layers = None
+        self._filters = filters
+        self._fft_layer = None
+        self._ifft_layer = None
+        self._mlp_layers = None
+        self._activation = activation
         self._n_channels = None
         self._dense_units = None
-        self.sparsity_threshold = sparsity_threshold
+        self._sparsity_threshold = sparsity_threshold
 
-    def softshrink(self, x, lambd=0.5):
+    def _softshrink(self, x, lambd=0.5):
         """Softshrink activation function
 
         https://pytorch.org/docs/stable/generated/torch.nn.Softshrink.html
         """
-        x = tf.convert_to_tensor(x)
         values_below_lower = tf.where(x < -lambd, x + lambd, 0)
         values_above_upper = tf.where(lambd < x, x - lambd, 0)
         return values_below_lower + values_above_upper
@@ -647,24 +648,23 @@ class FNO(tf.keras.layers.Layer):
         input_shape : tuple
             Shape tuple of the input tensor
         """
-        self._n_channels = input_shape[-1]
-        self._dense_units = int(np.ceil(self._n_channels / self._ratio))
+        self._n_channels = input_shape[-1] // 2 + 1
 
         if len(input_shape) == 4:
-            self.fft_layer = tf.signal.fft2d
-            self.ifft_layer = tf.signal.ifft2d
+            self._fft_layer = tf.signal.rfft2d
+            self._ifft_layer = tf.signal.irfft2d
         elif len(input_shape) == 5:
-            self.fft_layer = tf.signal.fft3d
-            self.ifft_layer = tf.signal.ifft3d
+            self._fft_layer = tf.signal.rfft3d
+            self._ifft_layer = tf.signal.irfft3d
         else:
-            msg = ('FourierNeuralOperator layer can only accept 4D or 5D data '
+            msg = ('FNO layer can only accept 4D or 5D data '
                    'for image or video input but received input shape: {}'
                    .format(input_shape))
             logger.error(msg)
             raise RuntimeError(msg)
 
-        self.mlp_layers = [
-            tf.keras.layers.Dense(self._dense_units, activation='relu'),
+        self._mlp_layers = [
+            tf.keras.layers.Dense(self._filters, activation=self._activation),
             tf.keras.layers.Dense(self._n_channels)]
 
     def call(self, x):
@@ -683,11 +683,12 @@ class FNO(tf.keras.layers.Layer):
         """
 
         t_in = x
-        x = self.fft_layer(x)
-        for layer in self.mlp_layers:
+        x = self._fft_layer(x)
+        for layer in self._mlp_layers:
             x = layer(x)
-        x = self.softshrink(x, lambd=self.sparsity_threshold)
-        x = self.ifft_layer(x)
+        x = self._softshrink(x, lambd=self._sparsity_threshold)
+        x = tf.cast(x, dtype=tf.complex64)
+        x = self._ifft_layer(x)
 
         return x + t_in
 
