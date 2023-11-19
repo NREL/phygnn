@@ -606,6 +606,8 @@ class FNO(tf.keras.layers.Layer):
     ----------
     1. FourCastNet: A Global Data-driven High-resolution Weather Model using
     Adaptive Fourier Neural Operators. http://arxiv.org/abs/2202.11214
+    2. Adaptive Fourier Neural Operators: Efficient Token Mixers for
+    Transformers. http://arxiv.org/abs/2111.13587
     """
 
     def __init__(self, filters, sparsity_threshold=0.5, activation='relu'):
@@ -616,9 +618,9 @@ class FNO(tf.keras.layers.Layer):
             Number of dense connections in the FNO block.
         sparsity_threshold : float
             Parameter to control sparsity and shrinkage in the softshrink
-            activation function.
+            activation function following the MLP layers.
         activation : str
-            Activation function used in the dense layer of the FNO block.
+            Activation function used in MLP layers.
         """
 
         super().__init__()
@@ -628,7 +630,8 @@ class FNO(tf.keras.layers.Layer):
         self._mlp_layers = None
         self._activation = activation
         self._n_channels = None
-        self._dense_units = None
+        self._perms_in = None
+        self._perms_out = None
         self._lambd = sparsity_threshold
 
     def _softshrink(self, x):
@@ -684,6 +687,12 @@ class FNO(tf.keras.layers.Layer):
             tf.keras.layers.Dense(self._filters, activation=self._activation),
             tf.keras.layers.Dense(self._n_channels)]
 
+    def _mlp_block(self, x):
+        """Run mlp layers on input"""
+        for layer in self._mlp_layers:
+            x = layer(x)
+        return x
+
     def call(self, x):
         """Call the custom FourierNeuralOperator layer
 
@@ -700,8 +709,7 @@ class FNO(tf.keras.layers.Layer):
         """
         t_in = x
         x = self._fft(x)
-        for layer in self._mlp_layers:
-            x = layer(x)
+        x = self._mlp_block(x)
         x = self._softshrink(x)
         x = self._ifft(x)
         x = tf.cast(x, dtype=t_in.dtype)
