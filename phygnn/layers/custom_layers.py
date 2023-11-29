@@ -785,3 +785,46 @@ class Sup3rConcat(tf.keras.layers.Layer):
             Output tensor with the hi_res_feature added to x.
         """
         return tf.concat((x, hi_res_feature), axis=-1)
+
+
+class FunctionalLayer(tf.keras.layers.Layer):
+    """Custom layer to implement the tensorflow layer functions (e.g., add,
+    subtract, multiply, maximum, and minimum) with a constant value. These
+    cannot be implemented in phygnn as normal layers because they need to
+    operate on two tensors of equal shape."""
+
+    def __init__(self, name, value):
+        """
+        Parameters
+        ----------
+        name : str
+            Name of the tensorflow layer function to be implemented, options
+            are (all lower-case): add, subtract, multiply, maximum, and minimum
+        value : float
+            Constant value to use in the function operation
+        """
+
+        options = ('add', 'subtract', 'multiply', 'maximum', 'minimum')
+        msg = (f'FunctionalLayer input `name` must be one of "{options}" '
+               f'but received "{name}"')
+        assert name in options, msg
+
+        super().__init__(name=name)
+        self.value = value
+        self.fun = getattr(tf.keras.layers, self.name)
+
+    def call(self, x):
+        """Operates on x with the specified function
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor operated on by the specified function
+        """
+        const = tf.constant(value=self.value, shape=x.shape, dtype=x.dtype)
+        return self.fun((x, const))

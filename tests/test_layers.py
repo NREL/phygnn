@@ -12,6 +12,7 @@ from phygnn.layers.custom_layers import (
     SkipConnection,
     SpatioTemporalExpansion,
     TileLayer,
+    FunctionalLayer,
 )
 from phygnn.layers.handlers import HiddenLayers, Layers
 
@@ -423,3 +424,23 @@ def test_fno_3d():
         x = layer(x)
         with pytest.raises(tf.errors.InvalidArgumentError):
             tf.assert_equal(x_in, x)
+
+
+def test_functional_layer():
+    """Test the generic functional layer"""
+
+    layer = FunctionalLayer('maximum', 1)
+    x = np.random.normal(0.5, 3, size=(1, 4, 4, 6, 3))
+    assert layer(x).numpy().min() == 1.0
+
+    # make sure layer works with input of arbitrary shape
+    x = np.random.normal(0.5, 3, size=(2, 8, 8, 4, 1))
+    assert layer(x).numpy().min() == 1.0
+
+    layer = FunctionalLayer('multiply', 1.5)
+    x = np.random.normal(0.5, 3, size=(1, 4, 4, 6, 3))
+    assert np.allclose(layer(x).numpy(), x * 1.5)
+
+    with pytest.raises(AssertionError) as excinfo:
+        FunctionalLayer('bad_arg', 0)
+    assert "must be one of" in str(excinfo.value)
