@@ -1,0 +1,31 @@
+phygnn.utilities.tf\_utilities
+==============================
+
+.. automodule:: phygnn.utilities.tf_utilities
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:
+   
+      tf_isin
+      tf_log10
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+
