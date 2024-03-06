@@ -169,7 +169,8 @@ class PreProcess:
 
         one_hot = False
 
-        if isinstance(sample, str) or np.issubdtype(type(sample), np.integer) and convert_int:
+        if (isinstance(sample, str) or np.issubdtype(type(sample), np.integer)
+                and convert_int):
             one_hot = True
 
         return one_hot
