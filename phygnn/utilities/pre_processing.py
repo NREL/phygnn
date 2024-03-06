@@ -3,10 +3,11 @@
 Data pre-processing module.
 """
 import logging
+from warnings import warn
+
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
-from warnings import warn
 
 logger = logging.getLogger(__name__)
 
@@ -168,9 +169,8 @@ class PreProcess:
 
         one_hot = False
 
-        if isinstance(sample, str):
-            one_hot = True
-        elif np.issubdtype(type(sample), np.integer) and convert_int:
+        if (isinstance(sample, str) or np.issubdtype(type(sample), np.integer)
+                and convert_int):
             one_hot = True
 
         return one_hot
@@ -277,9 +277,10 @@ class PreProcess:
                     cats = [categories[name]]
                     logger.debug('Using categories {} for column {}'
                                  ''.format(cats, name))
-                    oh_obj = OneHotEncoder(sparse=False, categories=cats)
+                    oh_obj = OneHotEncoder(sparse_output=False,
+                                           categories=cats)
                 else:
-                    oh_obj = OneHotEncoder(sparse=False)
+                    oh_obj = OneHotEncoder(sparse_output=False)
 
                 oh_obj.fit(col)
                 one_hot_data.append(oh_obj.transform(col))
