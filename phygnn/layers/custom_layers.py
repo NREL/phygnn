@@ -130,6 +130,98 @@ class TileLayer(tf.keras.layers.Layer):
         return tf.tile(x, self._mult)
 
 
+class GaussianAveragePooling2D(tf.keras.layers.Layer):
+    """Custom layer to implement tensorflow average pooling layer but with a
+    gaussian kernel."""
+
+    def __init__(self, pool_size, strides=None, padding='valid', sigma=1):
+        """
+        Parameters
+        ----------
+        pool_size: integer
+            factors by which to downscale in the (vertical, horizontal) axes.
+            `2` will halve the input in both spatial dimension.
+            Only one integer is specified, the same window length
+            will be used for both dimensions.
+        strides: Integer, tuple of 2 integers, or None.
+            Strides values.
+            If None, it will default to `pool_size`.
+        padding: One of `"valid"` or `"same"` (case-insensitive).
+            `"valid"` means no padding. `"same"` results in padding evenly to
+            the left/right or up/down of the input such that output has the
+            same height/width dimension as the input.
+        sigma : float
+            Sigma parameter for gaussian distribution
+        """
+
+        super().__init__()
+        assert isinstance(pool_size, int), 'pool_size must be int!'
+        self._pool_size = pool_size
+        self._strides = strides
+        self._padding = padding.upper()
+        self._sigma = sigma
+        self._kernel = None
+
+    @staticmethod
+    def _make_2D_gaussian_kernel(edge_len, sigma=1.):
+        """Creates 2D gaussian kernel with side length `edge_len` and a sigma
+        of `sigma`
+
+        Parameters
+        ----------
+        edge_len : int
+            Edge size of the kernel
+        sigma : float
+            Sigma parameter for gaussian distribution
+
+        Returns
+        -------
+        kernel : np.ndarray
+            2D kernel with shape (edge_len, edge_len)
+        """
+        ax = np.linspace(-(edge_len - 1) / 2., (edge_len - 1) / 2., edge_len)
+        gauss = np.exp(-0.5 * np.square(ax) / np.square(sigma))
+        kernel = np.outer(gauss, gauss)
+        kernel = kernel / np.sum(kernel)
+        return kernel.astype(np.float32)
+
+    def build(self, input_shape):
+        """Custom implementation of the tf layer build method.
+
+        Sets the shape of the gaussian kernel
+
+        Parameters
+        ----------
+        input_shape : tuple
+            Shape tuple of the input
+        """
+        target_shape = (self._pool_size, self._pool_size, 1, input_shape[-1])
+        self._kernel = self._make_2D_gaussian_kernel(self._pool_size,
+                                                     self._sigma)
+        self._kernel = [self._kernel for _ in range(input_shape[-1])]
+        self._kernel = np.dstack(self._kernel)
+        self._kernel = np.expand_dims(self._kernel, 2)
+        assert self._kernel.shape == target_shape
+        self._kernel = tf.convert_to_tensor(self._kernel, dtype=tf.float32)
+
+    def call(self, x):
+        """Operates on x with the specified function
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor operated on by the specified function
+        """
+        out = tf.nn.convolution(x, self._kernel, strides=self._strides,
+                                padding=self._padding)
+        return out
+
+
 class GaussianNoiseAxis(tf.keras.layers.Layer):
     """Layer to apply random noise along a given axis."""
 
