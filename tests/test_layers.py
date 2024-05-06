@@ -13,7 +13,7 @@ from phygnn.layers.custom_layers import (
     SpatioTemporalExpansion,
     TileLayer,
     FunctionalLayer,
-    GaussianAveragePooling2D,
+    GaussianKernelInit2D,
 )
 from phygnn.layers.handlers import HiddenLayers, Layers
 
@@ -447,28 +447,28 @@ def test_functional_layer():
     assert "must be one of" in str(excinfo.value)
 
 
-def test_gaussian_pool():
-    """Test the gaussian average pooling layer"""
+def test_gaussian_kernel():
+    """Test the gaussian kernel initializer for gaussian average pooling"""
 
-    layer = GaussianAveragePooling2D(pool_size=2, strides=2,
-                                     padding='valid', sigma=1)
-    x = np.zeros((2, 6, 6, 2))
-    x[:, 1, 1, :] = 1
-    x[:, 2, 2, :] = 1
-    y = layer(x)
-    print(y[0, :, :, 0])
-    assert y.shape == (2, 3, 3, 2)
-    assert (y[0, :, :, 0] == y[-1, :, :, -1]).numpy().all()
-    assert (y[:, 0, 0, :].numpy() == 0.25).all()
-    assert (y[:, 1, 1, :].numpy() == 0.25).all()
+    kernels = []
+    biases = []
+    for stdev in [1, 2]:
+        kinit = GaussianKernelInit2D(stdev=stdev)
+        layer = tf.keras.layers.Conv2D(filters=16, kernel_size=5, strides=1,
+                                       padding='valid',
+                                       kernel_initializer=kinit)
+        _ = layer(np.ones((24, 100, 100, 35)))
+        kernel = layer.weights[0].numpy()
+        bias = layer.weights[1].numpy()
+        kernels.append(kernel)
+        biases.append(bias)
 
-    layer = GaussianAveragePooling2D(pool_size=3, strides=1,
-                                     padding='valid', sigma=1)
-    x = np.zeros((2, 6, 6, 2))
-    x[:, 2, 2, :] = 2
-    y = layer(x)
-    assert y.shape == (2, 4, 4, 2)
-    assert (y[0, :, :, 0] == y[-1, :, :, -1]).numpy().all()
-    assert y[0, 1, 1, 0].numpy() == y.numpy().max()
-    assert (y[0, -1, 0, 0].numpy() == 0).all()
-    assert (y[0, :, -1, 0].numpy() == 0).all()
+        assert (kernel[:, :, 0, 0] == kernel[:, :, -1, -1]).all()
+        assert kernel[:, :, 0, 0].sum() == 1
+        assert (bias == 0).all()
+        assert kernel[2, 2, 0, 0] == kernel.max()
+        assert kernel[0, 0, 0, 0] == kernel.min()
+        assert kernel[-1, -1, 0, 0] == kernel.min()
+
+    assert kernels[1].max() < kernels[0].max()
+    assert kernels[1].min() > kernels[0].min()
