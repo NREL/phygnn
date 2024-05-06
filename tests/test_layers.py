@@ -13,6 +13,7 @@ from phygnn.layers.custom_layers import (
     SpatioTemporalExpansion,
     TileLayer,
     FunctionalLayer,
+    GaussianAveragePooling2D,
 )
 from phygnn.layers.handlers import HiddenLayers, Layers
 
@@ -444,3 +445,30 @@ def test_functional_layer():
     with pytest.raises(AssertionError) as excinfo:
         FunctionalLayer('bad_arg', 0)
     assert "must be one of" in str(excinfo.value)
+
+
+def test_gaussian_pool():
+    """Test the gaussian average pooling layer"""
+
+    layer = GaussianAveragePooling2D(pool_size=2, strides=2,
+                                     padding='valid', sigma=1)
+    x = np.zeros((2, 6, 6, 2))
+    x[:, 1, 1, :] = 1
+    x[:, 2, 2, :] = 1
+    y = layer(x)
+    print(y[0, :, :, 0])
+    assert y.shape == (2, 3, 3, 2)
+    assert (y[0, :, :, 0] == y[-1, :, :, -1]).numpy().all()
+    assert (y[:, 0, 0, :].numpy() == 0.25).all()
+    assert (y[:, 1, 1, :].numpy() == 0.25).all()
+
+    layer = GaussianAveragePooling2D(pool_size=3, strides=1,
+                                     padding='valid', sigma=1)
+    x = np.zeros((2, 6, 6, 2))
+    x[:, 2, 2, :] = 2
+    y = layer(x)
+    assert y.shape == (2, 4, 4, 2)
+    assert (y[0, :, :, 0] == y[-1, :, :, -1]).numpy().all()
+    assert y[0, 1, 1, 0].numpy() == y.numpy().max()
+    assert (y[0, -1, 0, 0].numpy() == 0).all()
+    assert (y[0, :, -1, 0].numpy() == 0).all()

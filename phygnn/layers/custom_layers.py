@@ -132,20 +132,21 @@ class TileLayer(tf.keras.layers.Layer):
 
 class GaussianAveragePooling2D(tf.keras.layers.Layer):
     """Custom layer to implement tensorflow average pooling layer but with a
-    gaussian kernel."""
+    gaussian kernel. This is basically a gaussian smoothing layer with a fixed
+    convolution window that limits the area of effect"""
 
     def __init__(self, pool_size, strides=None, padding='valid', sigma=1):
         """
         Parameters
         ----------
         pool_size: integer
-            factors by which to downscale in the (vertical, horizontal) axes.
-            `2` will halve the input in both spatial dimension.
-            Only one integer is specified, the same window length
-            will be used for both dimensions.
+            Pooling window size. This sets the number of pixels in each
+            dimension that will be averaged into an output pixel. Only one
+            integer is specified, the same window length will be used for both
+            dimensions. For example, if ``pool_size=2`` and ``strides=2`` then
+            the output dimension will be half of the input.
         strides: Integer, tuple of 2 integers, or None.
-            Strides values.
-            If None, it will default to `pool_size`.
+            Strides values. If None, it will default to `pool_size`.
         padding: One of `"valid"` or `"same"` (case-insensitive).
             `"valid"` means no padding. `"same"` results in padding evenly to
             the left/right or up/down of the input such that output has the
