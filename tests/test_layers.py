@@ -1,6 +1,8 @@
 """
 Test the custom tensorflow utilities
 """
+import os
+from tempfile import TemporaryDirectory
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -16,6 +18,7 @@ from phygnn.layers.custom_layers import (
     GaussianKernelInit2D,
 )
 from phygnn.layers.handlers import HiddenLayers, Layers
+from phygnn import TfModel
 
 
 @pytest.mark.parametrize(
@@ -472,3 +475,21 @@ def test_gaussian_kernel():
 
     assert kernels[1].max() < kernels[0].max()
     assert kernels[1].min() > kernels[0].min()
+
+    layers = [{'class': 'Conv2D', 'filters': 16, 'kernel_size': 3,
+               'kernel_initializer': GaussianKernelInit2D()}]
+    model1 = TfModel.build(['a'], ['b'], hidden_layers=layers,
+                           input_layer=False, output_layer=False)
+    x_in = np.random.uniform(0, 1, (10, 12, 12, 1))
+    out1 = model1.predict(x_in)
+    kernel1 = model1.layers[0].weights[0][:, :, 0, 0].numpy()
+
+    with TemporaryDirectory() as td:
+        model_path = os.path.join(td, 'test_model')
+        model1.save_model(model_path)
+        model2 = TfModel.load(model_path)
+
+        kernel2 = model2.layers[0].weights[0][:, :, 0, 0].numpy()
+        out2 = model2.predict(x_in)
+        assert np.allclose(kernel1, kernel2)
+        assert np.allclose(out1, out2)
