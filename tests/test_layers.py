@@ -477,7 +477,8 @@ def test_gaussian_kernel():
     assert kernels[1].min() > kernels[0].min()
 
     layers = [{'class': 'Conv2D', 'filters': 16, 'kernel_size': 3,
-               'kernel_initializer': GaussianKernelInit2D()}]
+               'kernel_initializer': GaussianKernelInit2D(),
+               'trainable': False}]
     model1 = TfModel.build(['a'], ['b'], hidden_layers=layers,
                            input_layer=False, output_layer=False)
     x_in = np.random.uniform(0, 1, (10, 12, 12, 1))
@@ -493,3 +494,7 @@ def test_gaussian_kernel():
         out2 = model2.predict(x_in)
         assert np.allclose(kernel1, kernel2)
         assert np.allclose(out1, out2)
+
+        layer = model2.layers[0]
+        x_in = np.random.uniform(0, 1, (10, 24, 24, 1))
+        _ = model2.predict(x_in)
