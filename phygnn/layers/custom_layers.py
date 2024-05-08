@@ -189,6 +189,51 @@ class GaussianNoiseAxis(tf.keras.layers.Layer):
         return x * rand_tensor
 
 
+class GaussianKernelInit2D(tf.keras.initializers.Initializer):
+    """Convolutional kernel initializer that creates a symmetric 2D array with
+    a gaussian distribution. This can be used with Conv2D as a gaussian average
+    pooling layer if trainable=False
+    """
+
+    def __init__(self, stdev=1):
+        """
+        Parameters
+        ----------
+        stdev : float
+            Standard deviation of the gaussian distribution defining the kernel
+            values
+        """
+        self.stdev = stdev
+
+    def __call__(self, shape, dtype=tf.float32):
+        """
+        Parameters
+        ---------
+        shape : tuple
+            Shape of the input tensor, typically (y, x, n_features, n_obs)
+        dtype : None | tf.DType
+            Tensorflow datatype e.g., tf.float32
+
+        Returns
+        -------
+        kernel : tf.Tensor
+            Kernel tensor of shape (y, x, n_features, n_obs) for use in a
+            Conv2D layer.
+        """
+
+        ax = np.linspace(-(shape[0] - 1) / 2., (shape[0] - 1) / 2., shape[0])
+        kernel = np.exp(-0.5 * np.square(ax) / np.square(self.stdev))
+        kernel = np.outer(kernel, kernel)
+        kernel = kernel / np.sum(kernel)
+
+        kernel = np.expand_dims(kernel, (2, 3))
+        kernel = np.repeat(kernel, shape[2], axis=2)
+        kernel = np.repeat(kernel, shape[3], axis=3)
+
+        kernel = tf.convert_to_tensor(kernel, dtype=dtype)
+        return kernel
+
+
 class FlattenAxis(tf.keras.layers.Layer):
     """Layer to flatten an axis from a 5D spatiotemporal Tensor into axis-0
     observations."""
