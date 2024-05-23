@@ -460,7 +460,6 @@ def test_gaussian_pooling():
         kernel = layer._kernel.numpy()
         kernels.append(kernel)
 
-        assert (kernel[:, :, 0, 0] == kernel[:, :, -1, -1]).all()
         assert kernel[:, :, 0, 0].sum() == 1
         assert kernel[2, 2, 0, 0] == kernel.max()
         assert kernel[0, 0, 0, 0] == kernel.min()

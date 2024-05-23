@@ -212,12 +212,11 @@ class GaussianAveragePooling2D(tf.keras.layers.Layer):
         input_shape : tuple
             Shape tuple of the input
         """
-        target_shape = (self._pool_size, self._pool_size, 1, input_shape[-1])
+        target_shape = (self._pool_size, self._pool_size, 1, 1)
         self._kernel = self._make_2D_gaussian_kernel(self._pool_size,
                                                      self._sigma)
-        self._kernel = [self._kernel for _ in range(input_shape[-1])]
-        self._kernel = np.dstack(self._kernel)
-        self._kernel = np.expand_dims(self._kernel, 2)
+        self._kernel = np.expand_dims(self._kernel, -1)
+        self._kernel = np.expand_dims(self._kernel, -1)
         assert self._kernel.shape == target_shape
         self._kernel = tf.convert_to_tensor(self._kernel, dtype=tf.float32)
 
@@ -232,8 +231,12 @@ class GaussianAveragePooling2D(tf.keras.layers.Layer):
         x : tf.Tensor
             Output tensor operated on by the specified function
         """
-        out = tf.nn.convolution(x, self._kernel, strides=self._strides,
-                                padding=self._padding)
+        out = []
+        for idf in range(x.shape[-1]):
+            iout = tf.nn.convolution(x[..., idf:idf+1], self._kernel, strides=self._strides,
+                                    padding=self._padding)
+            out.append(iout)
+        out = tf.concat(out, -1, name='concat')
         return out
 
 
