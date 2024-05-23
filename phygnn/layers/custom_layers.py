@@ -164,7 +164,14 @@ class GaussianAveragePooling2D(tf.keras.layers.Layer):
         self._strides = strides
         self._padding = padding.upper()
         self._sigma = sigma
-        self._kernel = None
+
+        target_shape = (self._pool_size, self._pool_size, 1, 1)
+        self._kernel = self._make_2D_gaussian_kernel(self._pool_size,
+                                                     self._sigma)
+        self._kernel = np.expand_dims(self._kernel, -1)
+        self._kernel = np.expand_dims(self._kernel, -1)
+        assert self._kernel.shape == target_shape
+        self._kernel = tf.convert_to_tensor(self._kernel, dtype=tf.float32)
 
     @staticmethod
     def _make_2D_gaussian_kernel(edge_len, sigma=1.):
@@ -204,22 +211,6 @@ class GaussianAveragePooling2D(tf.keras.layers.Layer):
         })
         return config
 
-    def build(self, input_shape):
-        """Custom implementation of the tf layer build method.
-        Sets the shape of the gaussian kernel
-        Parameters
-        ----------
-        input_shape : tuple
-            Shape tuple of the input
-        """
-        target_shape = (self._pool_size, self._pool_size, 1, 1)
-        self._kernel = self._make_2D_gaussian_kernel(self._pool_size,
-                                                     self._sigma)
-        self._kernel = np.expand_dims(self._kernel, -1)
-        self._kernel = np.expand_dims(self._kernel, -1)
-        assert self._kernel.shape == target_shape
-        self._kernel = tf.convert_to_tensor(self._kernel, dtype=tf.float32)
-
     def call(self, x):
         """Operates on x with the specified function
         Parameters
@@ -233,8 +224,10 @@ class GaussianAveragePooling2D(tf.keras.layers.Layer):
         """
         out = []
         for idf in range(x.shape[-1]):
-            iout = tf.nn.convolution(x[..., idf:idf+1], self._kernel, strides=self._strides,
-                                    padding=self._padding)
+            fslice = slice(idf, idf + 1)
+            iout = tf.nn.convolution(x[..., fslice], self._kernel,
+                                     strides=self._strides,
+                                     padding=self._padding)
             out.append(iout)
         out = tf.concat(out, -1, name='concat')
         return out

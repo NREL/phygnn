@@ -471,10 +471,15 @@ def test_gaussian_pooling():
     layers = [{'class': 'GaussianAveragePooling2D', 'pool_size': 12,
                'strides': 1}]
     model1 = TfModel.build(['a', 'b', 'c'], ['d'], hidden_layers=layers,
-                           input_layer=False, output_layer=False)
+                           input_layer=False, output_layer=False,
+                           normalize=False)
     x_in = np.random.uniform(0, 1, (1, 12, 12, 3))
     out1 = model1.predict(x_in)
     kernel1 = model1.layers[0]._kernel[:, :, 0, 0].numpy()
+
+    for idf in range(out1.shape[-1]):
+        test = (x_in[0, :, :, idf] * kernel1).sum()
+        assert np.allclose(test, out1[..., idf])
 
     assert out1.shape[1] == out1.shape[2] == 1
     assert out1[0, 0, 0, 0] != out1[0, 0, 0, 1] != out1[0, 0, 0, 2]
