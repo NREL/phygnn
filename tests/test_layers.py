@@ -15,7 +15,7 @@ from phygnn.layers.custom_layers import (
     SpatioTemporalExpansion,
     TileLayer,
     FunctionalLayer,
-    GaussianKernelInit2D,
+    GaussianAveragePooling2D,
 )
 from phygnn.layers.handlers import HiddenLayers, Layers
 from phygnn import TfModel
@@ -450,25 +450,17 @@ def test_functional_layer():
     assert "must be one of" in str(excinfo.value)
 
 
-def test_gaussian_kernel():
-    """Test the gaussian kernel initializer for gaussian average pooling"""
+def test_gaussian_pooling():
+    """Test the gaussian average pooling layer"""
 
     kernels = []
-    biases = []
     for stdev in [1, 2]:
-        kinit = GaussianKernelInit2D(stdev=stdev)
-        layer = tf.keras.layers.Conv2D(filters=16, kernel_size=5, strides=1,
-                                       padding='valid',
-                                       kernel_initializer=kinit)
+        layer = GaussianAveragePooling2D(pool_size=5, strides=1, sigma=stdev)
         _ = layer(np.ones((24, 100, 100, 35)))
-        kernel = layer.weights[0].numpy()
-        bias = layer.weights[1].numpy()
+        kernel = layer._kernel.numpy()
         kernels.append(kernel)
-        biases.append(bias)
 
-        assert (kernel[:, :, 0, 0] == kernel[:, :, -1, -1]).all()
         assert kernel[:, :, 0, 0].sum() == 1
-        assert (bias == 0).all()
         assert kernel[2, 2, 0, 0] == kernel.max()
         assert kernel[0, 0, 0, 0] == kernel.min()
         assert kernel[-1, -1, 0, 0] == kernel.min()
@@ -476,25 +468,32 @@ def test_gaussian_kernel():
     assert kernels[1].max() < kernels[0].max()
     assert kernels[1].min() > kernels[0].min()
 
-    layers = [{'class': 'Conv2D', 'filters': 16, 'kernel_size': 3,
-               'kernel_initializer': GaussianKernelInit2D(),
-               'trainable': False}]
-    model1 = TfModel.build(['a'], ['b'], hidden_layers=layers,
-                           input_layer=False, output_layer=False)
-    x_in = np.random.uniform(0, 1, (10, 12, 12, 1))
+    layers = [{'class': 'GaussianAveragePooling2D', 'pool_size': 12,
+               'strides': 1}]
+    model1 = TfModel.build(['a', 'b', 'c'], ['d'], hidden_layers=layers,
+                           input_layer=False, output_layer=False,
+                           normalize=False)
+    x_in = np.random.uniform(0, 1, (1, 12, 12, 3))
     out1 = model1.predict(x_in)
-    kernel1 = model1.layers[0].weights[0][:, :, 0, 0].numpy()
+    kernel1 = model1.layers[0]._kernel[:, :, 0, 0].numpy()
+
+    for idf in range(out1.shape[-1]):
+        test = (x_in[0, :, :, idf] * kernel1).sum()
+        assert np.allclose(test, out1[..., idf])
+
+    assert out1.shape[1] == out1.shape[2] == 1
+    assert out1[0, 0, 0, 0] != out1[0, 0, 0, 1] != out1[0, 0, 0, 2]
 
     with TemporaryDirectory() as td:
         model_path = os.path.join(td, 'test_model')
         model1.save_model(model_path)
         model2 = TfModel.load(model_path)
 
-        kernel2 = model2.layers[0].weights[0][:, :, 0, 0].numpy()
+        kernel2 = model2.layers[0]._kernel[:, :, 0, 0].numpy()
         out2 = model2.predict(x_in)
         assert np.allclose(kernel1, kernel2)
         assert np.allclose(out1, out2)
 
         layer = model2.layers[0]
-        x_in = np.random.uniform(0, 1, (10, 24, 24, 1))
+        x_in = np.random.uniform(0, 1, (10, 24, 24, 3))
         _ = model2.predict(x_in)
