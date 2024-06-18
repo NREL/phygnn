@@ -17,6 +17,7 @@ from phygnn.layers.custom_layers import (
     FunctionalLayer,
     GaussianAveragePooling2D,
     SigLin,
+    LogTransform,
 )
 from phygnn.layers.handlers import HiddenLayers, Layers
 from phygnn import TfModel
@@ -517,3 +518,21 @@ def test_siglin():
     assert x.shape == y.shape
     assert (y > 0).all()
     assert np.allclose(y[mid:], x[mid:] + 0.5)
+
+
+def test_logtransform():
+    """Test the log transform layer"""
+    n_points = 1000
+    lt = LogTransform(adder=0)
+    x = np.linspace(0, 10, n_points + 1)
+    y = lt(x).numpy()
+    assert x.shape == y.shape
+    assert y[0] == -np.inf
+    lt = LogTransform(adder=1)
+    ilt = LogTransform(adder=1, inverse=True)
+    x = np.linspace(0, 10, n_points + 1)
+    y = lt(x).numpy()
+    xinv = ilt(y).numpy()
+    assert not np.isnan(y).any()
+    assert np.allclose(y, np.log(x + 1))
+    assert np.allclose(x, xinv)
