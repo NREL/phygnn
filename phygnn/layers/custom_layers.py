@@ -931,3 +931,27 @@ class FunctionalLayer(tf.keras.layers.Layer):
         """
         const = tf.constant(value=self.value, shape=x.shape, dtype=x.dtype)
         return self.fun((x, const))
+
+
+class SigLin(tf.keras.layers.Layer):
+    """Sigmoid linear unit. This can be used to set a soft minimum on a range.
+
+    y = 1/(1+exp(-x)) where x<0.5
+    y = x + 0.5 where x>=0.5
+    """
+
+    def call(self, x):
+        """Operates on x with SigLin
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor with same shape as input x operated on by SigLin
+        """
+
+        return tf.math.maximum(tf.math.sigmoid(x), x + 0.5)
