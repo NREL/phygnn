@@ -955,3 +955,44 @@ class SigLin(tf.keras.layers.Layer):
         """
 
         return tf.math.maximum(tf.math.sigmoid(x), x + 0.5)
+
+
+class LogTransform(tf.keras.layers.Layer):
+    """Log transform or inverse transform of data
+
+    ``y = log(x + adder)`` or ``y = exp(x) - adder`` for inverse
+    """
+
+    def __init__(self, name=None, adder=0, inverse=False):
+        """
+        Parameters
+        ----------
+        name : str | None
+            Name of the tensorflow layer
+        adder : float
+            Adder for ``y = log(x + adder)``
+        inverse : bool
+            Option to perform the inverse operation e.g. ``y = exp(x) - adder``
+        """
+
+        super().__init__(name=name)
+        self.adder = adder
+        self.inverse = inverse
+
+    def call(self, x):
+        """Operates on x with (inverse) log transform
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+
+        Returns
+        -------
+        y : tf.Tensor
+            Output ``y = log(x + adder)`` or ``y = exp(x) - adder`` if inverse
+        """
+        if not self.inverse:
+            return tf.math.log(x + self.adder)
+        else:
+            return tf.math.exp(x) - self.adder
