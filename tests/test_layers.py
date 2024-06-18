@@ -16,6 +16,7 @@ from phygnn.layers.custom_layers import (
     TileLayer,
     FunctionalLayer,
     GaussianAveragePooling2D,
+    SigLin,
 )
 from phygnn.layers.handlers import HiddenLayers, Layers
 from phygnn import TfModel
@@ -504,3 +505,15 @@ def test_gaussian_pooling():
         layer = model2.layers[0]
         x_in = np.random.uniform(0, 1, (10, 24, 24, 3))
         _ = model2.predict(x_in)
+
+
+def test_siglin():
+    """Test the sigmoid linear layer"""
+    n_points = 1000
+    mid = n_points // 2
+    sl = SigLin()
+    x = np.linspace(-10, 10, n_points + 1)
+    y = sl(x).numpy()
+    assert x.shape == y.shape
+    assert (y > 0).all()
+    assert np.allclose(y[mid:], x[mid:] + 0.5)
