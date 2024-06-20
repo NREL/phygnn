@@ -978,6 +978,17 @@ class LogTransform(tf.keras.layers.Layer):
         super().__init__(name=name)
         self.adder = adder
         self.inverse = inverse
+        self.rank = None
+
+    def build(self, input_shape):
+        """Custom implementation of the tf layer build method.
+
+        Parameters
+        ----------
+        input_shape : tuple
+            Shape tuple of the input
+        """
+        self.rank = len(input_shape)
 
     def call(self, x):
         """Operates on x with (inverse) log transform
