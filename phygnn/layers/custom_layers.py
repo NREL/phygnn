@@ -960,23 +960,28 @@ class SigLin(tf.keras.layers.Layer):
 class LogTransform(tf.keras.layers.Layer):
     """Log transform or inverse transform of data
 
-    ``y = log(x + adder)`` or ``y = exp(x) - adder`` for inverse
+    ``y = log(x + adder) * scalar`` or
+    ``y = exp(x / scalar) - adder`` for the inverse
     """
 
-    def __init__(self, name=None, adder=0, inverse=False):
+    def __init__(self, name=None, adder=0, scalar=1, inverse=False):
         """
         Parameters
         ----------
         name : str | None
             Name of the tensorflow layer
         adder : float
-            Adder for ``y = log(x + adder)``
+            Adder term for ``y = log(x + adder) * scalar``
+        scalar : float
+            Scalar term for ``y = log(x + adder) * scalar``
         inverse : bool
-            Option to perform the inverse operation e.g. ``y = exp(x) - adder``
+            Option to perform the inverse operation e.g.
+            ``y = exp(x / scalar) - adder``
         """
 
         super().__init__(name=name)
         self.adder = adder
+        self.scalar = scalar
         self.inverse = inverse
         self.rank = None
 
@@ -1001,9 +1006,9 @@ class LogTransform(tf.keras.layers.Layer):
         Returns
         -------
         y : tf.Tensor
-            Output ``y = log(x + adder)`` or ``y = exp(x) - adder`` if inverse
+            Log-transformed x tensor
         """
         if not self.inverse:
-            return tf.math.log(x + self.adder)
+            return tf.math.log(x + self.adder) * self.scalar
         else:
-            return tf.math.exp(x) - self.adder
+            return tf.math.exp(x / self.scalar) - self.adder
