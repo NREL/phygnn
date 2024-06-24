@@ -529,13 +529,25 @@ def test_logtransform():
     y = lt(x).numpy()
     assert x.shape == y.shape
     assert y[0] == -np.inf
+
     lt = LogTransform(adder=1)
     ilt = LogTransform(adder=1, inverse=True)
-    x = np.linspace(0, 10, n_points + 1)
+    x = np.random.uniform(0, 10, (n_points + 1, 2))
     y = lt(x).numpy()
     xinv = ilt(y).numpy()
     assert not np.isnan(y).any()
     assert np.allclose(y, np.log(x + 1))
+    assert np.allclose(x, xinv)
+
+    lt = LogTransform(adder=1, idf=1)
+    ilt = LogTransform(adder=1, inverse=True, idf=1)
+    x = np.random.uniform(0, 10, (n_points + 1, 2))
+    y = lt(x).numpy()
+    xinv = ilt(y).numpy()
+    assert np.allclose(x[:, 0], y[:, 0])
+    assert not np.allclose(x[:, 1], y[:, 1])
+    assert not np.isnan(y).any()
+    assert np.allclose(y[:, 1], np.log(x[:, 1] + 1))
     assert np.allclose(x, xinv)
 
 
