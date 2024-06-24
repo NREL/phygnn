@@ -18,6 +18,7 @@ from phygnn.layers.custom_layers import (
     GaussianAveragePooling2D,
     SigLin,
     LogTransform,
+    UnitConversion,
 )
 from phygnn.layers.handlers import HiddenLayers, Layers
 from phygnn import TfModel
@@ -536,3 +537,30 @@ def test_logtransform():
     assert not np.isnan(y).any()
     assert np.allclose(y, np.log(x + 1))
     assert np.allclose(x, xinv)
+
+
+def test_unit_conversion():
+    """Test the custom unit conversion layer"""
+    x = np.random.uniform(0, 1, (1, 10, 10, 4))  # 4 features
+
+    layer = UnitConversion(adder=0, scalar=1)
+    y = layer(x).numpy()
+    assert np.allclose(x, y)
+
+    layer = UnitConversion(adder=1, scalar=1)
+    y = layer(x).numpy()
+    assert (y >= 1).all() and (y <= 2).all()
+
+    layer = UnitConversion(adder=1, scalar=100)
+    y = layer(x).numpy()
+    assert (y >= 1).all() and (y > 90).any() and (y <= 101).all()
+
+    layer = UnitConversion(adder=0, scalar=[100, 1, 1, 1])
+    y = layer(x).numpy()
+    assert (y[..., 0] > 90).any() and (y[..., 0] <= 100).all()
+    assert (y[..., 1:] >= 0).all() and (y[..., 1:] <= 1).all()
+
+    with pytest.raises(AssertionError):
+        # bad number of scalar values
+        layer = UnitConversion(adder=0, scalar=[100, 1, 1])
+        y = layer(x)
