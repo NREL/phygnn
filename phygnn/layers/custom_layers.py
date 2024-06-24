@@ -964,7 +964,7 @@ class LogTransform(tf.keras.layers.Layer):
     ``y = exp(x / scalar) - adder`` for the inverse
     """
 
-    def __init__(self, name=None, adder=0, scalar=1, inverse=False):
+    def __init__(self, name=None, adder=0, scalar=1, inverse=False, idf=None):
         """
         Parameters
         ----------
@@ -977,6 +977,9 @@ class LogTransform(tf.keras.layers.Layer):
         inverse : bool
             Option to perform the inverse operation e.g.
             ``y = exp(x / scalar) - adder``
+        idf : int | list | None
+            One or more feature channel indices to perform log transform on.
+            None will perform transform on all feature channels.
         """
 
         super().__init__(name=name)
@@ -984,6 +987,7 @@ class LogTransform(tf.keras.layers.Layer):
         self.scalar = scalar
         self.inverse = inverse
         self.rank = None
+        self.idf = [idf] if isinstance(idf, int) else idf
 
     def build(self, input_shape):
         """Custom implementation of the tf layer build method.
@@ -994,6 +998,12 @@ class LogTransform(tf.keras.layers.Layer):
             Shape tuple of the input
         """
         self.rank = len(input_shape)
+
+    def _logt(self, x):
+        if not self.inverse:
+            return tf.math.log(x + self.adder) * self.scalar
+        else:
+            return tf.math.exp(x / self.scalar) - self.adder
 
     def call(self, x):
         """Operates on x with (inverse) log transform
@@ -1008,10 +1018,19 @@ class LogTransform(tf.keras.layers.Layer):
         y : tf.Tensor
             Log-transformed x tensor
         """
-        if not self.inverse:
-            return tf.math.log(x + self.adder) * self.scalar
+
+        if self.idf is None:
+            return self._logt(x)
         else:
-            return tf.math.exp(x / self.scalar) - self.adder
+            out = []
+            for idf in range(x.shape[-1]):
+                if idf in self.idf:
+                    out.append(self._logt(x[..., idf:idf + 1]))
+                else:
+                    out.append(x[..., idf:idf + 1])
+
+            out = tf.concat(out, -1, name='concat')
+            return out
 
 
 class UnitConversion(tf.keras.layers.Layer):
