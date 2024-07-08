@@ -128,6 +128,8 @@ def test_skip_connection():
 
         if i == 3:  # skip start
             assert layer._cache is not None
+        elif i == 4 or i == 5 or i == 6:
+            assert np.allclose(cache.numpy(), layers[3]._cache.numpy())
         elif i == 7:  # skip end
             assert layer._cache is None
             tf.assert_equal(x, tf.add(x_input, cache))
