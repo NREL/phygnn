@@ -1,0 +1,47 @@
+phygnn.layers.custom\_layers
+============================
+
+.. automodule:: phygnn.layers.custom_layers
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+      :toctree:
+      :template: custom-class-template.rst
+   
+      ExpandDims
+      FNO
+      FlattenAxis
+      FlexiblePadding
+      FunctionalLayer
+      GaussianAveragePooling2D
+      GaussianNoiseAxis
+      LogTransform
+      SigLin
+      SkipConnection
+      SpatialExpansion
+      SpatioTemporalExpansion
+      SqueezeAndExcitation
+      Sup3rAdder
+      Sup3rConcat
+      TileLayer
+      UnitConversion
+   
+   
+
+   
+   
+   
+
+
+
