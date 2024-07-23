@@ -16,6 +16,9 @@ from phygnn.layers.custom_layers import (
     TileLayer,
     FunctionalLayer,
     GaussianAveragePooling2D,
+    SigLin,
+    LogTransform,
+    UnitConversion,
 )
 from phygnn.layers.handlers import HiddenLayers, Layers
 from phygnn import TfModel
@@ -109,7 +112,7 @@ def test_skip_connection():
         {'class': 'SkipConnection', 'name': 'a'},
         {'class': 'Conv2D', 'filters': 4, 'kernel_size': 3,
          'activation': 'relu', 'padding': 'same'},
-        ]
+    ]
     layers = HiddenLayers(hidden_layers)
     assert len(layers.layers) == 5
 
@@ -504,3 +507,72 @@ def test_gaussian_pooling():
         layer = model2.layers[0]
         x_in = np.random.uniform(0, 1, (10, 24, 24, 3))
         _ = model2.predict(x_in)
+
+
+def test_siglin():
+    """Test the sigmoid linear layer"""
+    n_points = 1000
+    mid = n_points // 2
+    sl = SigLin()
+    x = np.linspace(-10, 10, n_points + 1)
+    y = sl(x).numpy()
+    assert x.shape == y.shape
+    assert (y > 0).all()
+    assert np.allclose(y[mid:], x[mid:] + 0.5)
+
+
+def test_logtransform():
+    """Test the log transform layer"""
+    n_points = 1000
+    lt = LogTransform(adder=0)
+    x = np.linspace(0, 10, n_points + 1)
+    y = lt(x).numpy()
+    assert x.shape == y.shape
+    assert y[0] == -np.inf
+
+    lt = LogTransform(adder=1)
+    ilt = LogTransform(adder=1, inverse=True)
+    x = np.random.uniform(0, 10, (n_points + 1, 2))
+    y = lt(x).numpy()
+    xinv = ilt(y).numpy()
+    assert not np.isnan(y).any()
+    assert np.allclose(y, np.log(x + 1))
+    assert np.allclose(x, xinv)
+
+    lt = LogTransform(adder=1, idf=1)
+    ilt = LogTransform(adder=1, inverse=True, idf=1)
+    x = np.random.uniform(0, 10, (n_points + 1, 2))
+    y = lt(x).numpy()
+    xinv = ilt(y).numpy()
+    assert np.allclose(x[:, 0], y[:, 0])
+    assert not np.allclose(x[:, 1], y[:, 1])
+    assert not np.isnan(y).any()
+    assert np.allclose(y[:, 1], np.log(x[:, 1] + 1))
+    assert np.allclose(x, xinv)
+
+
+def test_unit_conversion():
+    """Test the custom unit conversion layer"""
+    x = np.random.uniform(0, 1, (1, 10, 10, 4))  # 4 features
+
+    layer = UnitConversion(adder=0, scalar=1)
+    y = layer(x).numpy()
+    assert np.allclose(x, y)
+
+    layer = UnitConversion(adder=1, scalar=1)
+    y = layer(x).numpy()
+    assert (y >= 1).all() and (y <= 2).all()
+
+    layer = UnitConversion(adder=1, scalar=100)
+    y = layer(x).numpy()
+    assert (y >= 1).all() and (y > 90).any() and (y <= 101).all()
+
+    layer = UnitConversion(adder=0, scalar=[100, 1, 1, 1])
+    y = layer(x).numpy()
+    assert (y[..., 0] > 90).any() and (y[..., 0] <= 100).all()
+    assert (y[..., 1:] >= 0).all() and (y[..., 1:] <= 1).all()
+
+    with pytest.raises(AssertionError):
+        # bad number of scalar values
+        layer = UnitConversion(adder=0, scalar=[100, 1, 1])
+        y = layer(x)

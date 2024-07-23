@@ -931,3 +931,190 @@ class FunctionalLayer(tf.keras.layers.Layer):
         """
         const = tf.constant(value=self.value, shape=x.shape, dtype=x.dtype)
         return self.fun((x, const))
+
+
+class SigLin(tf.keras.layers.Layer):
+    """Sigmoid linear unit. This can be used to set a soft minimum on a range.
+
+    y = 1/(1+exp(-x)) where x<0.5
+    y = x + 0.5 where x>=0.5
+    """
+
+    def call(self, x):
+        """Operates on x with SigLin
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor with same shape as input x operated on by SigLin
+        """
+
+        return tf.math.maximum(tf.math.sigmoid(x), x + 0.5)
+
+
+class LogTransform(tf.keras.layers.Layer):
+    """Log transform or inverse transform of data
+
+    ``y = log(x + adder) * scalar`` or
+    ``y = exp(x / scalar) - adder`` for the inverse
+    """
+
+    def __init__(self, name=None, adder=0, scalar=1, inverse=False, idf=None):
+        """
+        Parameters
+        ----------
+        name : str | None
+            Name of the tensorflow layer
+        adder : float
+            Adder term for ``y = log(x + adder) * scalar``
+        scalar : float
+            Scalar term for ``y = log(x + adder) * scalar``
+        inverse : bool
+            Option to perform the inverse operation e.g.
+            ``y = exp(x / scalar) - adder``
+        idf : int | list | None
+            One or more feature channel indices to perform log transform on.
+            None will perform transform on all feature channels.
+        """
+
+        super().__init__(name=name)
+        self.adder = adder
+        self.scalar = scalar
+        self.inverse = inverse
+        self.rank = None
+        self.idf = [idf] if isinstance(idf, int) else idf
+
+    def build(self, input_shape):
+        """Custom implementation of the tf layer build method.
+
+        Parameters
+        ----------
+        input_shape : tuple
+            Shape tuple of the input
+        """
+        self.rank = len(input_shape)
+
+    def _logt(self, x):
+        if not self.inverse:
+            return tf.math.log(x + self.adder) * self.scalar
+        else:
+            return tf.math.exp(x / self.scalar) - self.adder
+
+    def call(self, x):
+        """Operates on x with (inverse) log transform
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+
+        Returns
+        -------
+        y : tf.Tensor
+            Log-transformed x tensor
+        """
+
+        if self.idf is None:
+            return self._logt(x)
+        else:
+            out = []
+            for idf in range(x.shape[-1]):
+                if idf in self.idf:
+                    out.append(self._logt(x[..., idf:idf + 1]))
+                else:
+                    out.append(x[..., idf:idf + 1])
+
+            out = tf.concat(out, -1, name='concat')
+            return out
+
+
+class UnitConversion(tf.keras.layers.Layer):
+    """Layer to convert units per feature channel using the linear transform:
+    ``y = x * scalar + adder``
+
+    Be sure to check how this will interact with normalization factors.
+    """
+
+    def __init__(self, name=None, adder=0, scalar=1):
+        """
+        Parameters
+        ----------
+        name : str | None
+            Name of the tensorflow layer
+        adder : float | list
+            Adder term for ``y = x * scalar + adder``. If this is a float, the
+            same value will be used for all feature channels. If this is a
+            list, each value will be used for the corresponding feature channel
+            and the length must match the number of feature channels
+        scalar : float | list
+            Scalar term for ``y = x * scalar + adder``. If this is a float, the
+            same value will be used for all feature channels. If this is a
+            list, each value will be used for the corresponding feature channel
+            and the length must match the number of feature channels
+        """
+
+        super().__init__(name=name)
+        self.adder = adder
+        self.scalar = scalar
+        self.rank = None
+
+    def build(self, input_shape):
+        """Custom implementation of the tf layer build method.
+
+        Parameters
+        ----------
+        input_shape : tuple
+            Shape tuple of the input
+        """
+        self.rank = len(input_shape)
+        nfeat = input_shape[-1]
+
+        dtypes = (int, np.int64, np.int32, float, np.float32, np.float64)
+
+        if isinstance(self.adder, dtypes):
+            self.adder = np.ones(nfeat) * self.adder
+            self.adder = tf.convert_to_tensor(self.adder, dtype=tf.float32)
+        else:
+            msg = (f'UnitConversion layer `adder` array has length '
+                   f'{len(self.adder)} but input shape has last dimension '
+                   f'as {input_shape[-1]}')
+            assert len(self.adder) == input_shape[-1], msg
+
+        if isinstance(self.scalar, dtypes):
+            self.scalar = np.ones(nfeat) * self.scalar
+            self.scalar = tf.convert_to_tensor(self.scalar, dtype=tf.float32)
+        else:
+            msg = (f'UnitConversion layer `scalar` array has length '
+                   f'{len(self.scalar)} but input shape has last dimension '
+                   f'as {input_shape[-1]}')
+            assert len(self.scalar) == input_shape[-1], msg
+
+    def call(self, x):
+        """Convert units
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+
+        Returns
+        -------
+        y : tf.Tensor
+            Unit-converted x tensor
+        """
+
+        if self.rank is None:
+            self.build(x.shape)
+
+        out = []
+        for idf, (adder, scalar) in enumerate(zip(self.adder, self.scalar)):
+            out.append(x[..., idf:idf + 1] * scalar + adder)
+
+        out = tf.concat(out, -1, name='concat')
+
+        return out
