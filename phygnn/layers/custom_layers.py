@@ -1113,7 +1113,7 @@ class UnitConversion(tf.keras.layers.Layer):
 
         out = []
         for idf, (adder, scalar) in enumerate(zip(self.adder, self.scalar)):
-            out.append(x[..., idf:idf+1] * scalar + adder)
+            out.append(x[..., idf:idf + 1] * scalar + adder)
 
         out = tf.concat(out, -1, name='concat')
 

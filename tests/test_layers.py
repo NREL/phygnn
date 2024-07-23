@@ -112,7 +112,7 @@ def test_skip_connection():
         {'class': 'SkipConnection', 'name': 'a'},
         {'class': 'Conv2D', 'filters': 4, 'kernel_size': 3,
          'activation': 'relu', 'padding': 'same'},
-        ]
+    ]
     layers = HiddenLayers(hidden_layers)
     assert len(layers.layers) == 5
 
