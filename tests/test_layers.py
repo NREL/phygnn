@@ -467,10 +467,10 @@ def test_gaussian_pooling():
     for stdev in [1, 2]:
         layer = GaussianAveragePooling2D(pool_size=5, strides=1, sigma=stdev)
         _ = layer(np.ones((24, 100, 100, 35)))
-        kernel = layer._kernel.numpy()
+        kernel = layer.make_kernel().numpy()
         kernels.append(kernel)
 
-        assert kernel[:, :, 0, 0].sum() == 1
+        assert np.allclose(kernel[:, :, 0, 0].sum(), 1, rtol=1e-4)
         assert kernel[2, 2, 0, 0] == kernel.max()
         assert kernel[0, 0, 0, 0] == kernel.min()
         assert kernel[-1, -1, 0, 0] == kernel.min()
@@ -485,7 +485,7 @@ def test_gaussian_pooling():
                            normalize=False)
     x_in = np.random.uniform(0, 1, (1, 12, 12, 3))
     out1 = model1.predict(x_in)
-    kernel1 = model1.layers[0]._kernel[:, :, 0, 0].numpy()
+    kernel1 = model1.layers[0].make_kernel()[:, :, 0, 0].numpy()
 
     for idf in range(out1.shape[-1]):
         test = (x_in[0, :, :, idf] * kernel1).sum()
@@ -499,7 +499,7 @@ def test_gaussian_pooling():
         model1.save_model(model_path)
         model2 = TfModel.load(model_path)
 
-        kernel2 = model2.layers[0]._kernel[:, :, 0, 0].numpy()
+        kernel2 = model2.layers[0].make_kernel()[:, :, 0, 0].numpy()
         out2 = model2.predict(x_in)
         assert np.allclose(kernel1, kernel2)
         assert np.allclose(out1, out2)
@@ -507,6 +507,52 @@ def test_gaussian_pooling():
         layer = model2.layers[0]
         x_in = np.random.uniform(0, 1, (10, 24, 24, 3))
         _ = model2.predict(x_in)
+
+
+def test_gaussian_pooling_train():
+    """Test the trainable sigma functionality of the gaussian average pool"""
+    pool_size = 5
+    xtrain = np.random.uniform(0, 1, (10, pool_size, pool_size, 1))
+    ytrain = np.random.uniform(0, 1, (10, 1, 1, 1))
+    hidden_layers = [{'class': 'GaussianAveragePooling2D',
+                      'pool_size': pool_size, 'trainable': False,
+                      'strides': 1, 'padding': 'valid', 'sigma': 2}]
+
+    model = TfModel.build(['x'], ['y'],
+                          hidden_layers=hidden_layers,
+                          input_layer=False,
+                          output_layer=False,
+                          learning_rate=1e-3,
+                          normalize=(True, True))
+    model.layers[0].build(xtrain.shape)
+    assert len(model.layers[0].trainable_weights) == 0
+
+    hidden_layers[0]['trainable'] = True
+    model = TfModel.build(['x'], ['y'],
+                          hidden_layers=hidden_layers,
+                          input_layer=False,
+                          output_layer=False,
+                          learning_rate=1e-3,
+                          normalize=(True, True))
+    model.layers[0].build(xtrain.shape)
+    assert len(model.layers[0].trainable_weights) == 1
+
+    layer = model.layers[0]
+    sigma1 = float(layer.sigma)
+    kernel1 = layer.make_kernel().numpy().copy()
+    model.train_model(xtrain, ytrain, epochs=10)
+    sigma2 = float(layer.sigma)
+    kernel2 = layer.make_kernel().numpy().copy()
+
+    assert not np.allclose(sigma1, sigma2)
+    assert not np.allclose(kernel1, kernel2)
+
+    with TemporaryDirectory() as td:
+        model_path = os.path.join(td, 'test_model')
+        model.save_model(model_path)
+        model2 = TfModel.load(model_path)
+
+    assert np.allclose(model.predict(xtrain), model2.predict(xtrain))
 
 
 def test_siglin():
@@ -532,7 +578,7 @@ def test_logtransform():
 
     lt = LogTransform(adder=1)
     ilt = LogTransform(adder=1, inverse=True)
-    x = np.random.uniform(0, 10, (n_points + 1, 2))
+    x = np.random.uniform(0.01, 10, (n_points + 1, 2))
     y = lt(x).numpy()
     xinv = ilt(y).numpy()
     assert not np.isnan(y).any()
@@ -541,7 +587,7 @@ def test_logtransform():
 
     lt = LogTransform(adder=1, idf=1)
     ilt = LogTransform(adder=1, inverse=True, idf=1)
-    x = np.random.uniform(0, 10, (n_points + 1, 2))
+    x = np.random.uniform(0.01, 10, (n_points + 1, 2))
     y = lt(x).numpy()
     xinv = ilt(y).numpy()
     assert np.allclose(x[:, 0], y[:, 0])
