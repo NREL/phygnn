@@ -244,11 +244,12 @@ class GaussianNoiseAxis(tf.keras.layers.Layer):
         """
         Parameters
         ----------
-        axis : int
-            Axis to apply random noise across. All other axis will have the
-            same noise. For example, for a 5D spatiotemporal tensor with axis=3
-            (the time axis), this layer will apply a single random number to
-            every unique index of axis=3.
+        axis : int | list | tuple
+            Axes to apply random noise across. All other axes will have the
+            same noise. For example, for a 5D spatiotemporal tensor with
+            axis=(1, 2, 3) (both spatial axes and the temporal axis), this
+            layer will apply a single random number to every unique index of
+            axis=(1, 2, 3).
         mean : float
             The mean of the normal distribution.
         stddev : float
@@ -257,10 +258,16 @@ class GaussianNoiseAxis(tf.keras.layers.Layer):
 
         super().__init__()
         self.rank = None
-        self._axis = axis
-        self._rand_shape = None
+        self._axis = axis if isinstance(axis, (tuple, list)) else [axis]
         self._mean = tf.constant(mean, dtype=tf.dtypes.float32)
         self._stddev = tf.constant(stddev, dtype=tf.dtypes.float32)
+
+    def _get_rand_shape(self, x):
+        """Get shape of random noise along the specified axes."""
+        shape = np.ones(len(x.shape), dtype=np.int32)
+        for ax in self._axis:
+            shape[ax] = x.shape[ax]
+        return tf.constant(shape, dtype=tf.dtypes.int32)
 
     def build(self, input_shape):
         """Custom implementation of the tf layer build method.
@@ -272,10 +279,7 @@ class GaussianNoiseAxis(tf.keras.layers.Layer):
         input_shape : tuple
             Shape tuple of the input
         """
-        shape = np.ones(len(input_shape), dtype=np.int32)
-        shape[self._axis] = input_shape[self._axis]
         self.rank = len(input_shape)
-        self._rand_shape = tf.constant(shape, dtype=tf.dtypes.int32)
 
     def call(self, x):
         """Calls the tile operation
@@ -291,11 +295,11 @@ class GaussianNoiseAxis(tf.keras.layers.Layer):
             Output tensor with noise applied to the requested axis.
         """
 
-        rand_tensor = tf.random.normal(self._rand_shape,
+        rand_tensor = tf.random.normal(self._get_rand_shape(x),
                                        mean=self._mean,
                                        stddev=self._stddev,
                                        dtype=tf.dtypes.float32)
-        return x * rand_tensor
+        return x + rand_tensor
 
 
 class FlattenAxis(tf.keras.layers.Layer):
