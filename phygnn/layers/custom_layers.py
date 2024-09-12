@@ -177,12 +177,14 @@ class GaussianAveragePooling2D(tf.keras.layers.Layer):
     def _make_2D_gaussian_kernel(edge_len, sigma=1.):
         """Creates 2D gaussian kernel with side length `edge_len` and a sigma
         of `sigma`
+
         Parameters
         ----------
         edge_len : int
             Edge size of the kernel
         sigma : float
             Sigma parameter for gaussian distribution
+
         Returns
         -------
         kernel : np.ndarray
@@ -213,10 +215,12 @@ class GaussianAveragePooling2D(tf.keras.layers.Layer):
 
     def call(self, x):
         """Operates on x with the specified function
+
         Parameters
         ----------
         x : tf.Tensor
             Input tensor
+
         Returns
         -------
         x : tf.Tensor
@@ -240,11 +244,12 @@ class GaussianNoiseAxis(tf.keras.layers.Layer):
         """
         Parameters
         ----------
-        axis : int
-            Axis to apply random noise across. All other axis will have the
-            same noise. For example, for a 5D spatiotemporal tensor with axis=3
-            (the time axis), this layer will apply a single random number to
-            every unique index of axis=3.
+        axis : int | list | tuple
+            Axes to apply random noise across. All other axes will have the
+            same noise. For example, for a 5D spatiotemporal tensor with
+            axis=(1, 2, 3) (both spatial axes and the temporal axis), this
+            layer will apply a single random number to every unique index of
+            axis=(1, 2, 3).
         mean : float
             The mean of the normal distribution.
         stddev : float
@@ -252,10 +257,17 @@ class GaussianNoiseAxis(tf.keras.layers.Layer):
         """
 
         super().__init__()
-        self._axis = axis
-        self._rand_shape = None
+        self.rank = None
+        self._axis = axis if isinstance(axis, (tuple, list)) else [axis]
         self._mean = tf.constant(mean, dtype=tf.dtypes.float32)
         self._stddev = tf.constant(stddev, dtype=tf.dtypes.float32)
+
+    def _get_rand_shape(self, x):
+        """Get shape of random noise along the specified axes."""
+        shape = np.ones(len(x.shape), dtype=np.int32)
+        for ax in self._axis:
+            shape[ax] = x.shape[ax]
+        return tf.constant(shape, dtype=tf.dtypes.int32)
 
     def build(self, input_shape):
         """Custom implementation of the tf layer build method.
@@ -267,9 +279,7 @@ class GaussianNoiseAxis(tf.keras.layers.Layer):
         input_shape : tuple
             Shape tuple of the input
         """
-        shape = np.ones(len(input_shape), dtype=np.int32)
-        shape[self._axis] = input_shape[self._axis]
-        self._rand_shape = tf.constant(shape, dtype=tf.dtypes.int32)
+        self.rank = len(input_shape)
 
     def call(self, x):
         """Calls the tile operation
@@ -285,11 +295,11 @@ class GaussianNoiseAxis(tf.keras.layers.Layer):
             Output tensor with noise applied to the requested axis.
         """
 
-        rand_tensor = tf.random.normal(self._rand_shape,
+        rand_tensor = tf.random.normal(self._get_rand_shape(x),
                                        mean=self._mean,
                                        stddev=self._stddev,
                                        dtype=tf.dtypes.float32)
-        return x * rand_tensor
+        return x + rand_tensor
 
 
 class FlattenAxis(tf.keras.layers.Layer):
@@ -351,7 +361,7 @@ class SpatialExpansion(tf.keras.layers.Layer):
         """
         Parameters
         ----------
-        spatial_multiplier : int
+        spatial_mult : int
             Number of times to multiply the spatial dimensions. Note that the
             spatial expansion is an un-packing of the feature dimension. For
             example, if the input layer has shape (123, 5, 5, 16) with
@@ -435,14 +445,14 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
         """
         Parameters
         ----------
-        spatial_multiplier : int
+        spatial_mult : int
             Number of times to multiply the spatial dimensions. Note that the
             spatial expansion is an un-packing of the feature dimension. For
             example, if the input layer has shape (123, 5, 5, 24, 16) with
             multiplier=2 the output shape will be (123, 10, 10, 24, 4). The
             input feature dimension must be divisible by the spatial multiplier
             squared.
-        temporal_multiplier : int
+        temporal_mult : int
             Number of times to multiply the temporal dimension. For example,
             if the input layer has shape (123, 5, 5, 24, 2) with multiplier=2
             the output shape will be (123, 5, 5, 48, 2).
@@ -603,18 +613,17 @@ class SkipConnection(tf.keras.layers.Layer):
         if self._cache is None:
             self._cache = x
             return x
+        try:
+            out = tf.add(x, self._cache)
+        except Exception as e:
+            msg = ('Could not add SkipConnection "{}" data cache of '
+                   'shape {} to input of shape {}.'
+                   .format(self._name, self._cache.shape, x.shape))
+            logger.error(msg)
+            raise RuntimeError(msg) from e
         else:
-            try:
-                out = tf.add(x, self._cache)
-            except Exception as e:
-                msg = ('Could not add SkipConnection "{}" data cache of '
-                       'shape {} to input of shape {}.'
-                       .format(self._name, self._cache.shape, x.shape))
-                logger.error(msg)
-                raise RuntimeError(msg) from e
-            else:
-                self._cache = None
-                return out
+            self._cache = None
+            return out
 
 
 class SqueezeAndExcitation(tf.keras.layers.Layer):
@@ -834,7 +843,8 @@ class Sup3rAdder(tf.keras.layers.Layer):
         """
         super().__init__(name=name)
 
-    def call(self, x, hi_res_adder):
+    @staticmethod
+    def call(x, hi_res_adder):
         """Adds hi-resolution data to the input tensor x in the middle of a
         sup3r resolution network.
 
@@ -869,7 +879,8 @@ class Sup3rConcat(tf.keras.layers.Layer):
         """
         super().__init__(name=name)
 
-    def call(self, x, hi_res_feature):
+    @staticmethod
+    def call(x, hi_res_feature):
         """Concatenates a hi-resolution feature to the input tensor x in the
         middle of a sup3r resolution network.
 
@@ -940,7 +951,8 @@ class SigLin(tf.keras.layers.Layer):
     y = x + 0.5 where x>=0.5
     """
 
-    def call(self, x):
+    @staticmethod
+    def call(x):
         """Operates on x with SigLin
 
         Parameters
@@ -1002,8 +1014,7 @@ class LogTransform(tf.keras.layers.Layer):
     def _logt(self, x):
         if not self.inverse:
             return tf.math.log(x + self.adder) * self.scalar
-        else:
-            return tf.math.exp(x / self.scalar) - self.adder
+        return tf.math.exp(x / self.scalar) - self.adder
 
     def call(self, x):
         """Operates on x with (inverse) log transform
@@ -1021,16 +1032,15 @@ class LogTransform(tf.keras.layers.Layer):
 
         if self.idf is None:
             return self._logt(x)
-        else:
-            out = []
-            for idf in range(x.shape[-1]):
-                if idf in self.idf:
-                    out.append(self._logt(x[..., idf:idf + 1]))
-                else:
-                    out.append(x[..., idf:idf + 1])
+        out = []
+        for idf in range(x.shape[-1]):
+            if idf in self.idf:
+                out.append(self._logt(x[..., idf:idf + 1]))
+            else:
+                out.append(x[..., idf:idf + 1])
 
-            out = tf.concat(out, -1, name='concat')
-            return out
+        out = tf.concat(out, -1, name='concat')
+        return out
 
 
 class UnitConversion(tf.keras.layers.Layer):
