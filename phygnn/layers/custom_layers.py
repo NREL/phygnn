@@ -12,7 +12,7 @@ class FlexiblePadding(tf.keras.layers.Layer):
     """Class to perform padding on tensors
     """
 
-    def __init__(self, paddings, mode='REFLECT'):
+    def __init__(self, paddings, mode='REFLECT', option='tf'):
         """
         Parameters
         ----------
@@ -21,13 +21,29 @@ class FlexiblePadding(tf.keras.layers.Layer):
             rank of the tensor and elements give the number
             of leading and trailing pads
         mode : str
-            tf.pad() padding mode. Can be REFLECT, CONSTANT,
+            tf.pad() / np.pad() padding mode. Can be REFLECT, CONSTANT,
             or SYMMETRIC
+        option : str
+            Option for TensorFlow padding ("tf") or numpy ("np"). Default is tf
+            for tensorflow training. We have observed silent failures of
+            tf.pad() with larger array sizes, so "np" might be preferable at
+            inference time on large chunks.
         """
         super().__init__()
         self.paddings = tf.constant(paddings)
         self.rank = len(paddings)
-        self.mode = mode
+        self.mode = mode.lower()
+        self.option = option.lower()
+
+        if self.option == 'tf':
+            self._pad_fun = tf.pad
+        elif self.option == 'np':
+            self._pad_fun = np.pad
+        else:
+            msg = ('FlexiblePadding option must be "tf" or "np" but '
+                   f'received: {self.option}')
+            logger.error(msg)
+            raise KeyError(msg)
 
     def compute_output_shape(self, input_shape):
         """Computes output shape after padding
@@ -62,8 +78,7 @@ class FlexiblePadding(tf.keras.layers.Layer):
             by compute_output_shape
 
         """
-        return tf.pad(x, self.paddings,
-                      mode=self.mode)
+        return self._pad_fun(x, self.paddings, mode=self.mode)
 
 
 class ExpandDims(tf.keras.layers.Layer):
