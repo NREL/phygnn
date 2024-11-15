@@ -289,17 +289,17 @@ def test_flexible_padding(hidden_layers):
     layer = HiddenLayers(hidden_layers).layers[0]
     t = tf.constant([[1, 2, 3],
                      [4, 5, 6]])
-    if layer.mode == 'CONSTANT':
+    if layer.mode.upper() == 'CONSTANT':
         t_check = tf.constant([[0, 0, 0, 0, 0, 0, 0],
                                [0, 0, 1, 2, 3, 0, 0],
                                [0, 0, 4, 5, 6, 0, 0],
                                [0, 0, 0, 0, 0, 0, 0]])
-    elif layer.mode == 'REFLECT':
+    elif layer.mode.upper() == 'REFLECT':
         t_check = tf.constant([[6, 5, 4, 5, 6, 5, 4],
                                [3, 2, 1, 2, 3, 2, 1],
                                [6, 5, 4, 5, 6, 5, 4],
                                [3, 2, 1, 2, 3, 2, 1]])
-    elif layer.mode == 'SYMMETRIC':
+    elif layer.mode.upper() == 'SYMMETRIC':
         t_check = tf.constant([[2, 1, 1, 2, 3, 3, 2],
                                [2, 1, 1, 2, 3, 3, 2],
                                [5, 4, 4, 5, 6, 6, 5],
