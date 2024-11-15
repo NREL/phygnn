@@ -27,7 +27,8 @@ class FlexiblePadding(tf.keras.layers.Layer):
             Option for TensorFlow padding ("tf") or numpy ("np"). Default is tf
             for tensorflow training. We have observed silent failures of
             tf.pad() with larger array sizes, so "np" might be preferable at
-            inference time on large chunks.
+            inference time on large chunks, but it is much slower when it has
+            to convert tensors to numpy arrays.
         """
         super().__init__()
         self.paddings = tf.constant(paddings)
@@ -183,6 +184,7 @@ class GaussianAveragePooling2D(tf.keras.layers.Layer):
         self.trainable = trainable
         self.sigma = sigma
 
+    # pylint: disable=unused-argument
     def build(self, input_shape):
         """Custom implementation of the tf layer build method.
 
@@ -490,11 +492,13 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
             where the feature axis is unpacked into the temporal axis.
         t_roll : int
             Option to roll the temporal axis after expanding. When using
-            temporal_method="depth_to_time", the default (t_roll=0) will
-            add temporal steps after the input steps such that if input
-            temporal shape is 3 and the temporal_mult is 24x, the output will
-            have the original timesteps at idt=0,24,48 but if t_roll=12, the
-            output will have the original timesteps at idt=12,36,60
+            temporal_method="depth_to_time", the default (t_roll=0) will add
+            temporal steps after the input steps such that if input temporal
+            shape is 3 and the temporal_mult is 24x, the output will have the
+            index-0 timesteps at idt=0,24,48 but if t_roll=12, the output will
+            have the original timesteps at idt=12,36,60. This is no longer
+            recommended, as a positive roll will move the features of timestep
+            -1 from the end of the series to the beginning.
         """
 
         super().__init__()
