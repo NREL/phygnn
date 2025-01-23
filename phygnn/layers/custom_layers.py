@@ -897,6 +897,50 @@ class Sup3rAdder(tf.keras.layers.Layer):
         return x + hi_res_adder
 
 
+class Sup3rFixer(tf.keras.layers.Layer):
+    """Layer to fix certain values for a sup3r model in the middle of a
+    super resolution forward pass. This is used to condition models on sparse
+    observation data."""
+
+    def __init__(self, name=None):
+        """
+        Parameters
+        ----------
+        name : str | None
+            Unique str identifier of the fixer layer. Usually the name of the
+            hi-resolution feature used in the fixing.
+        """
+        super().__init__(name=name)
+
+    @staticmethod
+    def call(x, hi_res_fixer, feature_index):
+        """Fixes hi-resolution data for the tensor x in the middle of a
+        sup3r resolution network.
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+        hi_res_fixer : tf.Tensor | np.ndarray
+            This should be a 4D array for spatial enhancement model or 5D array
+            for a spatiotemporal enhancement model (obs, spatial_1, spatial_2,
+            (temporal), 1) that can be used to fix values of x.
+        feature_index : int
+            The index of the feature to fix. This assumes that x has the same
+            number of channels and indexing as the model output features.
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor with the hi_res_fixer used to fix values of x.
+        """
+        mask = tf.math.is_nan(hi_res_fixer[..., 0])
+        arrs = [x[..., i] for i in range(x.shape[-1])]
+        arrs[feature_index] = tf.where(
+            mask, x[..., feature_index], hi_res_fixer[..., 0])
+        return tf.stack(arrs, axis=-1)
+
+
 class Sup3rConcat(tf.keras.layers.Layer):
     """Layer to concatenate a high-resolution feature to a sup3r model in the
     middle of a super resolution forward pass."""

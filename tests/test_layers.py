@@ -19,6 +19,7 @@ from phygnn.layers.custom_layers import (
     SigLin,
     SkipConnection,
     SpatioTemporalExpansion,
+    Sup3rFixer,
     TileLayer,
     UnitConversion,
 )
@@ -623,3 +624,22 @@ def test_unit_conversion():
         # bad number of scalar values
         layer = UnitConversion(adder=0, scalar=[100, 1, 1])
         y = layer(x)
+
+
+def test_fixer_layer():
+    """Make sure ``Sup3rFixer`` layer works properly"""
+    x = np.random.uniform(0, 1, (1, 10, 10, 4)).astype(np.float32)
+    y = np.random.uniform(0, 1, (1, 10, 10, 1)).astype(np.float32)
+    mask = np.random.choice([False, True], (1, 10, 10), p=[0.1, 0.9])
+    y[mask] = np.nan
+
+    x = tf.convert_to_tensor(x)
+    y = tf.convert_to_tensor(y)
+
+    layer = Sup3rFixer()
+    out = layer(x, y, feature_index=0).numpy()
+
+    assert tf.reduce_any(tf.math.is_nan(y))
+    assert np.allclose(out[..., 0][~mask], y[..., 0][~mask])
+    assert x.shape == out.shape
+    assert not tf.reduce_any(tf.math.is_nan(out))
