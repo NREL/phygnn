@@ -19,7 +19,7 @@ from phygnn.layers.custom_layers import (
     SigLin,
     SkipConnection,
     SpatioTemporalExpansion,
-    Sup3rFixer,
+    Sup3rConcatMasked,
     TileLayer,
     UnitConversion,
 )
@@ -626,8 +626,8 @@ def test_unit_conversion():
         y = layer(x)
 
 
-def test_fixer_layer():
-    """Make sure ``Sup3rFixer`` layer works properly"""
+def test_concat_masked_layer():
+    """Make sure ``Sup3rConcatMasked`` layer works properly"""
     x = np.random.uniform(0, 1, (1, 10, 10, 4)).astype(np.float32)
     y = np.random.uniform(0, 1, (1, 10, 10, 1)).astype(np.float32)
     mask = np.random.choice([False, True], (1, 10, 10), p=[0.1, 0.9])
@@ -636,10 +636,11 @@ def test_fixer_layer():
     x = tf.convert_to_tensor(x)
     y = tf.convert_to_tensor(y)
 
-    layer = Sup3rFixer()
-    out = layer(x, y, feature_index=0).numpy()
+    layer = Sup3rConcatMasked()
+    out = layer(x, y).numpy()
 
     assert tf.reduce_any(tf.math.is_nan(y))
-    assert np.allclose(out[..., 0][~mask], y[..., 0][~mask])
-    assert x.shape == out.shape
+    assert np.allclose(out[..., -1][~mask], y[..., 0][~mask])
+    assert np.allclose(out[..., -1][mask], x[..., 0][mask])
+    assert x.shape[:-1] == out.shape[:-1]
     assert not tf.reduce_any(tf.math.is_nan(out))

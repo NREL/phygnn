@@ -897,10 +897,12 @@ class Sup3rAdder(tf.keras.layers.Layer):
         return x + hi_res_adder
 
 
-class Sup3rFixer(tf.keras.layers.Layer):
+class Sup3rConcatMasked(tf.keras.layers.Layer):
     """Layer to fix certain values for a sup3r model in the middle of a
     super resolution forward pass. This is used to condition models on sparse
-    observation data."""
+    observation data. This uses the first channel of the input tensor as a
+    background for the provided fixed values and then concatenates with the
+    input tensor."""
 
     def __init__(self, name=None):
         """
@@ -913,32 +915,27 @@ class Sup3rFixer(tf.keras.layers.Layer):
         super().__init__(name=name)
 
     @staticmethod
-    def call(x, hi_res_fixer, feature_index):
-        """Fixes hi-resolution data for the tensor x in the middle of a
-        sup3r resolution network.
+    def call(x, hi_res_feature):
+        """Combine the first channel of x and the non-nan data in
+        hi_res_feature and concatenates with x.
 
         Parameters
         ----------
         x : tf.Tensor
             Input tensor
-        hi_res_fixer : tf.Tensor | np.ndarray
+        hi_feature : tf.Tensor | np.ndarray
             This should be a 4D array for spatial enhancement model or 5D array
             for a spatiotemporal enhancement model (obs, spatial_1, spatial_2,
             (temporal), 1) that can be used to fix values of x.
-        feature_index : int
-            The index of the feature to fix. This assumes that x has the same
-            number of channels and indexing as the model output features.
 
         Returns
         -------
         x : tf.Tensor
             Output tensor with the hi_res_fixer used to fix values of x.
         """
-        mask = tf.math.is_nan(hi_res_fixer[..., 0])
-        arrs = [x[..., i] for i in range(x.shape[-1])]
-        arrs[feature_index] = tf.where(
-            mask, x[..., feature_index], hi_res_fixer[..., 0])
-        return tf.stack(arrs, axis=-1)
+        mask = tf.math.is_nan(hi_res_feature[..., 0])
+        fixed = tf.where(mask, x[..., 0], hi_res_feature[..., 0])
+        return tf.concat((x, tf.expand_dims(fixed, axis=-1)), axis=-1)
 
 
 class Sup3rConcat(tf.keras.layers.Layer):
