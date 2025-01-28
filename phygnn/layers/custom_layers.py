@@ -897,20 +897,20 @@ class Sup3rAdder(tf.keras.layers.Layer):
         return x + hi_res_adder
 
 
-class Sup3rConcatMasked(tf.keras.layers.Layer):
+class Sup3rConcatObs(tf.keras.layers.Layer):
     """Layer to fix certain values for a sup3r model in the middle of a
     super resolution forward pass. This is used to condition models on sparse
     observation data. This uses the first channel of the input tensor as a
-    background for the provided fixed values and then concatenates with the
-    input tensor."""
+    background for the provided values and then concatenates with the input
+    tensor."""
 
     def __init__(self, name=None):
         """
         Parameters
         ----------
         name : str | None
-            Unique str identifier of the fixer layer. Usually the name of the
-            hi-resolution feature used in the fixing.
+            Unique str identifier of the layer. Usually the name of the
+            hi-resolution feature used in the concatenation.
         """
         super().__init__(name=name)
 
@@ -923,7 +923,7 @@ class Sup3rConcatMasked(tf.keras.layers.Layer):
         ----------
         x : tf.Tensor
             Input tensor
-        hi_feature : tf.Tensor | np.ndarray
+        hi_res_feature : tf.Tensor | np.ndarray
             This should be a 4D array for spatial enhancement model or 5D array
             for a spatiotemporal enhancement model (obs, spatial_1, spatial_2,
             (temporal), 1) that can be used to fix values of x.
@@ -933,9 +933,53 @@ class Sup3rConcatMasked(tf.keras.layers.Layer):
         x : tf.Tensor
             Output tensor with the hi_res_fixer used to fix values of x.
         """
+        mask = tf.math.is_nan(hi_res_feature)
+        fixed = tf.where(mask, x[..., :1], hi_res_feature)
+        return tf.concat((x, fixed), axis=-1)
+
+
+class Sup3rImpute(tf.keras.layers.Layer):
+    """Layer to impute certain values for a sup3r model in the middle of a
+    super resolution forward pass. This is used to condition models on sparse
+    observation data. This imputes the non nan values of the given data into
+    the specified feature channel."""
+
+    def __init__(self, name=None):
+        """
+        Parameters
+        ----------
+        name : str | None
+            Unique str identifier of the layer. Usually the name of the
+            hi-resolution feature used in the imputing.
+        """
+        super().__init__(name=name)
+
+    @staticmethod
+    def call(x, hi_res_feature, feature_index):
+        """Impute the non nan data in ``hi_res_feature`` into the ``x``
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+        hi_res_feature : tf.Tensor | np.ndarray
+            This should be a 4D array for spatial enhancement model or 5D array
+            for a spatiotemporal enhancement model (obs, spatial_1, spatial_2,
+            (temporal), 1) that can be used to fix values of x.
+        feature_index : int
+            Index of the feature channel to impute the non nan data in
+            ``hi_res_feature``
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor with the hi_res_feature used to impute values of x.
+        """
         mask = tf.math.is_nan(hi_res_feature[..., 0])
-        fixed = tf.where(mask, x[..., 0], hi_res_feature[..., 0])
-        return tf.concat((x, tf.expand_dims(fixed, axis=-1)), axis=-1)
+        fixed = tf.where(mask, x[..., feature_index], hi_res_feature[..., 0])
+        out = [x[..., i] for i in range(x.shape[-1])]
+        out[feature_index] = fixed
+        return tf.stack(out, axis=-1)
 
 
 class Sup3rConcat(tf.keras.layers.Layer):
