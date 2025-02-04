@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Custom tf layers."""
+
 import logging
 
 import numpy as np
@@ -9,10 +10,9 @@ logger = logging.getLogger(__name__)
 
 
 class FlexiblePadding(tf.keras.layers.Layer):
-    """Class to perform padding on tensors
-    """
+    """Class to perform padding on tensors"""
 
-    def __init__(self, paddings, mode='REFLECT', option='tf'):
+    def __init__(self, paddings, mode="REFLECT", option="tf"):
         """
         Parameters
         ----------
@@ -36,13 +36,15 @@ class FlexiblePadding(tf.keras.layers.Layer):
         self.mode = mode.lower()
         self.option = option.lower()
 
-        if self.option == 'tf':
+        if self.option == "tf":
             self._pad_fun = tf.pad
-        elif self.option == 'np':
+        elif self.option == "np":
             self._pad_fun = np.pad
         else:
-            msg = ('FlexiblePadding option must be "tf" or "np" but '
-                   f'received: {self.option}')
+            msg = (
+                'FlexiblePadding option must be "tf" or "np" but '
+                f"received: {self.option}"
+            )
             logger.error(msg)
             raise KeyError(msg)
 
@@ -151,8 +153,15 @@ class GaussianAveragePooling2D(tf.keras.layers.Layer):
     gaussian kernel. This is basically a gaussian smoothing layer with a fixed
     convolution window that limits the area of effect"""
 
-    def __init__(self, pool_size, strides=None, padding='valid', sigma=1,
-                 trainable=True, **kwargs):
+    def __init__(
+        self,
+        pool_size,
+        strides=None,
+        padding="valid",
+        sigma=1,
+        trainable=True,
+        **kwargs,
+    ):
         """
         Parameters
         ----------
@@ -177,7 +186,7 @@ class GaussianAveragePooling2D(tf.keras.layers.Layer):
         """
 
         super().__init__(**kwargs)
-        assert isinstance(pool_size, int), 'pool_size must be int!'
+        assert isinstance(pool_size, int), "pool_size must be int!"
         self.pool_size = pool_size
         self.strides = strides
         self.padding = padding.upper()
@@ -197,10 +206,13 @@ class GaussianAveragePooling2D(tf.keras.layers.Layer):
         """
         if not any(self.weights):
             init = tf.keras.initializers.Constant(value=self.sigma)
-            self.sigma = self.add_weight("sigma", shape=[1],
-                                         trainable=self.trainable,
-                                         dtype=tf.float32,
-                                         initializer=init)
+            self.sigma = self.add_weight(
+                "sigma",
+                shape=[1],
+                trainable=self.trainable,
+                dtype=tf.float32,
+                initializer=init,
+            )
 
     def make_kernel(self):
         """Creates 2D gaussian kernel with side length `self.pool_size` and a
@@ -211,11 +223,14 @@ class GaussianAveragePooling2D(tf.keras.layers.Layer):
         kernel : np.ndarray
             2D kernel with shape (self.pool_size, self.pool_size)
         """
-        ax = tf.linspace(-(self.pool_size - 1) / 2.,
-                         (self.pool_size - 1) / 2.,
-                         self.pool_size)
-        gauss = tf.math.exp(-0.5 * tf.math.square(ax)
-                            / tf.math.square(self.sigma))
+        ax = tf.linspace(
+            -(self.pool_size - 1) / 2.0,
+            (self.pool_size - 1) / 2.0,
+            self.pool_size,
+        )
+        gauss = tf.math.exp(
+            -0.5 * tf.math.square(ax) / tf.math.square(self.sigma)
+        )
         kernel = tf.expand_dims(gauss, 0) * tf.expand_dims(gauss, -1)
         kernel = kernel / tf.math.reduce_sum(kernel)
         kernel = tf.expand_dims(kernel, -1)
@@ -231,13 +246,15 @@ class GaussianAveragePooling2D(tf.keras.layers.Layer):
         config : dict
         """
         config = super().get_config().copy()
-        config.update({
-            'pool_size': self.pool_size,
-            'strides': self.strides,
-            'padding': self.padding,
-            'trainable': self.trainable,
-            'sigma': float(self.sigma),
-        })
+        config.update(
+            {
+                "pool_size": self.pool_size,
+                "strides": self.strides,
+                "padding": self.padding,
+                "trainable": self.trainable,
+                "sigma": float(self.sigma),
+            }
+        )
         return config
 
     def call(self, x):
@@ -259,11 +276,14 @@ class GaussianAveragePooling2D(tf.keras.layers.Layer):
         out = []
         for idf in range(x.shape[-1]):
             fslice = slice(idf, idf + 1)
-            iout = tf.nn.convolution(x[..., fslice], kernel,
-                                     strides=self.strides,
-                                     padding=self.padding)
+            iout = tf.nn.convolution(
+                x[..., fslice],
+                kernel,
+                strides=self.strides,
+                padding=self.padding,
+            )
             out.append(iout)
-        out = tf.concat(out, -1, name='concat')
+        out = tf.concat(out, -1, name="concat")
         return out
 
 
@@ -325,10 +345,12 @@ class GaussianNoiseAxis(tf.keras.layers.Layer):
             Output tensor with noise applied to the requested axis.
         """
 
-        rand_tensor = tf.random.normal(self._get_rand_shape(x),
-                                       mean=self._mean,
-                                       stddev=self._stddev,
-                                       dtype=tf.dtypes.float32)
+        rand_tensor = tf.random.normal(
+            self._get_rand_shape(x),
+            mean=self._mean,
+            stddev=self._stddev,
+            dtype=tf.dtypes.float32,
+        )
         return x + rand_tensor
 
 
@@ -359,9 +381,11 @@ class FlattenAxis(tf.keras.layers.Layer):
         input_shape : tuple
             Shape tuple of the input
         """
-        msg = ('Input to FlattenAxis must be 5D with dimensions: '
-               '(n_observations, n_spatial_0, n_spatial_1, n_temporal, '
-               'n_features), but received shape: {}'.format(input_shape))
+        msg = (
+            "Input to FlattenAxis must be 5D with dimensions: "
+            "(n_observations, n_spatial_0, n_spatial_1, n_temporal, "
+            "n_features), but received shape: {}".format(input_shape)
+        )
         assert len(input_shape) == 5, msg
 
     def call(self, x):
@@ -412,9 +436,11 @@ class SpatialExpansion(tf.keras.layers.Layer):
         input_shape : tuple
             Shape tuple of the input
         """
-        msg = ('Input to SpatialExpansion must be 4D with dimensions: '
-               '(n_observations, n_spatial_0, n_spatial_1, n_features), '
-               'but received shape: {}'.format(input_shape))
+        msg = (
+            "Input to SpatialExpansion must be 4D with dimensions: "
+            "(n_observations, n_spatial_0, n_spatial_1, n_features), "
+            "but received shape: {}".format(input_shape)
+        )
         assert len(input_shape) == 4, msg
 
     def build(self, input_shape):
@@ -432,12 +458,17 @@ class SpatialExpansion(tf.keras.layers.Layer):
         data from the last axes"""
         check_shape = x.shape[-1] % self._spatial_mult**2
         if check_shape != 0:
-            msg = ('Spatial expansion of factor {} is being attempted on '
-                   'input tensor of shape {}, but the last dimension of the '
-                   'input tensor ({}) must be divisible by the spatial '
-                   'factor squared ({}).'
-                   .format(self._spatial_mult, x.shape, x.shape[-1],
-                           self._spatial_mult**2))
+            msg = (
+                "Spatial expansion of factor {} is being attempted on "
+                "input tensor of shape {}, but the last dimension of the "
+                "input tensor ({}) must be divisible by the spatial "
+                "factor squared ({}).".format(
+                    self._spatial_mult,
+                    x.shape,
+                    x.shape[-1],
+                    self._spatial_mult**2,
+                )
+            )
             logger.error(msg)
             raise RuntimeError(msg)
 
@@ -470,8 +501,13 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
     (n_observations, n_spatial_0, n_spatial_1, n_temporal, n_features)
     """
 
-    def __init__(self, spatial_mult=1, temporal_mult=1,
-                 temporal_method='nearest', t_roll=0):
+    def __init__(
+        self,
+        spatial_mult=1,
+        temporal_mult=1,
+        temporal_method="nearest",
+        t_roll=0,
+    ):
         """
         Parameters
         ----------
@@ -517,9 +553,11 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
         input_shape : tuple
             Shape tuple of the input
         """
-        msg = ('Input to SpatioTemporalExpansion must be 5D with dimensions: '
-               '(n_observations, n_spatial_0, n_spatial_1, n_temporal, '
-               'n_features), but received shape: {}'.format(input_shape))
+        msg = (
+            "Input to SpatioTemporalExpansion must be 5D with dimensions: "
+            "(n_observations, n_spatial_0, n_spatial_1, n_temporal, "
+            "n_features), but received shape: {}".format(input_shape)
+        )
         assert len(input_shape) == 5, msg
 
     def build(self, input_shape):
@@ -535,31 +573,46 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
     def _temporal_expand(self, x):
         """Expand the temporal dimension (axis=3) of a 5D tensor"""
 
-        if self._temporal_meth == 'depth_to_time':
+        if self._temporal_meth == "depth_to_time":
             check_shape = x.shape[-1] % self._temporal_mult
             if check_shape != 0:
-                msg = ('Temporal expansion of factor {} is being attempted on '
-                       'input tensor of shape {}, but the last dimension of '
-                       'the input tensor ({}) must be divisible by the '
-                       'temporal factor ({}).'
-                       .format(self._temporal_mult, x.shape, x.shape[-1],
-                               self._temporal_mult))
+                msg = (
+                    "Temporal expansion of factor {} is being attempted on "
+                    "input tensor of shape {}, but the last dimension of "
+                    "the input tensor ({}) must be divisible by the "
+                    "temporal factor ({}).".format(
+                        self._temporal_mult,
+                        x.shape,
+                        x.shape[-1],
+                        self._temporal_mult,
+                    )
+                )
                 logger.error(msg)
                 raise RuntimeError(msg)
 
-            shape = (x.shape[0], x.shape[1], x.shape[2],
-                     x.shape[3] * self._temporal_mult,
-                     x.shape[4] // self._temporal_mult)
+            shape = (
+                x.shape[0],
+                x.shape[1],
+                x.shape[2],
+                x.shape[3] * self._temporal_mult,
+                x.shape[4] // self._temporal_mult,
+            )
             out = tf.reshape(x, shape)
             out = tf.roll(out, self._t_roll, axis=3)
 
         else:
-            temp_expand_shape = tf.stack([x.shape[2],
-                                          x.shape[3] * self._temporal_mult])
+            temp_expand_shape = tf.stack(
+                [x.shape[2], x.shape[3] * self._temporal_mult]
+            )
             out = []
             for x_unstack in tf.unstack(x, axis=1):
-                out.append(tf.image.resize(x_unstack, temp_expand_shape,
-                           method=self._temporal_meth))
+                out.append(
+                    tf.image.resize(
+                        x_unstack,
+                        temp_expand_shape,
+                        method=self._temporal_meth,
+                    )
+                )
             out = tf.stack(out, axis=1)
 
         return out
@@ -569,12 +622,17 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
         data from the last axes"""
         check_shape = x.shape[-1] % self._spatial_mult**2
         if check_shape != 0:
-            msg = ('Spatial expansion of factor {} is being attempted on '
-                   'input tensor of shape {}, but the last dimension of the '
-                   'input tensor ({}) must be divisible by the spatial '
-                   'factor squared ({}).'
-                   .format(self._spatial_mult, x.shape, x.shape[-1],
-                           self._spatial_mult**2))
+            msg = (
+                "Spatial expansion of factor {} is being attempted on "
+                "input tensor of shape {}, but the last dimension of the "
+                "input tensor ({}) must be divisible by the spatial "
+                "factor squared ({}).".format(
+                    self._spatial_mult,
+                    x.shape,
+                    x.shape[-1],
+                    self._spatial_mult**2,
+                )
+            )
             logger.error(msg)
             raise RuntimeError(msg)
 
@@ -648,9 +706,12 @@ class SkipConnection(tf.keras.layers.Layer):
         try:
             out = tf.add(x, self._cache)
         except Exception as e:
-            msg = ('Could not add SkipConnection "{}" data cache of '
-                   'shape {} to input of shape {}.'
-                   .format(self._name, self._cache.shape, x.shape))
+            msg = (
+                'Could not add SkipConnection "{}" data cache of '
+                "shape {} to input of shape {}.".format(
+                    self._name, self._cache.shape, x.shape
+                )
+            )
             logger.error(msg)
             raise RuntimeError(msg) from e
         else:
@@ -704,17 +765,21 @@ class SqueezeAndExcitation(tf.keras.layers.Layer):
         elif len(input_shape) == 5:
             pool_layer = tf.keras.layers.GlobalAveragePooling3D()
         else:
-            msg = ('SqueezeAndExcitation layer can only accept 4D or 5D data '
-                   'for image or video input but received input shape: {}'
-                   .format(input_shape))
+            msg = (
+                "SqueezeAndExcitation layer can only accept 4D or 5D data "
+                "for image or video input but received input shape: {}".format(
+                    input_shape
+                )
+            )
             logger.error(msg)
             raise RuntimeError(msg)
 
         self._hidden_layers = [
             pool_layer,
-            tf.keras.layers.Dense(self._dense_units, activation='relu'),
-            tf.keras.layers.Dense(self._n_channels, activation='sigmoid'),
-            tf.keras.layers.Multiply()]
+            tf.keras.layers.Dense(self._dense_units, activation="relu"),
+            tf.keras.layers.Dense(self._n_channels, activation="sigmoid"),
+            tf.keras.layers.Multiply(),
+        ]
 
     def call(self, x):
         """Call the custom SqueezeAndExcitation layer
@@ -741,6 +806,322 @@ class SqueezeAndExcitation(tf.keras.layers.Layer):
         return x
 
 
+class MaskedSqueezeAndExcitation(tf.keras.layers.Layer):
+    """Custom layer for masked squeeze and excitation block for convolutional
+    networks
+
+    Note that this is only set up to take a channels-last conv output"""
+
+    def __init__(self, ratio=16, name=None):
+        """
+        Parameters
+        ----------
+        ratio : int
+            Number of convolutional channels/filters divided by the number of
+            dense connections in the SE block.
+        """
+
+        super().__init__(name=name)
+        self._ratio = ratio
+        self._n_channels = None
+        self._dense_units = None
+        self._hidden_layers = None
+
+    def build(self, input_shape):
+        """Build the SqueezeAndExcitation layer based on an input shape
+
+        Parameters
+        ----------
+        input_shape : tuple
+            Shape tuple of the input tensor
+        """
+
+        self._n_channels = input_shape[-1]
+        self._dense_units = int(np.ceil(self._n_channels / self._ratio))
+
+        if len(input_shape) == 4:
+            pool_layer = tf.keras.layers.GlobalAveragePooling2D()
+        elif len(input_shape) == 5:
+            pool_layer = tf.keras.layers.GlobalAveragePooling3D()
+        else:
+            msg = (
+                "SqueezeAndExcitation layer can only accept 4D or 5D data "
+                "for image or video input but received input shape: {}".format(
+                    input_shape
+                )
+            )
+            logger.error(msg)
+            raise RuntimeError(msg)
+
+        self._hidden_layers = [
+            pool_layer,
+            tf.keras.layers.Dense(self._dense_units, activation="relu"),
+            tf.keras.layers.Dense(self._n_channels, activation="sigmoid"),
+            tf.keras.layers.Multiply(),
+        ]
+
+    def call(self, x, y):
+        """Call the custom SqueezeAndExcitation layer
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor.
+        y : tf.Tensor
+            Sparse input tensor used to mask ``x``
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor, this is the squeeze-and-excitation weights
+            multiplied by the original input tensor x
+        """
+
+        t_in = x
+        mask = tf.math.is_nan(y[..., 0])
+        x = tf.ragged.boolean_mask(x, mask)
+        for layer in self._hidden_layers[:-1]:
+            x = layer(x)
+
+        # multiply layer
+        x = self._hidden_layers[-1]([t_in, x])
+
+        return x
+
+
+class SparseAttention(tf.keras.layers.Layer):
+    """Sparse Scan Self-Attention block
+
+    References
+    ----------
+    Fan, Qihang, et al. "Vision Transformer with Sparse Scan Prior." arXiv
+    preprint arXiv:2405.13335 (2024).
+    """
+
+    def __init__(self, num_heads=1, key_dim=16, window_size=8, name=None):
+        """
+        Parameters
+        ----------
+        num_heads : int
+            Number of attention heads
+        key_dim : int
+            Size of each attention head
+        window_size : int
+            Window size over which to compute the attention
+        name : str | None
+            Name of layer.
+        """
+
+        super().__init__(name=name)
+        self.num_heads = num_heads
+        self.key_dim = key_dim
+        self.window_size = window_size
+        self.attention = tf.keras.layers.MultiHeadAttention(
+            num_heads=self.num_heads, key_dim=self.key_dim)
+
+    def call(self, x, y):
+        """Call the Sparse Scan Self Attention block
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor.
+        y : tf.Tensor
+            Tensor with possible NaN values, used to create mask.
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor
+        """
+        x_in = tf.reshape(x, (x.shape[0], -1, x.shape[-1]))
+        mask = ~tf.math.is_nan(y)
+        mask = tf.reshape(mask, x_in.shape[:-1])
+        mask = tf.broadcast_to(mask, (*x_in.shape[:-1], x_in.shape[1]))
+        output = self.attention(x_in, x_in, attention_mask=mask)
+        output = tf.reshape(output, x.shape)
+
+        return output
+
+
+class CBAM(tf.keras.layers.Layer):
+    """Convolutional Block Attention Module
+
+    Note that this is only set up to take a channels-last conv output
+
+    References
+    ----------
+    1. Woo, Sanghyun, et al. "Cbam: Convolutional block attention module."
+       Proceedings of the European conference on computer vision (ECCV). 2018.
+    2. Ma, Bing, et al. "CBAM-GAN: generative adversarial networks based on
+       convolutional block attention module." Artificial Intelligence and
+       Security: 5th International Conference, ICAIS 2019, New York, NY, USA,
+       July 26-28, 2019, Proceedings, Part I 5. Springer International
+       Publishing, 2019.
+    """
+
+    def __init__(self, ratio=8):
+        """
+        Parameters
+        ----------
+        ratio : int
+            Number of convolutional channels/filters divided by the number of
+            dense connections in the CBAM block.
+        """
+
+        super().__init__()
+        self._ratio = ratio
+        self._n_channels = None
+        self._dense_units = None
+        self._ch_avg = None
+        self._ch_max = None
+        self._ch_scale = None
+        self._st_scale = None
+
+    def build(self, input_shape):
+        """Build the CBAM layer based on an input shape
+
+        Parameters
+        ----------
+        input_shape : tuple
+            Shape tuple of the input tensor
+        """
+
+        self._n_channels = input_shape[-1]
+        self._dense_units = int(np.ceil(self._n_channels / self._ratio))
+
+        if len(input_shape) == 4:
+            avg_pool_layer = tf.keras.layers.GlobalAveragePooling2D()
+            max_pool_layer = tf.keras.layers.GlobalMaxPooling2D()
+            conv_layer = tf.keras.layers.Conv2D(
+                1, kernel_size=7, padding="same", activation="sigmoid"
+            )
+            reshape_layer = tf.keras.layers.Reshape(
+                (1, 1, self._n_channels)
+            )
+        elif len(input_shape) == 5:
+            avg_pool_layer = tf.keras.layers.GlobalAveragePooling3D()
+            max_pool_layer = tf.keras.layers.GlobalMaxPooling3D()
+            conv_layer = tf.keras.layers.Conv3D(
+                1, kernel_size=7, padding="same", activation="sigmoid"
+            )
+            reshape_layer = tf.keras.layers.Reshape(
+                (1, 1, 1, self._n_channels)
+            )
+        else:
+            msg = (
+                "CBAM layer can only accept 4D or 5D data for image or video "
+                "input but received input shape: {}".format(
+                    input_shape
+                )
+            )
+            logger.error(msg)
+            raise RuntimeError(msg)
+
+        self._ch_avg = [
+            avg_pool_layer,
+            tf.keras.layers.Dense(self._dense_units, activation="relu"),
+            tf.keras.layers.Dense(self._n_channels, activation="sigmoid"),
+        ]
+        self._ch_max = [
+            max_pool_layer,
+            tf.keras.layers.Dense(self._dense_units, activation="relu"),
+            tf.keras.layers.Dense(self._n_channels, activation="sigmoid"),
+        ]
+        self._ch_scale = [
+            tf.keras.layers.Add(),
+            tf.keras.layers.Activation("sigmoid"),
+            reshape_layer,
+            tf.keras.layers.Multiply(),
+        ]
+
+        self._st_scale = [
+            tf.keras.layers.Concatenate(axis=-1),
+            conv_layer,
+            tf.keras.layers.Multiply(),
+        ]
+
+    def channel_attention(self, x):
+        """Call the channel attention block
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor.
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor, this is the channel attention weights
+            multiplied by the original input tensor x
+        """
+
+        t_in = x
+        avg_pool = x
+        max_pool = x
+        for layer in self._ch_avg:
+            avg_pool = layer(avg_pool)
+
+        for layer in self._ch_max:
+            max_pool = layer(max_pool)
+
+        x = [avg_pool, max_pool]
+        for layer in self._ch_scale[:-1]:
+            x = layer(x)
+
+        # multiply layer
+        x = self._ch_scale[-1]([t_in, x])
+
+        return x
+
+    def spatiotemporal_attention(self, x):
+        """Call the spatiotemporal attention block
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor.
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor, this is the spatiotemporal attention weights
+            multiplied by the original input tensor x
+        """
+
+        t_in = x
+        avg_pool = tf.reduce_mean(x, axis=-1, keepdims=True)
+        max_pool = tf.reduce_max(x, axis=-1, keepdims=True)
+        x = [avg_pool, max_pool]
+
+        for layer in self._st_scale[:-1]:
+            x = layer(x)
+
+        # multiply layer
+        x = self._st_scale[-1]([t_in, x])
+
+        return x
+
+    def call(self, x):
+        """Call the full CBAM block
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor.
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor, this is channel attention followed by spatiotemporal
+            attention
+        """
+
+        x = self.channel_attention(x)
+        x = self.spatiotemporal_attention(x)
+        return x
+
+
 class FNO(tf.keras.layers.Layer):
     """Custom layer for fourier neural operator block
 
@@ -754,7 +1135,7 @@ class FNO(tf.keras.layers.Layer):
     Transformers. http://arxiv.org/abs/2111.13587
     """
 
-    def __init__(self, filters, sparsity_threshold=0.5, activation='relu'):
+    def __init__(self, filters, sparsity_threshold=0.5, activation="relu"):
         """
         Parameters
         ----------
@@ -821,15 +1202,19 @@ class FNO(tf.keras.layers.Layer):
             self._fft_layer = tf.signal.fft3d
             self._ifft_layer = tf.signal.ifft3d
         else:
-            msg = ('FNO layer can only accept 4D or 5D data '
-                   'for image or video input but received input shape: {}'
-                   .format(input_shape))
+            msg = (
+                "FNO layer can only accept 4D or 5D data "
+                "for image or video input but received input shape: {}".format(
+                    input_shape
+                )
+            )
             logger.error(msg)
             raise RuntimeError(msg)
 
         self._mlp_layers = [
             tf.keras.layers.Dense(self._filters, activation=self._activation),
-            tf.keras.layers.Dense(self._n_channels)]
+            tf.keras.layers.Dense(self._n_channels),
+        ]
 
     def _mlp_block(self, x):
         """Run mlp layers on input"""
@@ -938,6 +1323,50 @@ class Sup3rConcatObs(tf.keras.layers.Layer):
         return tf.concat((x, fixed), axis=-1)
 
 
+class Sup3rConcatObsBlock(tf.keras.layers.Layer):
+    """Layer to fix certain values for a sup3r model in the middle of a
+    super resolution forward pass. This is used to condition models on sparse
+    observation data. This uses the first N channels of the input tensor as a
+    background for the provided values and then concatenates with the input
+    tensor."""
+
+    def __init__(self, name=None, block_size=1):
+        """
+        Parameters
+        ----------
+        name : str | None
+            Unique str identifier of the layer. Usually the name of the
+            hi-resolution feature used in the concatenation.
+        block_size : int
+            Number of feature channels to impute sparse observations into and
+            then concatenate.
+        """
+        super().__init__(name=name)
+        self.block_size = block_size
+
+    def call(self, x, hi_res_feature):
+        """Combine the first channel of x and the non-nan data in
+        hi_res_feature and concatenates with x.
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+        hi_res_feature : tf.Tensor | np.ndarray
+            This should be a 4D array for spatial enhancement model or 5D array
+            for a spatiotemporal enhancement model (obs, spatial_1, spatial_2,
+            (temporal), 1) that can be used to fix values of x.
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor with the hi_res_fixer used to fix values of x.
+        """
+        mask = tf.math.is_nan(hi_res_feature)
+        fixed = tf.where(mask, x[..., : self.block_size], hi_res_feature)
+        return tf.concat((x, fixed), axis=-1)
+
+
 class Sup3rImpute(tf.keras.layers.Layer):
     """Layer to impute certain values for a sup3r model in the middle of a
     super resolution forward pass. This is used to condition models on sparse
@@ -1035,9 +1464,11 @@ class FunctionalLayer(tf.keras.layers.Layer):
             Constant value to use in the function operation
         """
 
-        options = ('add', 'subtract', 'multiply', 'maximum', 'minimum')
-        msg = (f'FunctionalLayer input `name` must be one of "{options}" '
-               f'but received "{name}"')
+        options = ("add", "subtract", "multiply", "maximum", "minimum")
+        msg = (
+            f'FunctionalLayer input `name` must be one of "{options}" '
+            f'but received "{name}"'
+        )
         assert name in options, msg
 
         super().__init__(name=name)
@@ -1152,11 +1583,11 @@ class LogTransform(tf.keras.layers.Layer):
         out = []
         for idf in range(x.shape[-1]):
             if idf in self.idf:
-                out.append(self._logt(x[..., idf:idf + 1]))
+                out.append(self._logt(x[..., idf : idf + 1]))
             else:
-                out.append(x[..., idf:idf + 1])
+                out.append(x[..., idf : idf + 1])
 
-        out = tf.concat(out, -1, name='concat')
+        out = tf.concat(out, -1, name="concat")
         return out
 
 
@@ -1207,18 +1638,22 @@ class UnitConversion(tf.keras.layers.Layer):
             self.adder = np.ones(nfeat) * self.adder
             self.adder = tf.convert_to_tensor(self.adder, dtype=tf.float32)
         else:
-            msg = (f'UnitConversion layer `adder` array has length '
-                   f'{len(self.adder)} but input shape has last dimension '
-                   f'as {input_shape[-1]}')
+            msg = (
+                f"UnitConversion layer `adder` array has length "
+                f"{len(self.adder)} but input shape has last dimension "
+                f"as {input_shape[-1]}"
+            )
             assert len(self.adder) == input_shape[-1], msg
 
         if isinstance(self.scalar, dtypes):
             self.scalar = np.ones(nfeat) * self.scalar
             self.scalar = tf.convert_to_tensor(self.scalar, dtype=tf.float32)
         else:
-            msg = (f'UnitConversion layer `scalar` array has length '
-                   f'{len(self.scalar)} but input shape has last dimension '
-                   f'as {input_shape[-1]}')
+            msg = (
+                f"UnitConversion layer `scalar` array has length "
+                f"{len(self.scalar)} but input shape has last dimension "
+                f"as {input_shape[-1]}"
+            )
             assert len(self.scalar) == input_shape[-1], msg
 
     def call(self, x):
@@ -1240,8 +1675,8 @@ class UnitConversion(tf.keras.layers.Layer):
 
         out = []
         for idf, (adder, scalar) in enumerate(zip(self.adder, self.scalar)):
-            out.append(x[..., idf:idf + 1] * scalar + adder)
+            out.append(x[..., idf : idf + 1] * scalar + adder)
 
-        out = tf.concat(out, -1, name='concat')
+        out = tf.concat(out, -1, name="concat")
 
         return out

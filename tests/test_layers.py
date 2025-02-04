@@ -16,10 +16,12 @@ from phygnn.layers.custom_layers import (
     GaussianAveragePooling2D,
     GaussianNoiseAxis,
     LogTransform,
+    MaskedSqueezeAndExcitation,
     SigLin,
     SkipConnection,
     SpatioTemporalExpansion,
     Sup3rConcatObs,
+    Sup3rConcatObsBlock,
     Sup3rImpute,
     TileLayer,
     UnitConversion,
@@ -409,6 +411,57 @@ def test_squeeze_excite_3d():
             tf.assert_equal(x_in, x)
 
 
+def test_cbam_2d():
+    """Test the CBAM layer with 2D data (4D tensor input)"""
+    hidden_layers = [{'class': 'CBAM'}]
+    layers = HiddenLayers(hidden_layers)
+    assert len(layers.layers) == 1
+
+    x = np.random.normal(0, 1, size=(1, 4, 4, 3))
+
+    for layer in layers:
+        x_in = x
+        x = layer(x)
+        assert x.shape == x_in.shape
+        with pytest.raises(tf.errors.InvalidArgumentError):
+            tf.assert_equal(x_in, x)
+
+
+def test_cbam_3d():
+    """Test the CBAM layer with 3D data (5D tensor input)"""
+    hidden_layers = [{'class': 'CBAM'}]
+    layers = HiddenLayers(hidden_layers)
+    assert len(layers.layers) == 1
+
+    x = np.random.normal(0, 1, size=(1, 10, 10, 6, 3))
+
+    for layer in layers:
+        x_in = x
+        x = layer(x)
+        assert x.shape == x_in.shape
+        with pytest.raises(tf.errors.InvalidArgumentError):
+            tf.assert_equal(x_in, x)
+
+
+def test_s3a_layer():
+    """Test the S3A layer with 3D data (5D tensor input)"""
+    hidden_layers = [{'class': 'SparseAttention'}]
+    layers = HiddenLayers(hidden_layers)
+    assert len(layers.layers) == 1
+
+    x = np.random.normal(0, 1, size=(1, 10, 10, 6, 3))
+    y = np.random.uniform(0, 1, size=(1, 10, 10, 6, 1))
+    mask = np.random.choice([False, True], (1, 10, 10), p=[0.1, 0.9])
+    y[mask] = np.nan
+
+    for layer in layers:
+        x_in = x
+        x = layer(x, y)
+        assert x.shape == x_in.shape
+        with pytest.raises(tf.errors.InvalidArgumentError):
+            tf.assert_equal(x_in, x)
+
+
 def test_fno_2d():
     """Test the FNO layer with 2D data (4D tensor input)"""
     hidden_layers = [
@@ -629,13 +682,10 @@ def test_unit_conversion():
 
 def test_impute_obs_layer():
     """Make sure ``Sup3rImpute`` layer works properly"""
-    x = np.random.uniform(0, 1, (1, 10, 10, 4)).astype(np.float32)
-    y = np.random.uniform(0, 1, (1, 10, 10, 1)).astype(np.float32)
+    x = np.random.normal(0, 1, size=(1, 4, 4, 6, 3))
+    y = np.random.uniform(0, 1, size=(1, 10, 10, 1))
     mask = np.random.choice([False, True], (1, 10, 10), p=[0.1, 0.9])
     y[mask] = np.nan
-
-    x = tf.convert_to_tensor(x)
-    y = tf.convert_to_tensor(y)
 
     layer = Sup3rImpute()
     out = layer(x, y, 0).numpy()
@@ -647,15 +697,25 @@ def test_impute_obs_layer():
     assert not tf.reduce_any(tf.math.is_nan(out))
 
 
-def test_concat_obs_layer():
-    """Make sure ``Sup3rConcatObs`` layer works properly"""
-    x = np.random.uniform(0, 1, (1, 10, 10, 4)).astype(np.float32)
-    y = np.random.uniform(0, 1, (1, 10, 10, 1)).astype(np.float32)
+def test_masked_squeeze_excite():
+    """Make sure ``MaskedSqueezeAndExcite`` layer works properly"""
+    x = np.random.normal(0, 1, size=(1, 4, 4, 6, 3))
+    y = np.random.uniform(0, 1, size=(1, 10, 10, 1))
     mask = np.random.choice([False, True], (1, 10, 10), p=[0.1, 0.9])
     y[mask] = np.nan
 
-    x = tf.convert_to_tensor(x)
-    y = tf.convert_to_tensor(y)
+    layer = MaskedSqueezeAndExcitation()
+    out = layer(x, y).numpy()
+
+    assert not tf.reduce_any(tf.math.is_nan(out))
+
+
+def test_concat_obs_layer():
+    """Make sure ``Sup3rConcatObs`` layer works properly"""
+    x = np.random.normal(0, 1, size=(1, 4, 4, 6, 3))
+    y = np.random.uniform(0, 1, size=(1, 10, 10, 1))
+    mask = np.random.choice([False, True], (1, 10, 10), p=[0.1, 0.9])
+    y[mask] = np.nan
 
     layer = Sup3rConcatObs()
     out = layer(x, y).numpy()
@@ -663,5 +723,24 @@ def test_concat_obs_layer():
     assert tf.reduce_any(tf.math.is_nan(y))
     assert np.allclose(out[..., -1][~mask], y[..., 0][~mask])
     assert np.allclose(out[..., -1][mask], x[..., 0][mask])
+    assert x.shape[:-1] == out.shape[:-1]
+    assert not tf.reduce_any(tf.math.is_nan(out))
+
+
+def test_concat_obs_block_layer():
+    """Make sure ``Sup3rConcatObsBlock`` layer works properly"""
+    x = np.random.normal(0, 1, size=(1, 4, 4, 6, 3))
+    y = np.random.uniform(0, 1, size=(1, 10, 10, 1))
+    mask = np.random.choice([False, True], (1, 10, 10), p=[0.1, 0.9])
+    y[mask] = np.nan
+
+    block_size = 3
+    layer = Sup3rConcatObsBlock(block_size=block_size)
+    out = layer(x, y).numpy()
+
+    assert tf.reduce_any(tf.math.is_nan(y))
+    for i in range(block_size):
+        assert np.allclose(out[..., i - block_size][~mask], y[..., 0][~mask])
+        assert np.allclose(out[..., i - block_size][mask], x[..., i][mask])
     assert x.shape[:-1] == out.shape[:-1]
     assert not tf.reduce_any(tf.math.is_nan(out))
