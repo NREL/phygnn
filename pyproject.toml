@@ -33,7 +33,7 @@ dependencies = [
   "numpy>=1.16",
   "pandas>=0.25",
   "scikit-learn>=1.2",
-  "tensorflow>=2.12,<=2.15.1"
+  "tensorflow>=2.12"
 ]
 
 [project.optional-dependencies]
