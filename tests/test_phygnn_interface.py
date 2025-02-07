@@ -2,18 +2,18 @@
 Tests for basic phygnn model interface functionality and execution.
 """
 # pylint: disable=W0613
-import tempfile
 import json
 import os
+import tempfile
+
 import numpy as np
 import pandas as pd
 import pytest
 import tensorflow as tf
-from tensorflow.keras.layers import (InputLayer, Dense, Activation)
+from tensorflow.keras.layers import Activation, Dense, InputLayer
 
 from phygnn import PhysicsGuidedNeuralNetwork
 from phygnn.model_interfaces.phygnn_model import PhygnnModel
-
 
 N = 100
 A = np.linspace(-1, 1, N)
@@ -34,7 +34,7 @@ HIDDEN_LAYERS = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
                  {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
 
 
-def p_fun_pythag(model, y_true, y_predicted, p):
+def p_fun_pythag(model, y_true, y_predicted, p):  # noqa: ARG001
     """Example function for loss calculation using physical relationships.
 
     Parameters
@@ -176,7 +176,7 @@ def test_save_load():
         assert loaded.feature_names == ['a', 'b']
         assert loaded.label_names == ['c']
 
-        with open(os.path.join(model_fpath, 'test_model.json'), 'r') as f:
+        with open(os.path.join(model_fpath, 'test_model.json')) as f:
             params = json.load(f)
 
         assert 'version_record' in params
@@ -214,7 +214,7 @@ def test_bad_categories():
     Test OHE checks
     """
     one_hot_categories = {'categorical': list('abc')}
-    feature_names = FEATURES.columns.tolist() + ['categorical']
+    feature_names = [*FEATURES.columns.tolist(), 'categorical']
     label_names = 'c'
     with pytest.raises(RuntimeError):
         PhygnnModel.build(p_fun_pythag, feature_names, label_names,
@@ -223,7 +223,7 @@ def test_bad_categories():
                           loss_weights=(0.0, 1.0))
 
     one_hot_categories = {'categorical': list('cdf')}
-    feature_names = FEATURES.columns.tolist() + ['categorical']
+    feature_names = [*FEATURES.columns.tolist(), 'categorical']
     label_names = 'c'
     with pytest.raises(RuntimeError):
         PhygnnModel.build(p_fun_pythag, feature_names, label_names,
@@ -232,7 +232,7 @@ def test_bad_categories():
                           loss_weights=(0.0, 1.0))
 
     one_hot_categories = {'categorical': list('def')}
-    feature_names = FEATURES.columns.tolist() + ['categories']
+    feature_names = [*FEATURES.columns.tolist(), 'categories']
     label_names = 'c'
     with pytest.raises(RuntimeError):
         PhygnnModel.build(p_fun_pythag, feature_names, label_names,
@@ -241,7 +241,7 @@ def test_bad_categories():
                           loss_weights=(0.0, 1.0))
 
     one_hot_categories = {'cat1': list('def'), 'cat2': list('fgh')}
-    feature_names = FEATURES.columns.tolist() + ['cat1', 'cat2']
+    feature_names = [*FEATURES.columns.tolist(), 'cat1', 'cat2']
     label_names = 'c'
     with pytest.raises(RuntimeError):
         PhygnnModel.build(p_fun_pythag, feature_names, label_names,

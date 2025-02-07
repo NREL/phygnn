@@ -2,20 +2,21 @@
 """
 Custom Neural Network Infrastructure.
 """
-from abc import ABC, abstractmethod
-import random
+import logging
 import os
 import pickle
 import pprint
+import random
+from abc import ABC, abstractmethod
+from inspect import signature
+
 import numpy as np
 import pandas as pd
-import logging
-from inspect import signature
 import tensorflow as tf
-from tensorflow.keras.layers import BatchNormalization, Dropout, LSTM
+from tensorflow.keras.layers import LSTM, BatchNormalization, Dropout
 
-from phygnn.utilities import VERSION_RECORD
 from phygnn.layers.handlers import Layers
+from phygnn.utilities import VERSION_RECORD
 
 logger = logging.getLogger(__name__)
 
@@ -288,9 +289,7 @@ class CustomNetwork(ABC):
         assert len(set(vi)) == len(vi)
         assert len(set(list(vi) + list(ti))) == L
 
-        out = []
-        for arg in args:
-            out.append([arg[ti], arg[vi]])
+        out = [[arg[ti], arg[vi]] for arg in args]
 
         for out_sub in out[1:]:
             cls._check_shapes(out[0][0], out_sub[0])
@@ -367,7 +366,7 @@ class CustomNetwork(ABC):
             dimensions can be used in intermediate axes.
 
         Returns
-        ----------
+        -------
         x : np.ndarray
             Feature data in a >=2D array
         """

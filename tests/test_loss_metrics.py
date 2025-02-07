@@ -2,12 +2,12 @@
 Tests for basic phygnn functionality and execution.
 """
 # pylint: disable=W0613
-import pytest
 import numpy as np
+import pytest
 import tensorflow as tf
-from tensorflow.keras.layers import InputLayer, Dense, Activation
-from phygnn import PhysicsGuidedNeuralNetwork
+from tensorflow.keras.layers import Activation, Dense, InputLayer
 
+from phygnn import PhysicsGuidedNeuralNetwork
 
 N = 100
 A = np.linspace(-1, 1, N)
@@ -27,7 +27,7 @@ HIDDEN_LAYERS = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
                  ]
 
 
-def p_fun_pythag(model, y_true, y_predicted, p):
+def p_fun_pythag(model, y_true, y_predicted, p):  # noqa: ARG001
     """Example function for loss calculation using physical relationships.
 
     Parameters

@@ -99,7 +99,7 @@ def test_bad_categories():
     Test OHE checks
     """
     one_hot_categories = {'cat1': list('def'), 'cat2': list('fgh')}
-    feature_names = FEATURES.columns.tolist() + ['cat1', 'cat2']
+    feature_names = [*FEATURES.columns.tolist(), 'cat1', 'cat2']
     label_names = 'c'
     with pytest.raises(RuntimeError):
         ModelBase(None, feature_names=feature_names,

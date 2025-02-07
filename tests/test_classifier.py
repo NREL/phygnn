@@ -3,8 +3,8 @@ Tests for basic phygnn functionality and execution.
 """
 import numpy as np
 import pandas as pd
-from phygnn import PhysicsGuidedNeuralNetwork
 
+from phygnn import PhysicsGuidedNeuralNetwork
 
 x1 = np.arange(500) - 250
 x2 = np.arange(500) - 250

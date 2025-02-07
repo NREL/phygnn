@@ -2,10 +2,11 @@
 """
 Physics Guided Neural Network
 """
+import logging
 import time
+
 import numpy as np
 import pandas as pd
-import logging
 import tensorflow as tf
 from tensorflow.keras import optimizers
 
@@ -172,7 +173,7 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
             self._optimizer = optimizers.Adam(learning_rate=learning_rate)
 
     @staticmethod
-    def p_fun_dummy(model, y_true, y_predicted, p):
+    def p_fun_dummy(model, y_true, y_predicted, p): # noqa : ARG004
         """Example dummy function for p loss calculation.
 
         This dummy function does not do a real physics calculation, it just
@@ -224,7 +225,7 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
             array or DataFrame. Same dimension rules as x.
 
         Returns
-        ----------
+        -------
         x : np.ndarray
             Feature data
         y : np.ndarray
@@ -576,7 +577,7 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
                 logger.debug('Epoch {} batch {} train loss: {:.2e} for "{}"'
                              .format(epoch, b, b_tr_loss, self.name))
 
-            for b, (x_batch, y_batch, p_batch) in enumerate(v_batch_iter):
+            for _, (x_batch, y_batch, p_batch) in enumerate(v_batch_iter):
                 y_val_pred = self.predict(x_batch, to_numpy=False)
                 out = self.calc_loss(y_batch, y_val_pred, p_batch, p_kwargs)
                 b_val_loss, b_val_nn_loss, b_val_p_loss = out
@@ -610,3 +611,4 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
 
         if return_diagnostics:
             return diagnostics
+        return None
