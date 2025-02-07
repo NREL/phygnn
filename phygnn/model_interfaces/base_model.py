@@ -2,15 +2,16 @@
 """
 Base Model Interface
 """
-from abc import ABC
-import random
 import copy
-import pprint
 import logging
+import pprint
+import random
+from abc import ABC
+from warnings import warn
+
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from warnings import warn
 
 from phygnn.utilities import TF2, VERSION_RECORD
 from phygnn.utilities.pre_processing import PreProcess
@@ -366,8 +367,7 @@ class ModelBase(ABC):
         """
         if self._one_hot_categories is None:
             return {}
-        else:
-            return self._one_hot_categories
+        return self._one_hot_categories
 
     @staticmethod
     def _parse_normalize(normalize):
@@ -442,6 +442,7 @@ class ModelBase(ABC):
     def seed(s=0):
         """
         Set the random seed for reproducible results.
+
         Parameters
         ----------
         s : int
@@ -503,10 +504,7 @@ class ModelBase(ABC):
         n : int
             Number of items
         """
-        if len(arr.shape) == 1:
-            n = 1
-        else:
-            n = arr.shape[-1]
+        n = 1 if len(arr.shape) == 1 else arr.shape[-1]
 
         return n
 
@@ -712,15 +710,14 @@ class ModelBase(ABC):
                        'arrays')
                 logger.error(msg)
                 raise RuntimeError(msg)
+            if self.one_hot_feature_names:
+                idx = [i for i, f in enumerate(names)
+                       if f not in self.one_hot_feature_names]
+                norm_names = np.array(names)[idx]
+                data[:, idx] = self._normalize_arr(data[:, idx],
+                                                   norm_names)
             else:
-                if self.one_hot_feature_names:
-                    idx = [i for i, f in enumerate(names)
-                           if f not in self.one_hot_feature_names]
-                    norm_names = np.array(names)[idx]
-                    data[:, idx] = self._normalize_arr(data[:, idx],
-                                                       norm_names)
-                else:
-                    data = self._normalize_arr(data, names)
+                data = self._normalize_arr(data, names)
         else:
             msg = "Cannot normalize data of type: {}".format(type(data))
             logger.error(msg)
@@ -846,8 +843,7 @@ class ModelBase(ABC):
                        'arrays')
                 logger.error(msg)
                 raise RuntimeError(msg)
-            else:
-                data = self._unnormalize_arr(data, names)
+            data = self._unnormalize_arr(data, names)
         else:
             msg = "Cannot un-normalize data of type: {}".format(type(data))
             logger.error(msg)
