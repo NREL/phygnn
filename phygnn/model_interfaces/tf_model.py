@@ -4,17 +4,18 @@ TensorFlow Model
 """
 import json
 import logging
-import numpy as np
-import pprint
 import os
+import pprint
+from warnings import warn
+
+import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow import feature_column
 from tensorflow.keras.optimizers import Adam
-from warnings import warn
 
-from phygnn.model_interfaces.base_model import ModelBase
 from phygnn.layers.handlers import Layers
+from phygnn.model_interfaces.base_model import ModelBase
 from phygnn.utilities import TF2
 from phygnn.utilities.pre_processing import PreProcess
 
@@ -504,12 +505,12 @@ class TfModel(ModelBase):
             e = ('Can only load directory path but target is not '
                  'directory: {}'.format(path))
             logger.error(e)
-            raise IOError(e)
+            raise OSError(e)
 
         loaded = tf.keras.models.load_model(path)
 
         json_path = path + 'model.json'
-        with open(json_path, 'r') as f:
+        with open(json_path) as f:
             model_params = json.load(f)
 
         if 'version_record' in model_params:

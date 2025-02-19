@@ -3,25 +3,26 @@ Test the custom tensorflow utilities
 """
 import os
 from tempfile import TemporaryDirectory
+
 import numpy as np
 import pytest
 import tensorflow as tf
 
+from phygnn import TfModel
 from phygnn.layers.custom_layers import (
     ExpandDims,
     FlattenAxis,
+    FunctionalLayer,
+    GaussianAveragePooling2D,
     GaussianNoiseAxis,
+    LogTransform,
+    SigLin,
     SkipConnection,
     SpatioTemporalExpansion,
     TileLayer,
-    FunctionalLayer,
-    GaussianAveragePooling2D,
-    SigLin,
-    LogTransform,
     UnitConversion,
 )
 from phygnn.layers.handlers import HiddenLayers, Layers
-from phygnn import TfModel
 
 
 @pytest.mark.parametrize(
@@ -160,7 +161,7 @@ def test_double_skip():
 
     skip_layers = [x for x in layers.layers if isinstance(x, SkipConnection)]
     assert len(skip_layers) == 4
-    assert len(set(id(layer) for layer in skip_layers)) == 1
+    assert len({id(layer) for layer in skip_layers}) == 1
 
     x = np.ones((5, 3))
     cache = None
@@ -224,7 +225,7 @@ def test_temporal_depth_to_time(t_mult, s_mult, t_roll):
                                     t_roll=t_roll)
     n_filters = 2 * s_mult**2 * t_mult
     shape = (1, 4, 4, 3, n_filters)
-    n = np.product(shape)
+    n = np.prod(shape)
     x = np.arange(n).reshape(shape)
     y = layer(x)
     assert y.shape[0] == x.shape[0]

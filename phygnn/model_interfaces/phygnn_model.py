@@ -2,14 +2,15 @@
 """
 TensorFlow Model
 """
-import numpy as np
-import pprint
 import json
 import logging
 import os
+import pprint
 
-from phygnn.phygnn import PhysicsGuidedNeuralNetwork
+import numpy as np
+
 from phygnn.model_interfaces.base_model import ModelBase
+from phygnn.phygnn import PhysicsGuidedNeuralNetwork
 from phygnn.utilities.pre_processing import PreProcess
 
 logger = logging.getLogger(__name__)
@@ -631,8 +632,7 @@ class PhygnnModel(ModelBase):
 
         if diagnostics:
             return model, diagnostics
-        else:
-            return model
+        return model
 
     @classmethod
     def load(cls, path):
@@ -662,7 +662,7 @@ class PhygnnModel(ModelBase):
         if not os.path.exists(pkl_path):
             e = ('{} does not exist'.format(pkl_path))
             logger.error(e)
-            raise IOError(e)
+            raise OSError(e)
 
         loaded = cls.MODEL_CLASS.load(pkl_path)
 
@@ -670,9 +670,9 @@ class PhygnnModel(ModelBase):
         if not os.path.exists(json_path):
             e = ('{} does not exist'.format(json_path))
             logger.error(e)
-            raise IOError(e)
+            raise OSError(e)
 
-        with open(json_path, 'r') as f:
+        with open(json_path) as f:
             model_params = json.load(f)
 
         if 'version_record' in model_params:

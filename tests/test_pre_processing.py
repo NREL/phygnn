@@ -3,8 +3,8 @@ Test the pre processing module.
 """
 import numpy as np
 import pandas as pd
-from phygnn.utilities.pre_processing import PreProcess
 
+from phygnn.utilities.pre_processing import PreProcess
 
 index = pd.date_range('20180101', '20190101', freq='5min')
 A = pd.DataFrame({'f1': ['a', 'b', 'c', 'd', 'a', 'c', 'a'],
@@ -42,7 +42,7 @@ def test_one_hot_encoding():
 
 
 def test_categories():
-    """ Verify predefined categories handle missing data """
+    """Verify predefined categories handle missing data"""
     proc = PreProcess(A)
     out = proc.process_one_hot(convert_int=False)
     assert (out.columns == ['f2', 'f3', 'f1_0', 'f1_1',

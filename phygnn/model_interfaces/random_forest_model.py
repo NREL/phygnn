@@ -4,9 +4,10 @@ Random Forest Model
 """
 import json
 import logging
-import numpy as np
-import pprint
 import os
+import pprint
+
+import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 
 from phygnn.model_interfaces.base_model import ModelBase
@@ -282,9 +283,9 @@ class RandomForestModel(ModelBase):
         if not os.path.exists(path):
             e = ('{} does not exist'.format(path))
             logger.error(e)
-            raise IOError(e)
+            raise OSError(e)
 
-        with open(path, 'r') as f:
+        with open(path) as f:
             model_params = json.load(f)
 
         if 'version_record' in model_params:

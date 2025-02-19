@@ -2,19 +2,28 @@
 Tests for basic phygnn functionality and execution.
 """
 # pylint: disable=W0613
-import types
 import os
-import pytest
+import tempfile
+import types
+
 import numpy as np
 import pandas as pd
-import tempfile
+import pytest
 import tensorflow as tf
+from tensorflow.keras.layers import (
+    LSTM,
+    Activation,
+    BatchNormalization,
+    Conv1D,
+    Conv3D,
+    Dense,
+    Dropout,
+    Flatten,
+    InputLayer,
+)
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
-                                     BatchNormalization, Conv1D, Conv3D,
-                                     Flatten, LSTM)
-from phygnn import PhysicsGuidedNeuralNetwork
 
+from phygnn import PhysicsGuidedNeuralNetwork
 
 N = 100
 A = np.linspace(-1, 1, N)
@@ -34,7 +43,7 @@ HIDDEN_LAYERS = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
                  ]
 
 
-def p_fun_pythag(model, y_true, y_predicted, p):
+def p_fun_pythag(model, y_true, y_predicted, p): # noqa : ARG001
     """Example function for loss calculation using physical relationships.
 
     Parameters
@@ -67,9 +76,8 @@ def p_fun_pythag(model, y_true, y_predicted, p):
     return p_loss
 
 
-def p_fun_bad(model, y_true, y_predicted, p):
-    """This is an example of a poorly formulated p_fun() that uses
-    numpy operations."""
+def p_fun_bad(model, y_true, y_predicted, p): # noqa : ARG001
+    """Example of a poorly formulated p_fun() that use numpy operations."""
 
     y_physical = p[:, 0]**2 + p[:, 1]**2
     p_loss = np.mean(np.abs(y_predicted.numpy() - y_physical))

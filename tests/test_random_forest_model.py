@@ -2,11 +2,12 @@
 Tests for basic phygnn functionality and execution.
 """
 # pylint: disable=W0613
-import numpy as np
 import os
+import shutil
+
+import numpy as np
 import pandas as pd
 import pytest
-import shutil
 
 from phygnn import TESTDATADIR
 from phygnn.model_interfaces.random_forest_model import RandomForestModel
@@ -29,7 +30,7 @@ LABELS = pd.DataFrame(Y_NOISE, columns=['c'])
 
 
 def test_random_forest():
-    """Test the RandomForestModel """
+    """Test the RandomForestModel"""
     model = RandomForestModel.build_trained(FEATURES.copy(), LABELS.copy())
 
     test_mae = np.mean(np.abs(model[X].values.ravel() - Y))

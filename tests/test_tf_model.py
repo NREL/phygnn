@@ -2,23 +2,20 @@
 Tests for basic tensorflow model functionality and execution.
 """
 # pylint: disable=W0613
-import numpy as np
 import json
 import os
-import pandas as pd
-import pytest
 import tempfile
 
-from phygnn.utilities import TF2
-from phygnn.model_interfaces.tf_model import TfModel
+import numpy as np
+import pandas as pd
+import pytest
 
+from phygnn.model_interfaces.tf_model import TfModel
+from phygnn.utilities import TF2
 
 TfModel.seed(0)
 
-if TF2:
-    mae_key = 'val_mae'
-else:
-    mae_key = 'val_mean_absolute_error'
+mae_key = 'val_mae' if TF2 else 'val_mean_absolute_error'
 
 N = 100
 A = np.linspace(-1, 1, N)
@@ -39,7 +36,7 @@ LABELS = pd.DataFrame(Y, columns=['c'])
      ([{'units': 64, 'activation': 'relu', 'name': 'relu1'},
        {'units': 64, 'activation': 'relu', 'name': 'relu2'}], 0.03)])
 def test_nn(hidden_layers, loss):
-    """Test TfModel """
+    """Test TfModel"""
     model = TfModel.build_trained(FEATURES.copy(), LABELS.copy(),
                                   hidden_layers=hidden_layers,
                                   epochs=10,
@@ -64,7 +61,7 @@ def test_nn(hidden_layers, loss):
      ((True, False), 0.01),
      ((False, True), 0.09)])
 def test_normalize(normalize, loss):
-    """Test TfModel """
+    """Test TfModel"""
     hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
                      {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
     model = TfModel.build_trained(FEATURES.copy(), LABELS.copy(),
@@ -99,7 +96,7 @@ def test_normalize_build_separate():
 
 
 def test_complex_nn():
-    """Test complex TfModel """
+    """Test complex TfModel"""
     hidden_layers = [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
                      {'units': 64},
                      {'batch_normalization': {'axis': -1}},
@@ -162,7 +159,7 @@ def test_save_load():
         assert loaded.feature_names == ['a', 'b']
         assert loaded.label_names == ['c']
 
-        with open(os.path.join(model_fpath, 'model.json'), 'r') as f:
+        with open(os.path.join(model_fpath, 'model.json')) as f:
             params = json.load(f)
 
         assert 'version_record' in params
@@ -203,7 +200,7 @@ def test_bad_categories():
                      {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
 
     one_hot_categories = {'categorical': list('abc')}
-    feature_names = FEATURES.columns.tolist() + ['categorical']
+    feature_names = [*FEATURES.columns.tolist(), 'categorical']
     label_names = 'c'
     with pytest.raises(RuntimeError):
         TfModel.build(feature_names, label_names,
@@ -211,7 +208,7 @@ def test_bad_categories():
                       hidden_layers=hidden_layers)
 
     one_hot_categories = {'categorical': list('cdf')}
-    feature_names = FEATURES.columns.tolist() + ['categorical']
+    feature_names = [*FEATURES.columns.tolist(), 'categorical']
     label_names = 'c'
     with pytest.raises(RuntimeError):
         TfModel.build(feature_names, label_names,
@@ -219,7 +216,7 @@ def test_bad_categories():
                       hidden_layers=hidden_layers)
 
     one_hot_categories = {'categorical': list('def')}
-    feature_names = FEATURES.columns.tolist() + ['categories']
+    feature_names = [*FEATURES.columns.tolist(), 'categories']
     label_names = 'c'
     with pytest.raises(RuntimeError):
         TfModel.build(feature_names, label_names,
@@ -227,7 +224,7 @@ def test_bad_categories():
                       hidden_layers=hidden_layers)
 
     one_hot_categories = {'cat1': list('def'), 'cat2': list('fgh')}
-    feature_names = FEATURES.columns.tolist() + ['cat1', 'cat2']
+    feature_names = [*FEATURES.columns.tolist(), 'cat1', 'cat2']
     label_names = 'c'
     with pytest.raises(RuntimeError):
         TfModel.build(feature_names, label_names,
