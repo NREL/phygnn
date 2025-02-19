@@ -526,7 +526,7 @@ def test_gaussian_pooling_train():
                           learning_rate=1e-3,
                           normalize=(True, True))
     model.layers[0].build(xtrain.shape)
-    assert not any(model.layers[0].trainable_weights)
+    assert len(model.layers[0].trainable_weights) == 0
 
     hidden_layers[0]['trainable'] = True
     model = TfModel.build(['x'], ['y'],

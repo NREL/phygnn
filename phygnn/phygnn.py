@@ -577,7 +577,7 @@ class PhysicsGuidedNeuralNetwork(CustomNetwork):
                 logger.debug('Epoch {} batch {} train loss: {:.2e} for "{}"'
                              .format(epoch, b, b_tr_loss, self.name))
 
-            for _, (x_batch, y_batch, p_batch) in enumerate(v_batch_iter):
+            for x_batch, y_batch, p_batch in v_batch_iter:
                 y_val_pred = self.predict(x_batch, to_numpy=False)
                 out = self.calc_loss(y_batch, y_val_pred, p_batch, p_kwargs)
                 b_val_loss, b_val_nn_loss, b_val_p_loss = out
