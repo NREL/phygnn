@@ -207,7 +207,7 @@ class GaussianAveragePooling2D(tf.keras.layers.Layer):
         if not any(self.weights):
             init = tf.keras.initializers.Constant(value=self.sigma)
             self.sigma = self.add_weight(
-                "sigma",
+                name="sigma",
                 shape=[1],
                 trainable=self.trainable,
                 dtype=tf.float32,
@@ -819,6 +819,8 @@ class MaskedSqueezeAndExcitation(tf.keras.layers.Layer):
         ratio : int
             Number of convolutional channels/filters divided by the number of
             dense connections in the SE block.
+        name : str
+            Name of layer
         """
 
         super().__init__(name=name)
@@ -1583,9 +1585,9 @@ class LogTransform(tf.keras.layers.Layer):
         out = []
         for idf in range(x.shape[-1]):
             if idf in self.idf:
-                out.append(self._logt(x[..., idf : idf + 1]))
+                out.append(self._logt(x[..., idf: idf + 1]))
             else:
-                out.append(x[..., idf : idf + 1])
+                out.append(x[..., idf: idf + 1])
 
         out = tf.concat(out, -1, name="concat")
         return out
@@ -1675,7 +1677,7 @@ class UnitConversion(tf.keras.layers.Layer):
 
         out = []
         for idf, (adder, scalar) in enumerate(zip(self.adder, self.scalar)):
-            out.append(x[..., idf : idf + 1] * scalar + adder)
+            out.append(x[..., idf: idf + 1] * scalar + adder)
 
         out = tf.concat(out, -1, name="concat")
 
