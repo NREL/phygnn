@@ -101,6 +101,48 @@ def test_repeat_layers():
         layers = HiddenLayers(hidden_layers)
 
 
+def test_skip_concat_connection():
+    """Test a functional skip connection with concatenation"""
+    hidden_layers = [
+        {'class': 'Conv2D', 'filters': 4, 'kernel_size': 3,
+         'activation': 'relu', 'padding': 'same'},
+        {'class': 'SkipConnection', 'name': 'a', 'method': 'concat'},
+        {'class': 'Conv2D', 'filters': 4, 'kernel_size': 3,
+         'activation': 'relu', 'padding': 'same'},
+        {'class': 'SkipConnection', 'name': 'a'},
+        {'class': 'Conv2D', 'filters': 4, 'kernel_size': 3,
+         'activation': 'relu', 'padding': 'same'},
+    ]
+    layers = HiddenLayers(hidden_layers)
+    assert len(layers.layers) == 5
+
+    skip_layers = [x for x in layers.layers if isinstance(x, SkipConnection)]
+    assert len(skip_layers) == 2
+    assert id(skip_layers[0]) == id(skip_layers[1])
+
+    x = np.ones((5, 10, 10, 4))
+    cache = None
+    x_input = None
+
+    for i, layer in enumerate(layers):
+        if i == 1:  # skip start
+            cache = tf.identity(x)
+            assert id(cache) != id(x)
+        elif i == 3:  # skip end
+            x_input = tf.identity(x)
+            assert id(x_input) != id(x)
+
+        x = layer(x)
+
+        if i == 1:  # skip start
+            assert layer._cache is not None
+        elif i == 2:
+            assert np.allclose(cache.numpy(), layers[3]._cache.numpy())
+        elif i == 3:  # skip end
+            assert layer._cache is None
+            tf.assert_equal(x, tf.concat((x_input, cache), axis=-1))
+
+
 def test_skip_connection():
     """Test a functional skip connection"""
     hidden_layers = [

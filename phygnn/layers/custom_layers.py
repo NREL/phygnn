@@ -615,16 +615,21 @@ class SkipConnection(tf.keras.layers.Layer):
     skip start and skip end.
     """
 
-    def __init__(self, name):
+    def __init__(self, name, method='add'):
         """
         Parameters
         ----------
         name : str
             Unique string identifier of the skip connection. The skip endpoint
             should have the same name.
+        method : str
+            Method to use for combining the skip start data and skip end data.
+            Defaults to 'add'. If 'concat' this is applied along the trailing
+            axis
         """
         super().__init__(name=name)
         self._cache = None
+        self._method = method
 
     def call(self, x):
         """Call the custom SkipConnection layer
@@ -639,18 +644,28 @@ class SkipConnection(tf.keras.layers.Layer):
         x : tf.Tensor
             Output tensor. If this is the skip start, the input will be cached
             and returned without manipulation. If this is the skip endpoint,
-            the output will be the input x added to the tensor cached at the
-            skip start.
+            the output will be the input x combined with the tensor cached at
+            the skip start. The tensors will be combined according to the
+            method given at initialization.
         """
         if self._cache is None:
             self._cache = x
             return x
         try:
-            out = tf.add(x, self._cache)
+            if self._method == 'concat':
+                out = tf.concat((x, self._cache), axis=-1)
+            else:
+                out = getattr(tf, self._method)(x, self._cache)
         except Exception as e:
-            msg = ('Could not add SkipConnection "{}" data cache of '
-                   'shape {} to input of shape {}.'
-                   .format(self._name, self._cache.shape, x.shape))
+            msg = (
+                'Could not {} SkipConnection "{}" data cache of '
+                "shape {} to input of shape {}.".format(
+                    self._method,
+                    self._name,
+                    self._cache.shape,
+                    x.shape
+                )
+            )
             logger.error(msg)
             raise RuntimeError(msg) from e
         else:
