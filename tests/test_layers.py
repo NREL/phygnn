@@ -722,8 +722,8 @@ def test_unit_conversion():
 
 def test_masked_squeeze_excite():
     """Make sure ``MaskedSqueezeAndExcite`` layer works properly"""
-    x = np.random.normal(0, 1, size=(1, 4, 4, 6, 3))
-    y = np.random.uniform(0, 1, size=(1, 10, 10, 1))
+    x = np.random.normal(0, 1, size=(1, 10, 10, 6, 3))
+    y = np.random.uniform(0, 1, size=(1, 10, 10, 6, 1))
     mask = np.random.choice([False, True], (1, 10, 10), p=[0.1, 0.9])
     y[mask] = np.nan
 
@@ -735,8 +735,8 @@ def test_masked_squeeze_excite():
 
 def test_concat_obs_layer():
     """Make sure ``Sup3rConcatObs`` layer works properly"""
-    x = np.random.normal(0, 1, size=(1, 4, 4, 6, 3))
-    y = np.random.uniform(0, 1, size=(1, 10, 10, 1))
+    x = np.random.normal(0, 1, size=(1, 10, 10, 6, 3))
+    y = np.random.uniform(0, 1, size=(1, 10, 10, 6, 1))
     mask = np.random.choice([False, True], (1, 10, 10), p=[0.1, 0.9])
     y[mask] = np.nan
 
