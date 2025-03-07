@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class FlexiblePadding(tf.keras.layers.Layer):
     """Class to perform padding on tensors"""
 
-    def __init__(self, paddings, mode="REFLECT", option="tf"):
+    def __init__(self, paddings, mode='REFLECT', option='tf'):
         """
         Parameters
         ----------
@@ -1325,12 +1325,14 @@ class Sup3rConcatObs(tf.keras.layers.Layer):
         hi_res_feature : tf.Tensor | np.ndarray
             This should be a 4D array for spatial enhancement model or 5D array
             for a spatiotemporal enhancement model (obs, spatial_1, spatial_2,
-            (temporal), 1) that can be used to fix values of x.
+            (temporal), 1) that can be used to fix values of x. This is NaN
+            where there are no observations and real values where observations
+            exist.
 
         Returns
         -------
         x : tf.Tensor
-            Output tensor with the hi_res_fixer used to fix values of x.
+            Output tensor with the hi_res_feature used to fix values of x.
         """
         mask = tf.math.is_nan(hi_res_feature)
         fixed = tf.where(mask, x[..., :1], hi_res_feature)
