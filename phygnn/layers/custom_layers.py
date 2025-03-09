@@ -903,16 +903,10 @@ class MaskedSqueezeAndExcitation(tf.keras.layers.Layer):
         return x
 
 
-class SparseAttention(tf.keras.layers.Layer):
-    """Sparse Scan Self-Attention block
+class Attention(tf.keras.layers.Layer):
+    """Self-Attention block"""
 
-    References
-    ----------
-    Fan, Qihang, et al. "Vision Transformer with Sparse Scan Prior." arXiv
-    preprint arXiv:2405.13335 (2024).
-    """
-
-    def __init__(self, num_heads=1, key_dim=16, window_size=8, name=None):
+    def __init__(self, num_heads=1, key_dim=16, name=None):
         """
         Parameters
         ----------
@@ -920,8 +914,6 @@ class SparseAttention(tf.keras.layers.Layer):
             Number of attention heads
         key_dim : int
             Size of each attention head
-        window_size : int
-            Window size over which to compute the attention
         name : str | None
             Name of layer.
         """
@@ -929,9 +921,36 @@ class SparseAttention(tf.keras.layers.Layer):
         super().__init__(name=name)
         self.num_heads = num_heads
         self.key_dim = key_dim
-        self.window_size = window_size
         self.attention = tf.keras.layers.MultiHeadAttention(
             num_heads=self.num_heads, key_dim=self.key_dim)
+
+    def call(self, x):
+        """Self Attention block
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor.
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor
+        """
+        x_in = tf.reshape(x, (x.shape[0], -1, x.shape[-1]))
+        output = self.attention(x_in, x_in)
+        output = tf.reshape(output, x.shape)
+        return output
+
+
+class SparseAttention(Attention):
+    """Sparse Scan Self-Attention block
+
+    References
+    ----------
+    Fan, Qihang, et al. "Vision Transformer with Sparse Scan Prior." arXiv
+    preprint arXiv:2405.13335 (2024).
+    """
 
     def call(self, x, y):
         """Call the Sparse Scan Self Attention block
