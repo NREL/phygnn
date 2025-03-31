@@ -144,8 +144,10 @@ def test_save_load():
     """Test the save/load operations of TfModel"""
     with tempfile.TemporaryDirectory() as td:
         model_fpath = os.path.join(td, 'test_model/')
-        hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
-                         {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
+        hidden_layers = [
+            {'units': 64, 'activation': 'relu', 'name': 'relu1'},
+            {'units': 64, 'activation': 'relu', 'name': 'relu2'},
+        ]
         model = TfModel.build_trained(FEATURES.copy(), LABELS.copy(),
                                       hidden_layers=hidden_layers,
                                       epochs=10, fit_kwargs={"batch_size": 16},

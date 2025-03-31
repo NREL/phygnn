@@ -4,13 +4,18 @@ Tensorflow Layers Handlers
 """
 import copy
 import logging
+
 import tensorflow as tf
-from tensorflow.keras.layers import (InputLayer, Dense, Dropout, Activation,
-                                     BatchNormalization)
+from tensorflow.keras.layers import (
+    Activation,
+    BatchNormalization,
+    Dense,
+    Dropout,
+    InputLayer,
+)
 
 import phygnn.layers.custom_layers
 from phygnn.layers.custom_layers import SkipConnection
-
 
 logger = logging.getLogger(__name__)
 
@@ -224,7 +229,7 @@ class HiddenLayers:
 
         return weights
 
-    def add_skip_layer(self, name):
+    def add_skip_layer(self, name, method='add'):
         """Add a skip layer, looking for a prior skip connection start point if
         already in the layer list.
 
@@ -233,11 +238,13 @@ class HiddenLayers:
         name : str
             Unique string identifier of the skip connection. The skip endpoint
             should have the same name.
+        method : str
+            Method to use for combining skip start data and skip end data.
         """
         if name in self.skip_layers:
             self._layers.append(self.skip_layers[name])
         else:
-            self._layers.append(SkipConnection(name))
+            self._layers.append(SkipConnection(name, method))
 
     def add_layer_by_class(self, class_name, **kwargs):
         """Add a new layer by the class name, either from
@@ -272,8 +279,7 @@ class HiddenLayers:
             raise KeyError(msg)
 
         if layer_class == SkipConnection:
-            name = kwargs['name']
-            self.add_skip_layer(name)
+            self.add_skip_layer(**kwargs)
         else:
             self._layers.append(layer_class(**kwargs))
 
@@ -432,8 +438,7 @@ class Layers(HiddenLayers):
                 msg = ('Input layer spec needs to be a dict but received: {}'
                        .format(type(self.input_layer_kwargs)))
                 raise TypeError(msg)
-            else:
-                self.add_layer(self.input_layer_kwargs)
+            self.add_layer(self.input_layer_kwargs)
 
     def _add_output_layer(self):
         """Add an output layer, defaults to tf.layers.Dense without activation
