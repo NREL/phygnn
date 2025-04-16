@@ -21,6 +21,7 @@ from phygnn.layers.custom_layers import (
     SkipConnection,
     SpatioTemporalExpansion,
     Sup3rConcatObs,
+    Sup3rConcatWeightedObs,
     TileLayer,
     UnitConversion,
 )
@@ -745,6 +746,26 @@ def test_concat_obs_layer():
 
     assert tf.reduce_any(tf.math.is_nan(y))
     assert np.allclose(out[..., -1][~mask], y[..., 0][~mask])
+    assert np.allclose(out[..., -1][mask], x[..., 0][mask])
+    assert x.shape[:-1] == out.shape[:-1]
+    assert not tf.reduce_any(tf.math.is_nan(out))
+
+
+def test_concat_weighted_obs_layer():
+    """Make sure ``Sup3rConcatWeightedObs`` layer works properly"""
+    x = np.random.normal(0, 1, size=(1, 10, 10, 6, 3))
+    y = np.random.uniform(0, 1, size=(1, 10, 10, 6, 1))
+    mask = np.random.choice([False, True], (1, 10, 10), p=[0.1, 0.9])
+    y[mask] = np.nan
+
+    layer = Sup3rConcatWeightedObs()
+    out = layer(x, y).numpy()
+
+    weights = layer.weight_net(x[..., :1])
+    weighted = weights * y + (1 - weights) * x[..., :1]
+
+    assert tf.reduce_any(tf.math.is_nan(y))
+    assert np.allclose(out[..., -1][~mask], weighted[..., 0][~mask])
     assert np.allclose(out[..., -1][mask], x[..., 0][mask])
     assert x.shape[:-1] == out.shape[:-1]
     assert not tf.reduce_any(tf.math.is_nan(out))
