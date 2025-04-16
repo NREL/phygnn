@@ -28,7 +28,8 @@ class FlexiblePadding(tf.keras.layers.Layer):
             for tensorflow training. We have observed silent failures of
             tf.pad() with larger array sizes, so "np" might be preferable at
             inference time on large chunks, but it is much slower when it has
-            to convert tensors to numpy arrays.
+            to convert tensors to numpy arrays. See the tensorflow issue
+            https://github.com/tensorflow/tensorflow/issues/91027
         """
         super().__init__()
         self.paddings = tf.constant(paddings)
