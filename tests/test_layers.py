@@ -1,6 +1,7 @@
 """
 Test the custom tensorflow utilities
 """
+
 import os
 from tempfile import TemporaryDirectory
 
@@ -21,7 +22,6 @@ from phygnn.layers.custom_layers import (
     SkipConnection,
     SpatioTemporalExpansion,
     Sup3rConcatObs,
-    Sup3rConcatWeightedObs,
     TileLayer,
     UnitConversion,
 )
@@ -30,9 +30,8 @@ from phygnn.layers.handlers import HiddenLayers, Layers
 
 @pytest.mark.parametrize(
     'hidden_layers',
-    [None,
-     [{'units': 64, 'name': 'relu1'},
-      {'units': 64, 'name': 'relu2'}]])
+    [None, [{'units': 64, 'name': 'relu1'}, {'units': 64, 'name': 'relu2'}]],
+)
 def test_layers(hidden_layers):
     """Test Layers handler"""
     n_features = 1
@@ -44,8 +43,10 @@ def test_layers(hidden_layers):
 
 def test_dropouts():
     """Test the dropout rate kwargs for adding dropout layers."""
-    hidden_layers = [{'units': 64, 'name': 'relu1', 'dropout': 0.1},
-                     {'units': 64, 'name': 'relu2', 'dropout': 0.1}]
+    hidden_layers = [
+        {'units': 64, 'name': 'relu1', 'dropout': 0.1},
+        {'units': 64, 'name': 'relu2', 'dropout': 0.1},
+    ]
     layers = HiddenLayers(hidden_layers)
 
     assert len(layers) == 4
@@ -53,8 +54,10 @@ def test_dropouts():
 
 def test_activate():
     """Test the dropout rate kwargs for adding dropout layers."""
-    hidden_layers = [{'units': 64, 'activation': 'relu', 'name': 'relu1'},
-                     {'units': 64, 'activation': 'relu', 'name': 'relu2'}]
+    hidden_layers = [
+        {'units': 64, 'activation': 'relu', 'name': 'relu1'},
+        {'units': 64, 'activation': 'relu', 'name': 'relu2'},
+    ]
     layers = HiddenLayers(hidden_layers)
 
     assert len(layers) == 4
@@ -64,7 +67,8 @@ def test_batch_norm():
     """Test the dropout rate kwargs for adding dropout layers."""
     hidden_layers = [
         {'units': 64, 'name': 'relu1', 'batch_normalization': {'axis': -1}},
-        {'units': 64, 'name': 'relu2', 'batch_normalization': {'axis': -1}}]
+        {'units': 64, 'name': 'relu2', 'batch_normalization': {'axis': -1}},
+    ]
     layers = HiddenLayers(hidden_layers)
 
     assert len(layers) == 4
@@ -72,11 +76,13 @@ def test_batch_norm():
 
 def test_complex_layers():
     """Test the dropout rate kwargs for adding dropout layers."""
-    hidden_layers = [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
-                     {'units': 64},
-                     {'batch_normalization': {'axis': -1}},
-                     {'activation': 'relu'},
-                     {'dropout': 0.01}]
+    hidden_layers = [
+        {'units': 64, 'activation': 'relu', 'dropout': 0.01},
+        {'units': 64},
+        {'batch_normalization': {'axis': -1}},
+        {'activation': 'relu'},
+        {'dropout': 0.01},
+    ]
     layers = HiddenLayers(hidden_layers)
 
     assert len(layers) == 7
@@ -84,23 +90,31 @@ def test_complex_layers():
 
 def test_repeat_layers():
     """Test repeat argument to duplicate layers"""
-    hidden_layers = [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
-                     {'n': 3, 'repeat': [{'units': 64},
-                                         {'activation': 'relu'},
-                                         {'dropout': 0.01}]},
-                     ]
+    hidden_layers = [
+        {'units': 64, 'activation': 'relu', 'dropout': 0.01},
+        {
+            'n': 3,
+            'repeat': [
+                {'units': 64},
+                {'activation': 'relu'},
+                {'dropout': 0.01},
+            ],
+        },
+    ]
     layers = HiddenLayers(hidden_layers)
     assert len(layers) == 12
 
-    hidden_layers = [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
-                     {'n': 3, 'repeat': {'units': 64}},
-                     ]
+    hidden_layers = [
+        {'units': 64, 'activation': 'relu', 'dropout': 0.01},
+        {'n': 3, 'repeat': {'units': 64}},
+    ]
     layers = HiddenLayers(hidden_layers)
     assert len(layers) == 6
 
-    hidden_layers = [{'units': 64, 'activation': 'relu', 'dropout': 0.01},
-                     {'repeat': {'units': 64}},
-                     ]
+    hidden_layers = [
+        {'units': 64, 'activation': 'relu', 'dropout': 0.01},
+        {'repeat': {'units': 64}},
+    ]
     with pytest.raises(KeyError):
         layers = HiddenLayers(hidden_layers)
 
@@ -108,14 +122,29 @@ def test_repeat_layers():
 def test_skip_concat_connection():
     """Test a functional skip connection with concatenation"""
     hidden_layers = [
-        {'class': 'Conv2D', 'filters': 4, 'kernel_size': 3,
-         'activation': 'relu', 'padding': 'same'},
+        {
+            'class': 'Conv2D',
+            'filters': 4,
+            'kernel_size': 3,
+            'activation': 'relu',
+            'padding': 'same',
+        },
         {'class': 'SkipConnection', 'name': 'a', 'method': 'concat'},
-        {'class': 'Conv2D', 'filters': 4, 'kernel_size': 3,
-         'activation': 'relu', 'padding': 'same'},
+        {
+            'class': 'Conv2D',
+            'filters': 4,
+            'kernel_size': 3,
+            'activation': 'relu',
+            'padding': 'same',
+        },
         {'class': 'SkipConnection', 'name': 'a'},
-        {'class': 'Conv2D', 'filters': 4, 'kernel_size': 3,
-         'activation': 'relu', 'padding': 'same'},
+        {
+            'class': 'Conv2D',
+            'filters': 4,
+            'kernel_size': 3,
+            'activation': 'relu',
+            'padding': 'same',
+        },
     ]
     layers = HiddenLayers(hidden_layers)
     assert len(layers.layers) == 5
@@ -150,14 +179,29 @@ def test_skip_concat_connection():
 def test_skip_connection():
     """Test a functional skip connection"""
     hidden_layers = [
-        {'class': 'Conv2D', 'filters': 4, 'kernel_size': 3,
-         'activation': 'relu', 'padding': 'same'},
+        {
+            'class': 'Conv2D',
+            'filters': 4,
+            'kernel_size': 3,
+            'activation': 'relu',
+            'padding': 'same',
+        },
         {'class': 'SkipConnection', 'name': 'a'},
-        {'class': 'Conv2D', 'filters': 4, 'kernel_size': 3,
-         'activation': 'relu', 'padding': 'same'},
+        {
+            'class': 'Conv2D',
+            'filters': 4,
+            'kernel_size': 3,
+            'activation': 'relu',
+            'padding': 'same',
+        },
         {'class': 'SkipConnection', 'name': 'a'},
-        {'class': 'Conv2D', 'filters': 4, 'kernel_size': 3,
-         'activation': 'relu', 'padding': 'same'},
+        {
+            'class': 'Conv2D',
+            'filters': 4,
+            'kernel_size': 3,
+            'activation': 'relu',
+            'padding': 'same',
+        },
     ]
     layers = HiddenLayers(hidden_layers)
     assert len(layers.layers) == 5
@@ -200,7 +244,8 @@ def test_double_skip():
         {'units': 64, 'activation': 'relu', 'dropout': 0.01},
         {'class': 'SkipConnection', 'name': 'a'},
         {'units': 64, 'activation': 'relu', 'dropout': 0.01},
-        {'class': 'SkipConnection', 'name': 'a'}]
+        {'class': 'SkipConnection', 'name': 'a'},
+    ]
     layers = HiddenLayers(hidden_layers)
     assert len(layers.layers) == 16
 
@@ -230,13 +275,8 @@ def test_double_skip():
 
 
 @pytest.mark.parametrize(
-    ('t_mult', 's_mult'),
-    ((1, 1),
-     (2, 1),
-     (1, 2),
-     (2, 2),
-     (3, 2),
-     (5, 3)))
+    ('t_mult', 's_mult'), ((1, 1), (2, 1), (1, 2), (2, 2), (3, 2), (5, 3))
+)
 def test_st_expansion(t_mult, s_mult):
     """Test the spatiotemporal expansion layer."""
     layer = SpatioTemporalExpansion(spatial_mult=s_mult, temporal_mult=t_mult)
@@ -252,22 +292,28 @@ def test_st_expansion(t_mult, s_mult):
 
 @pytest.mark.parametrize(
     ('t_mult', 's_mult', 't_roll'),
-    ((2, 1, 0),
-     (2, 1, 1),
-     (1, 2, 0),
-     (2, 2, 0),
-     (2, 2, 1),
-     (5, 3, 0),
-     (5, 1, 0),
-     (5, 1, 2),
-     (5, 1, 3),
-     (5, 2, 3),
-     (24, 1, 12)))
+    (
+        (2, 1, 0),
+        (2, 1, 1),
+        (1, 2, 0),
+        (2, 2, 0),
+        (2, 2, 1),
+        (5, 3, 0),
+        (5, 1, 0),
+        (5, 1, 2),
+        (5, 1, 3),
+        (5, 2, 3),
+        (24, 1, 12),
+    ),
+)
 def test_temporal_depth_to_time(t_mult, s_mult, t_roll):
     """Test the spatiotemporal expansion layer."""
-    layer = SpatioTemporalExpansion(spatial_mult=s_mult, temporal_mult=t_mult,
-                                    temporal_method='depth_to_time',
-                                    t_roll=t_roll)
+    layer = SpatioTemporalExpansion(
+        spatial_mult=s_mult,
+        temporal_mult=t_mult,
+        temporal_method='depth_to_time',
+        t_roll=t_roll,
+    )
     n_filters = 2 * s_mult**2 * t_mult
     shape = (1, 4, 4, 3, n_filters)
     n = np.prod(shape)
@@ -324,32 +370,55 @@ def test_st_expansion_bad():
 
 @pytest.mark.parametrize(
     ('hidden_layers'),
-    (([{'class': 'FlexiblePadding', 'paddings': [[1, 1], [2, 2]],
-        'mode': 'REFLECT'}]),
-     ([{'class': 'FlexiblePadding', 'paddings': [[1, 1], [2, 2]],
-        'mode': 'CONSTANT'}]),
-     ([{'class': 'FlexiblePadding', 'paddings': [[1, 1], [2, 2]],
-        'mode': 'SYMMETRIC'}])))
+    (
+        ([
+            {
+                'class': 'FlexiblePadding',
+                'paddings': [[1, 1], [2, 2]],
+                'mode': 'REFLECT',
+            }
+        ]),
+        ([
+            {
+                'class': 'FlexiblePadding',
+                'paddings': [[1, 1], [2, 2]],
+                'mode': 'CONSTANT',
+            }
+        ]),
+        ([
+            {
+                'class': 'FlexiblePadding',
+                'paddings': [[1, 1], [2, 2]],
+                'mode': 'SYMMETRIC',
+            }
+        ]),
+    ),
+)
 def test_flexible_padding(hidden_layers):
     """Test flexible padding routine"""
     layer = HiddenLayers(hidden_layers).layers[0]
-    t = tf.constant([[1, 2, 3],
-                     [4, 5, 6]])
+    t = tf.constant([[1, 2, 3], [4, 5, 6]])
     if layer.mode.upper() == 'CONSTANT':
-        t_check = tf.constant([[0, 0, 0, 0, 0, 0, 0],
-                               [0, 0, 1, 2, 3, 0, 0],
-                               [0, 0, 4, 5, 6, 0, 0],
-                               [0, 0, 0, 0, 0, 0, 0]])
+        t_check = tf.constant([
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 2, 3, 0, 0],
+            [0, 0, 4, 5, 6, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+        ])
     elif layer.mode.upper() == 'REFLECT':
-        t_check = tf.constant([[6, 5, 4, 5, 6, 5, 4],
-                               [3, 2, 1, 2, 3, 2, 1],
-                               [6, 5, 4, 5, 6, 5, 4],
-                               [3, 2, 1, 2, 3, 2, 1]])
+        t_check = tf.constant([
+            [6, 5, 4, 5, 6, 5, 4],
+            [3, 2, 1, 2, 3, 2, 1],
+            [6, 5, 4, 5, 6, 5, 4],
+            [3, 2, 1, 2, 3, 2, 1],
+        ])
     elif layer.mode.upper() == 'SYMMETRIC':
-        t_check = tf.constant([[2, 1, 1, 2, 3, 3, 2],
-                               [2, 1, 1, 2, 3, 3, 2],
-                               [5, 4, 4, 5, 6, 6, 5],
-                               [5, 4, 4, 5, 6, 6, 5]])
+        t_check = tf.constant([
+            [2, 1, 1, 2, 3, 3, 2],
+            [2, 1, 1, 2, 3, 3, 2],
+            [5, 4, 4, 5, 6, 6, 5],
+            [5, 4, 4, 5, 6, 6, 5],
+        ])
     tf.assert_equal(layer(t), t_check)
 
 
@@ -368,8 +437,7 @@ def test_flatten_axis():
 
 
 def test_expand_dims():
-    """Test the layer to expand a new dimension
-    """
+    """Test the layer to expand a new dimension"""
     layer = ExpandDims(axis=3)
     x = np.ones((5, 10, 10, 2))
     y = layer(x)
@@ -382,8 +450,7 @@ def test_expand_dims():
 
 
 def test_tile():
-    """Test the layer to tile (repeat) an existing dimension
-    """
+    """Test the layer to tile (repeat) an existing dimension"""
     layer = TileLayer(multiples=[1, 0, 2, 3])
     x = np.ones((5, 10, 10, 2))
     y = layer(x)
@@ -421,7 +488,8 @@ def test_squeeze_excite_2d():
     hidden_layers = [
         {'class': 'Conv2D', 'filters': 8, 'kernel_size': 3},
         {'activation': 'relu'},
-        {'class': 'SqueezeAndExcitation'}]
+        {'class': 'SqueezeAndExcitation'},
+    ]
     layers = HiddenLayers(hidden_layers)
     assert len(layers.layers) == 3
 
@@ -439,7 +507,8 @@ def test_squeeze_excite_3d():
     hidden_layers = [
         {'class': 'Conv3D', 'filters': 8, 'kernel_size': 3},
         {'activation': 'relu'},
-        {'class': 'SqueezeAndExcitation'}]
+        {'class': 'SqueezeAndExcitation'},
+    ]
     layers = HiddenLayers(hidden_layers)
     assert len(layers.layers) == 3
 
@@ -506,8 +575,13 @@ def test_s3a_layer():
 def test_fno_2d():
     """Test the FNO layer with 2D data (4D tensor input)"""
     hidden_layers = [
-        {'class': 'FNO', 'filters': 8, 'sparsity_threshold': 0.01,
-         'activation': 'relu'}]
+        {
+            'class': 'FNO',
+            'filters': 8,
+            'sparsity_threshold': 0.01,
+            'activation': 'relu',
+        }
+    ]
     layers = HiddenLayers(hidden_layers)
     assert len(layers.layers) == 1
 
@@ -523,8 +597,13 @@ def test_fno_2d():
 def test_fno_3d():
     """Test the FNO layer with 3D data (5D tensor input)"""
     hidden_layers = [
-        {'class': 'FNO', 'filters': 8, 'sparsity_threshold': 0.01,
-         'activation': 'relu'}]
+        {
+            'class': 'FNO',
+            'filters': 8,
+            'sparsity_threshold': 0.01,
+            'activation': 'relu',
+        }
+    ]
     layers = HiddenLayers(hidden_layers)
     assert len(layers.layers) == 1
 
@@ -554,7 +633,7 @@ def test_functional_layer():
 
     with pytest.raises(AssertionError) as excinfo:
         FunctionalLayer('bad_arg', 0)
-    assert "must be one of" in str(excinfo.value)
+    assert 'must be one of' in str(excinfo.value)
 
 
 def test_gaussian_pooling():
@@ -575,11 +654,17 @@ def test_gaussian_pooling():
     assert kernels[1].max() < kernels[0].max()
     assert kernels[1].min() > kernels[0].min()
 
-    layers = [{'class': 'GaussianAveragePooling2D', 'pool_size': 12,
-               'strides': 1}]
-    model1 = TfModel.build(['a', 'b', 'c'], ['d'], hidden_layers=layers,
-                           input_layer=False, output_layer=False,
-                           normalize=False)
+    layers = [
+        {'class': 'GaussianAveragePooling2D', 'pool_size': 12, 'strides': 1}
+    ]
+    model1 = TfModel.build(
+        ['a', 'b', 'c'],
+        ['d'],
+        hidden_layers=layers,
+        input_layer=False,
+        output_layer=False,
+        normalize=False,
+    )
     x_in = np.random.uniform(0, 1, (1, 12, 12, 3))
     out1 = model1.predict(x_in)
     kernel1 = model1.layers[0].make_kernel()[:, :, 0, 0].numpy()
@@ -611,26 +696,39 @@ def test_gaussian_pooling_train():
     pool_size = 5
     xtrain = np.random.uniform(0, 1, (10, pool_size, pool_size, 1))
     ytrain = np.random.uniform(0, 1, (10, 1, 1, 1))
-    hidden_layers = [{'class': 'GaussianAveragePooling2D',
-                      'pool_size': pool_size, 'trainable': False,
-                      'strides': 1, 'padding': 'valid', 'sigma': 2}]
+    hidden_layers = [
+        {
+            'class': 'GaussianAveragePooling2D',
+            'pool_size': pool_size,
+            'trainable': False,
+            'strides': 1,
+            'padding': 'valid',
+            'sigma': 2,
+        }
+    ]
 
-    model = TfModel.build(['x'], ['y'],
-                          hidden_layers=hidden_layers,
-                          input_layer=False,
-                          output_layer=False,
-                          learning_rate=1e-3,
-                          normalize=(True, True))
+    model = TfModel.build(
+        ['x'],
+        ['y'],
+        hidden_layers=hidden_layers,
+        input_layer=False,
+        output_layer=False,
+        learning_rate=1e-3,
+        normalize=(True, True),
+    )
     model.layers[0].build(xtrain.shape)
     assert len(model.layers[0].trainable_weights) == 0
 
     hidden_layers[0]['trainable'] = True
-    model = TfModel.build(['x'], ['y'],
-                          hidden_layers=hidden_layers,
-                          input_layer=False,
-                          output_layer=False,
-                          learning_rate=1e-3,
-                          normalize=(True, True))
+    model = TfModel.build(
+        ['x'],
+        ['y'],
+        hidden_layers=hidden_layers,
+        input_layer=False,
+        output_layer=False,
+        learning_rate=1e-3,
+        normalize=(True, True),
+    )
     model.layers[0].build(xtrain.shape)
     assert len(model.layers[0].trainable_weights) == 1
 
@@ -746,26 +844,6 @@ def test_concat_obs_layer():
 
     assert tf.reduce_any(tf.math.is_nan(y))
     assert np.allclose(out[..., -1][~mask], y[..., 0][~mask])
-    assert np.allclose(out[..., -1][mask], x[..., 0][mask])
-    assert x.shape[:-1] == out.shape[:-1]
-    assert not tf.reduce_any(tf.math.is_nan(out))
-
-
-def test_concat_weighted_obs_layer():
-    """Make sure ``Sup3rConcatWeightedObs`` layer works properly"""
-    x = np.random.normal(0, 1, size=(1, 10, 10, 6, 3))
-    y = np.random.uniform(0, 1, size=(1, 10, 10, 6, 1))
-    mask = np.random.choice([False, True], (1, 10, 10), p=[0.1, 0.9])
-    y[mask] = np.nan
-
-    layer = Sup3rConcatWeightedObs()
-    out = layer(x, y).numpy()
-
-    weights = layer.weight_net(x[..., :1])
-    weighted = weights * y + (1 - weights) * x[..., :1]
-
-    assert tf.reduce_any(tf.math.is_nan(y))
-    assert np.allclose(out[..., -1][~mask], weighted[..., 0][~mask])
     assert np.allclose(out[..., -1][mask], x[..., 0][mask])
     assert x.shape[:-1] == out.shape[:-1]
     assert not tf.reduce_any(tf.math.is_nan(out))

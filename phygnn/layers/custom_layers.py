@@ -1412,7 +1412,7 @@ class Sup3rConcatObs(tf.keras.layers.Layer):
         super().__init__(name=name)
 
     @staticmethod
-    def call(x, hi_res_feature):
+    def call(x, hi_res_feature=None):
         """Combine the first channel of x and the non-nan data in
         hi_res_feature and concatenate with x.
 
@@ -1431,6 +1431,8 @@ class Sup3rConcatObs(tf.keras.layers.Layer):
         x : tf.Tensor
             Output tensor with the hi_res_feature used to fix values of x.
         """
+        if hi_res_feature is None:
+            hi_res_feature = tf.fill(x[..., :1].shape, np.nan)
         mask = tf.math.is_nan(hi_res_feature)
         fixed = tf.where(mask, x[..., :1], hi_res_feature)
         return tf.concat((x, fixed), axis=-1)
@@ -1481,7 +1483,7 @@ class Sup3rConcatEmbeddedObs(tf.keras.layers.Layer):
             conv_class(1, kernel_size=3, padding='same', activation='relu'),
         ]
 
-    def call(self, x, hi_res_feature):
+    def call(self, x, hi_res_feature=None):
         """Combine the first channel of x and the non-nan data in
         hi_res_feature, with a learned weighting, and concatenate with x. Also
         concatenates an observation mask with 1s where observation data exists.
@@ -1502,6 +1504,9 @@ class Sup3rConcatEmbeddedObs(tf.keras.layers.Layer):
             Output tensor with embedded hi_res_feature and observation mask
             concatenated to input.
         """
+        if hi_res_feature is None:
+            hi_res_feature = tf.fill(x[..., :1].shape, np.nan)
+
         nans = tf.math.is_nan(hi_res_feature)
         mask = tf.cast(~nans, dtype=tf.float32)
 
@@ -1559,7 +1564,7 @@ class Sup3rConcatWeightedObs(tf.keras.layers.Layer):
             conv_class(1, kernel_size=3, padding='same', activation='sigmoid'),
         ]
 
-    def call(self, x, hi_res_feature):
+    def call(self, x, hi_res_feature=None):
         """Combine the first channel of x and the non-nan data in
         hi_res_feature, multiply by a learned weighting, and concatenate with
         x. Also concatenates an observation mask with 1s where observation data
@@ -1581,6 +1586,9 @@ class Sup3rConcatWeightedObs(tf.keras.layers.Layer):
             Output tensor with weighted hi_res_feature and observation mask
             concatenated to input.
         """
+        if hi_res_feature is None:
+            hi_res_feature = tf.fill(x[..., :1].shape, np.nan)
+
         nans = tf.math.is_nan(hi_res_feature)
         hr_feat = tf.where(nans, x[..., :1], hi_res_feature)
         mask = tf.cast(~nans, dtype=tf.float32)
@@ -1639,7 +1647,7 @@ class Sup3rConcatWeightedObsWithEmbedding(Sup3rConcatWeightedObs):
             conv_class(1, kernel_size=3, padding='same', activation='relu'),
         ]
 
-    def call(self, x, hi_res_feature):
+    def call(self, x, hi_res_feature=None):
         """Combine the first channel of x and the non-nan data in
         hi_res_feature, use learned embedding where hi_res_feature has NaNs,
         and concatenate with x. Also concatenates an observation mask with
@@ -1661,6 +1669,9 @@ class Sup3rConcatWeightedObsWithEmbedding(Sup3rConcatWeightedObs):
             Output tensor with embedded hi_res_feature and observation mask
             concatenated to input.
         """
+        if hi_res_feature is None:
+            hi_res_feature = tf.fill(x[..., :1].shape, np.nan)
+
         nans = tf.math.is_nan(hi_res_feature)
         mask = tf.cast(~nans, dtype=tf.float32)
 

@@ -86,7 +86,7 @@ fixable = [
   "E225", # missing-whitespace-around-operator
   "E303", # too-many-blank-lines
   "UP039", # unnecessary-class-parentheses
-  ]
+]
 # preview = true
 # logger-objects = []
 task-tags = ["TODO", "FIXME", "XXX"]
@@ -111,7 +111,7 @@ select = [
   "SIM", # flake8-simplify
   "UP", # pyupgrade
   "W", # Warning
-  ]
+]
 
 ignore = [
   # Currently don't conform but we might want to reconsider
@@ -178,7 +178,7 @@ ignore = [
   "UP015", # redundant-open-modes
   "UP032", # f-string
 #  "UP038" # non-pep604-isinstance
-  ]
+]
 # Ignored in pylint setup but missing on ruff. We shall delete from the
 # following lines what is not intended to follow anymore.
 # arguments-renamed
