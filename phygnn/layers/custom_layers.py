@@ -977,6 +977,11 @@ class AxialAttentionBlock(tf.keras.layers.Layer):
             Shape tuple of the input tensor
         """
         self.rank = len(input_shape)
+        msg = (
+            'AxialAttentionBlock must have at least 3 dimensions, but '
+            f'received input shape: {input_shape}'
+        )
+        assert self.rank >= 3, msg
         self.attention_layers = [
             tf.keras.layers.MultiHeadAttention(
                 num_heads=self.num_heads, key_dim=self.key_dim
@@ -1017,10 +1022,10 @@ class AxialAttentionBlock(tf.keras.layers.Layer):
         x : tf.Tensor
             Output tensor
         """
-        x = self._apply_attention_along_axis(x, axis=1)  # Lats
-        x = self._apply_attention_along_axis(x, axis=2)  # Lons
-        if self.rank == 5:
-            x = self._apply_attention_along_axis(x, axis=3)  # Time
+
+        # ida=0 is the batch axis and ida=-1 is the feature axis
+        for ida in range(1, self.rank - 1):
+            x = self._apply_attention_along_axis(x, axis=ida)
         return x
 
 
@@ -1468,6 +1473,9 @@ class Sup3rConcatEmbeddedObs(tf.keras.layers.Layer):
             Shape tuple of the input tensor
         """
         self.rank = len(input_shape)
+
+        msg = 'Sup3rConcatEmbeddedObs layer can only accept 4D or 5D data'
+        assert self.rank in (4, 5), msg
 
         if self.rank == 4:
             conv_class = tf.keras.layers.Conv2D
