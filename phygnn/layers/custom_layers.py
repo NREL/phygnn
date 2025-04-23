@@ -1443,13 +1443,13 @@ class Sup3rConcatEmbeddedObs(tf.keras.layers.Layer):
     forward pass, with a learned embedding. This is used to condition models
     on sparse observation data."""
 
-    def __init__(self, filters=16, name=None):
+    def __init__(self, filters=32, name=None):
         """
         Parameters
         ----------
         filters : int
-            Number of filters for the first convolutional layer in the embed
-            net.
+            Number of filters to use for each convolutional layer. e.g.
+            [64, 32] for one layer with 64 and another with 32.
         name : str | None
             Unique str identifier of the layer. Usually the name of the
             hi-resolution feature used in the concatenation.
@@ -1457,7 +1457,7 @@ class Sup3rConcatEmbeddedObs(tf.keras.layers.Layer):
         super().__init__(name=name)
         self.embed_net = None
         self.rank = None
-        self.filters = filters
+        self.filters = filters if isinstance(filters, list) else [filters]
 
     def build(self, input_shape):
         """Build the weight net layer based on an input shape
@@ -1473,20 +1473,37 @@ class Sup3rConcatEmbeddedObs(tf.keras.layers.Layer):
             conv_class = tf.keras.layers.Conv2D
         else:
             conv_class = tf.keras.layers.Conv3D
-        self.embed_net = [
-            conv_class(
-                self.filters,
-                kernel_size=3,
-                padding='same',
-                activation='relu',
-            ),
-            conv_class(1, kernel_size=3, padding='same', activation='relu'),
-        ]
+        self.embed_net = []
+        for _, filters in enumerate(self.filters):
+            self.embed_net += [
+                conv_class(
+                    filters=filters,
+                    kernel_size=1,
+                    padding='same'),
+                tf.keras.layers.LeakyReLU(alpha=0.2)
+            ]
+
+    @staticmethod
+    def nan_fill(hi_res_feature):
+        """Fill NaN values in the input tensor with the mean of the non-NaN.
+        If all values are NaN, fill with 0."""
+
+        not_nan = tf.math.logical_not(tf.math.is_nan(hi_res_feature))
+        not_nan_float = tf.cast(not_nan, hi_res_feature.dtype)
+
+        hi_res_zeroed = tf.where(
+            not_nan, hi_res_feature, tf.zeros_like(hi_res_feature))
+
+        count = tf.reduce_sum(not_nan_float)
+        total = tf.reduce_sum(hi_res_zeroed)
+        mean = tf.math.divide_no_nan(total, count)
+
+        return tf.where(not_nan, hi_res_feature, mean)
 
     def call(self, x, hi_res_feature=None):
-        """Combine the first channel of x and the non-nan data in
-        hi_res_feature, with a learned weighting, and concatenate with x. Also
-        concatenates an observation mask with 1s where observation data exists.
+        """Apply the embed net to x, hi_res_feature, and the mask
+        representing where hi_res_feature is not nan. Concatenate the output
+        with x
 
         Parameters
         ----------
@@ -1507,186 +1524,16 @@ class Sup3rConcatEmbeddedObs(tf.keras.layers.Layer):
         if hi_res_feature is None:
             hi_res_feature = tf.fill(x[..., :1].shape, np.nan)
 
+        hr_feat = self.nan_fill(hi_res_feature)
         nans = tf.math.is_nan(hi_res_feature)
         mask = tf.cast(~nans, dtype=tf.float32)
 
-        # get embedding based on obs locations and x
-        embed = tf.concat([x, mask], axis=-1)
+        # get embedding based on obs locations, obs data
+        embed = tf.concat([hr_feat, mask], axis=-1)
         for layer in self.embed_net:
             embed = layer(embed)
-        embed = tf.where(nans, embed, hi_res_feature)
 
-        return tf.concat([x, embed, mask], axis=-1)
-
-
-class Sup3rConcatWeightedObs(tf.keras.layers.Layer):
-    """Layer to concatenate sparse data in the middle of a super resolution
-    forward pass, with a learned weighting. This is used to condition models
-    on sparse observation data."""
-
-    def __init__(self, filters=16, name=None):
-        """
-        Parameters
-        ----------
-        filters : int
-            Number of filters for the first convolutional layer in the weight
-            net.
-        name : str | None
-            Unique str identifier of the layer. Usually the name of the
-            hi-resolution feature used in the concatenation.
-        """
-        super().__init__(name=name)
-        self.weight_net = None
-        self.rank = None
-        self.filters = filters
-
-    def build(self, input_shape):
-        """Build the weight net layer based on an input shape
-
-        Parameters
-        ----------
-        input_shape : tuple
-            Shape tuple of the input tensor
-        """
-        self.rank = len(input_shape)
-
-        if self.rank == 4:
-            conv_class = tf.keras.layers.Conv2D
-        else:
-            conv_class = tf.keras.layers.Conv3D
-        self.weight_net = [
-            conv_class(
-                self.filters,
-                kernel_size=3,
-                padding='same',
-                activation='relu',
-            ),
-            conv_class(1, kernel_size=3, padding='same', activation='sigmoid'),
-        ]
-
-    def call(self, x, hi_res_feature=None):
-        """Combine the first channel of x and the non-nan data in
-        hi_res_feature, multiply by a learned weighting, and concatenate with
-        x. Also concatenates an observation mask with 1s where observation data
-        exists.
-
-        Parameters
-        ----------
-        x : tf.Tensor
-            Input tensor
-        hi_res_feature : tf.Tensor | np.ndarray
-            This should be a 4D array for spatial enhancement model or 5D array
-            for a spatiotemporal enhancement model (obs, spatial_1, spatial_2,
-            (temporal), 1). This is NaN where there are no observations and
-            real values where observations exist.
-
-        Returns
-        -------
-        x : tf.Tensor
-            Output tensor with weighted hi_res_feature and observation mask
-            concatenated to input.
-        """
-        if hi_res_feature is None:
-            hi_res_feature = tf.fill(x[..., :1].shape, np.nan)
-
-        nans = tf.math.is_nan(hi_res_feature)
-        hr_feat = tf.where(nans, x[..., :1], hi_res_feature)
-        mask = tf.cast(~nans, dtype=tf.float32)
-
-        # get weights based on obs locations and differences with x channel
-        weights = tf.concat([x, hr_feat, mask], axis=-1)
-        for layer in self.weight_net:
-            weights = layer(weights)
-        return tf.concat([x, hr_feat * weights, mask], axis=-1)
-
-
-class Sup3rConcatWeightedObsWithEmbedding(Sup3rConcatWeightedObs):
-    """Layer to concatenate sparse data in the middle of a super resolution
-    forward pass, with a learned embedding and weighting. This is used to
-    condition models on sparse observation data."""
-
-    def __init__(self, weight_filters=16, embed_filters=16, name=None):
-        """
-        Parameters
-        ----------
-        weight_filters : int
-            Number of filters for the first convolutional layer in the
-            weight net.
-        embed_filters : int
-            Number of filters for the first convolutional layer in the
-            embedding net.
-        name : str | None
-            Unique str identifier of the layer. Usually the name of the
-            hi-resolution feature used in the concatenation.
-        """
-        super().__init__(filters=weight_filters, name=name)
-        self.embed_net = None
-        self.embed_filters = embed_filters
-
-    def build(self, input_shape):
-        """Build the weight net layer based on an input shape
-
-        Parameters
-        ----------
-        input_shape : tuple
-            Shape tuple of the input tensor
-        """
-        super().build(input_shape)
-
-        if self.rank == 4:
-            conv_class = tf.keras.layers.Conv2D
-        else:
-            conv_class = tf.keras.layers.Conv3D
-        self.embed_net = [
-            conv_class(
-                self.filters,
-                kernel_size=3,
-                padding='same',
-                activation='relu',
-            ),
-            conv_class(1, kernel_size=3, padding='same', activation='relu'),
-        ]
-
-    def call(self, x, hi_res_feature=None):
-        """Combine the first channel of x and the non-nan data in
-        hi_res_feature, use learned embedding where hi_res_feature has NaNs,
-        and concatenate with x. Also concatenates an observation mask with
-        1s where observation data exists.
-
-        Parameters
-        ----------
-        x : tf.Tensor
-            Input tensor
-        hi_res_feature : tf.Tensor | np.ndarray
-            This should be a 4D array for spatial enhancement model or 5D array
-            for a spatiotemporal enhancement model (obs, spatial_1, spatial_2,
-            (temporal), 1). This is NaN where there are no observations and
-            real values where observations exist.
-
-        Returns
-        -------
-        x : tf.Tensor
-            Output tensor with embedded hi_res_feature and observation mask
-            concatenated to input.
-        """
-        if hi_res_feature is None:
-            hi_res_feature = tf.fill(x[..., :1].shape, np.nan)
-
-        nans = tf.math.is_nan(hi_res_feature)
-        mask = tf.cast(~nans, dtype=tf.float32)
-
-        # get embedding based on obs locations and x
-        embed = tf.concat([x, mask], axis=-1)
-        for layer in self.embed_net:
-            embed = layer(embed)
-        embed = tf.where(nans, embed, hi_res_feature)
-
-        # get weights based on embedding, hi_res_feature, and obs locations
-        weights = tf.concat([embed, mask], axis=-1)
-        for layer in self.weight_net:
-            weights = layer(weights)
-
-        return tf.concat([x, weights * embed], axis=-1)
+        return tf.concat([x, embed], axis=-1)
 
 
 class Sup3rConcat(tf.keras.layers.Layer):
