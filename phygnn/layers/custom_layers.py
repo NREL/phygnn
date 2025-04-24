@@ -1022,7 +1022,6 @@ class AxialAttentionBlock(tf.keras.layers.Layer):
         x : tf.Tensor
             Output tensor
         """
-
         # ida=0 is the batch axis and ida=-1 is the feature axis
         for ida in range(1, self.rank - 1):
             x = self._apply_attention_along_axis(x, axis=ida)
@@ -1494,8 +1493,16 @@ class Sup3rConcatEmbeddedObs(tf.keras.layers.Layer):
     @staticmethod
     def nan_fill(hi_res_feature):
         """Fill NaN values in the input tensor with the mean of the non-NaN.
-        If all values are NaN, fill with 0."""
+        If all values are NaN, fill with 0.
 
+        Returns
+        -------
+        hi_res_feature : tf.Tensor
+            Input tensor with NaN values filled with the mean of the non-NaN
+            values or 0 if all values are NaN.
+        mask : tf.Tensor
+            Mask of the input tensor where 1 is not NaN and 0 is NaN.
+        """
         not_nan = tf.math.logical_not(tf.math.is_nan(hi_res_feature))
         not_nan_float = tf.cast(not_nan, hi_res_feature.dtype)
 
@@ -1506,7 +1513,7 @@ class Sup3rConcatEmbeddedObs(tf.keras.layers.Layer):
         total = tf.reduce_sum(hi_res_zeroed)
         mean = tf.math.divide_no_nan(total, count)
 
-        return tf.where(not_nan, hi_res_feature, mean)
+        return tf.where(not_nan, hi_res_feature, mean), not_nan_float
 
     def call(self, x, hi_res_feature=None):
         """Apply the embed net to x, hi_res_feature, and the mask
@@ -1532,9 +1539,7 @@ class Sup3rConcatEmbeddedObs(tf.keras.layers.Layer):
         if hi_res_feature is None:
             hi_res_feature = tf.fill(x[..., :1].shape, np.nan)
 
-        hr_feat = self.nan_fill(hi_res_feature)
-        nans = tf.math.is_nan(hi_res_feature)
-        mask = tf.cast(~nans, dtype=tf.float32)
+        hr_feat, mask = self.nan_fill(hi_res_feature)
 
         # get embedding based on obs locations, obs data
         embed = tf.concat([hr_feat, mask], axis=-1)
