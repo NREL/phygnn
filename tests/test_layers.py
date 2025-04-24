@@ -847,3 +847,34 @@ def test_concat_obs_layer():
     assert np.allclose(out[..., -1][mask], x[..., 0][mask])
     assert x.shape[:-1] == out.shape[:-1]
     assert not tf.reduce_any(tf.math.is_nan(out))
+
+
+def test_recursive_hidden_layers_init():
+    """Make sure initializing a layer with a hidden_layer argument works
+    properly"""
+
+    config = [
+        {
+            'class': 'Sup3rConcatEmbeddedObsWithExo',
+            'name': 'test',
+            'hidden_layers': [
+                {
+                    'class': 'Conv2D',
+                    'padding': 'same',
+                    'filters': 8,
+                    'kernel_size': 3,
+                }
+            ],
+        }
+    ]
+    layer = HiddenLayers(config)._layers[0]
+
+    x = np.random.normal(0, 1, size=(1, 10, 10, 6, 3))
+    y = np.random.uniform(0, 1, size=(1, 10, 10, 6, 1))
+    mask = np.random.choice([False, True], (1, 10, 10), p=[0.1, 0.9])
+    y[mask] = np.nan
+
+    out = layer(x, y).numpy()
+
+    assert tf.reduce_any(tf.math.is_nan(y))
+    assert not tf.reduce_any(tf.math.is_nan(out))

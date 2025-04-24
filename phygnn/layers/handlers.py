@@ -278,7 +278,12 @@ class HiddenLayers:
             logger.error(msg)
             raise KeyError(msg)
 
-        if layer_class == SkipConnection:
+        if 'hidden_layers' in kwargs:
+            hl = HiddenLayers(hidden_layers=kwargs.pop('hidden_layers'))
+            layer = layer_class(hidden_layers=hl._layers, **kwargs)
+            self._layers.append(layer)
+
+        elif layer_class == SkipConnection:
             self.add_skip_layer(**kwargs)
         else:
             self._layers.append(layer_class(**kwargs))

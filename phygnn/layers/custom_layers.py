@@ -1516,9 +1516,8 @@ class Sup3rConcatEmbeddedObs(tf.keras.layers.Layer):
         return tf.where(not_nan, hi_res_feature, mean), not_nan_float
 
     def call(self, x, hi_res_feature=None):
-        """Apply the embed net to x, hi_res_feature, and the mask
-        representing where hi_res_feature is not nan. Concatenate the output
-        with x
+        """Apply the embed net to hi_res_feature and the mask representing
+        where hi_res_feature is not nan. Concatenate the output with x
 
         Parameters
         ----------
@@ -1544,6 +1543,83 @@ class Sup3rConcatEmbeddedObs(tf.keras.layers.Layer):
         # get embedding based on obs locations, obs data
         embed = tf.concat([hr_feat, mask], axis=-1)
         for layer in self.embed_net:
+            embed = layer(embed)
+
+        return tf.concat([x, embed], axis=-1)
+
+
+class Sup3rConcatEmbeddedObsWithExo(Sup3rConcatEmbeddedObs):
+    """Layer to concatenate sparse data in the middle of a super
+    resolution forward pass, with a learned embedding. Extra features can be
+    included in the input to this embedding. The embedding network is defined
+    with a list of hidden layers."""
+
+    def __init__(self, name=None, exo_features=None, hidden_layers=None):
+        """
+        Parameters
+        ----------
+        name : str | None
+            Unique str identifier of the layer. Usually the name of the
+            hi-resolution feature used in the concatenation.
+        exo_features : list | None
+            The names of exogenous features to be included in the embedding
+            input
+        hidden_layers : list | None
+            The list of layers used to create the embedding network.
+        """
+        super().__init__(name=name)
+        self._hidden_layers = hidden_layers
+        self.rank = None
+        self.exo_features = exo_features
+
+    def build(self, input_shape):
+        """Build the weight net layer based on an input shape
+
+        Parameters
+        ----------
+        input_shape : tuple
+            Shape tuple of the input tensor
+        """
+        self.rank = len(input_shape)
+
+    def call(self, x, hi_res_feature=None, exo_data=None):
+        """Apply the embed net to x, hi_res_feature, exogenous data, and the
+        mask representing where hi_res_feature is not nan. Concatenate the
+        output with x
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+        hi_res_feature : tf.Tensor | np.ndarray
+            This should be a 4D array for spatial enhancement model or 5D array
+            for a spatiotemporal enhancement model (obs, spatial_1, spatial_2,
+            (temporal), 1). This is NaN where there are no observations and
+            real values where observations exist.
+        exo_data : tf.Tensor | np.ndarray
+            This is an array of exogenous data used to imform the embedding,
+            like topography
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor with embedding concatenated to input.
+        """
+        if hi_res_feature is None:
+            hi_res_feature = tf.fill(x[..., :1].shape, np.nan)
+
+        if exo_data is None and self.exo_features is not None:
+            exo_shape = (*x[..., 0].shape, len(self.exo_features))
+            exo_data = tf.fill(exo_shape, 0)
+
+        hr_feat, mask = self.nan_fill(hi_res_feature)
+
+        # get embedding based on obs locations, obs data, and exo data
+        embed = tf.concat([hr_feat, mask], axis=-1)
+        if exo_data is not None:
+            embed = tf.concat([exo_data, embed], axis=-1)
+
+        for layer in self._hidden_layers:
             embed = layer(embed)
 
         return tf.concat([x, embed], axis=-1)
