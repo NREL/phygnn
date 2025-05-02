@@ -1492,6 +1492,164 @@ class Sup3rConcatObs(tf.keras.layers.Layer):
         return tf.concat((x, fixed), axis=-1)
 
 
+class Sup3rConcatEmbeddedObs(tf.keras.layers.Layer):
+    """Layer to concatenate sparse data in the middle of a super resolution
+    forward pass, with a learned embedding. This is used to condition models
+    on sparse observation data."""
+
+    def __init__(self, filters=32, name=None):
+        """
+        Parameters
+        ----------
+        filters : int
+            Number of filters to use for each convolutional layer. e.g.
+            [64, 32] for one layer with 64 and another with 32.
+        name : str | None
+            Unique str identifier of the layer. Usually the name of the
+            hi-resolution feature used in the concatenation.
+        """
+        super().__init__(name=name)
+        self.embed_net = None
+        self.rank = None
+        self.filters = filters if isinstance(filters, list) else [filters]
+
+    def build(self, input_shape):
+        """Build the weight net layer based on an input shape
+
+        Parameters
+        ----------
+        input_shape : tuple
+            Shape tuple of the input tensor
+        """
+        self.rank = len(input_shape)
+
+        msg = 'Sup3rConcatEmbeddedObs layer can only accept 4D or 5D data'
+        assert self.rank in (4, 5), msg
+
+        if self.rank == 4:
+            conv_class = tf.keras.layers.Conv2D
+        else:
+            conv_class = tf.keras.layers.Conv3D
+        self.embed_net = []
+        for _, filters in enumerate(self.filters):
+            self.embed_net += [
+                conv_class(
+                    filters=filters,
+                    kernel_size=1,
+                    padding='same'),
+                tf.keras.layers.LeakyReLU(alpha=0.2)
+            ]
+
+    def call(self, x, hi_res_feature=None):
+        """Apply the embed net to hi_res_feature and the mask representing
+        where hi_res_feature is not nan. Concatenate the output with x
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+        hi_res_feature : tf.Tensor | np.ndarray
+            This should be a 4D array for spatial enhancement model or 5D array
+            for a spatiotemporal enhancement model (obs, spatial_1, spatial_2,
+            (temporal), 1). This is NaN where there are no observations and
+            real values where observations exist.
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor with embedded hi_res_feature and observation mask
+            concatenated to input.
+        """
+        if hi_res_feature is None:
+            hi_res_feature = tf.fill(x[..., :1].shape, np.nan)
+
+        hr_feat, mask = nan_fill(hi_res_feature)
+
+        # get embedding based on obs locations, obs data
+        embed = tf.concat([hr_feat, mask], axis=-1)
+        for layer in self.embed_net:
+            embed = layer(embed)
+
+        return tf.concat([x, embed], axis=-1)
+
+
+class Sup3rConcatEmbeddedObsWithExo(tf.keras.layers.Layer):
+    """Layer to concatenate sparse data in the middle of a super
+    resolution forward pass, with a learned embedding. Extra features can be
+    included in the input to this embedding. The embedding network is defined
+    with a list of hidden layers."""
+
+    def __init__(self, name=None, exo_features=None, hidden_layers=None):
+        """
+        Parameters
+        ----------
+        name : str | None
+            Unique str identifier of the layer. Usually the name of the
+            hi-resolution feature used in the concatenation.
+        exo_features : list | None
+            The names of exogenous features to be included in the embedding
+            input
+        hidden_layers : list | None
+            The list of layers used to create the embedding network.
+        """
+        super().__init__(name=name)
+        self._hidden_layers = hidden_layers
+        self.rank = None
+        self.exo_features = exo_features
+
+    def build(self, input_shape):
+        """Build the weight net layer based on an input shape
+
+        Parameters
+        ----------
+        input_shape : tuple
+            Shape tuple of the input tensor
+        """
+        self.rank = len(input_shape)
+
+    def call(self, x, hi_res_feature=None, exo_data=None):
+        """Apply the embed net to x, hi_res_feature, exogenous data, and the
+        mask representing where hi_res_feature is not nan. Concatenate the
+        output with x
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            Input tensor
+        hi_res_feature : tf.Tensor | np.ndarray
+            This should be a 4D array for spatial enhancement model or 5D array
+            for a spatiotemporal enhancement model (obs, spatial_1, spatial_2,
+            (temporal), 1). This is NaN where there are no observations and
+            real values where observations exist.
+        exo_data : tf.Tensor | np.ndarray
+            This is an array of exogenous data used to imform the embedding,
+            like topography
+
+        Returns
+        -------
+        x : tf.Tensor
+            Output tensor with embedding concatenated to input.
+        """
+        if hi_res_feature is None:
+            hi_res_feature = tf.fill(x[..., :1].shape, np.nan)
+
+        if exo_data is None and self.exo_features is not None:
+            exo_shape = (*x[..., 0].shape, len(self.exo_features))
+            exo_data = tf.fill(exo_shape, 0)
+
+        hr_feat, mask = nan_fill(hi_res_feature)
+
+        # get embedding based on obs locations, obs data, and exo data
+        embed = tf.concat([hr_feat, mask], axis=-1)
+        if exo_data is not None:
+            embed = tf.concat([exo_data, embed], axis=-1)
+
+        for layer in self._hidden_layers:
+            embed = layer(embed)
+
+        return tf.concat([x, embed], axis=-1)
+
+
 class Sup3rObsModel(tf.keras.layers.Layer):
     """Layer to concatenate sparse data in the middle of a super
     resolution forward pass, with a learned embedding. Mutiple observation
@@ -1541,8 +1699,8 @@ class Sup3rObsModel(tf.keras.layers.Layer):
         hi_res_feature : tf.Tensor | np.ndarray
             This should be a 4D array for spatial enhancement model or 5D array
             for a spatiotemporal enhancement model (obs, spatial_1, spatial_2,
-            (temporal), features). This is NaN where there are no observations
-            and real values where observations exist.
+            (temporal), 1). This is NaN where there are no observations and
+            real values where observations exist.
         exo_data : tf.Tensor | np.ndarray
             This is an array of exogenous data used to imform the embedding,
             like topography
