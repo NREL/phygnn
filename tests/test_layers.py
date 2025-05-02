@@ -855,7 +855,7 @@ def test_recursive_hidden_layers_init():
 
     config = [
         {
-            'class': 'Sup3rConcatEmbeddedObsWithExo',
+            'class': 'Sup3rObsModel',
             'name': 'test',
             'hidden_layers': [
                 {
