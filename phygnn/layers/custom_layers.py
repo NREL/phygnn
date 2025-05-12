@@ -9,7 +9,7 @@ import tensorflow as tf
 logger = logging.getLogger(__name__)
 
 
-def _nan_fill(hi_res_feature):
+def _mean_fill(hi_res_feature):
     """Fill NaN values in the input tensor with the mean of the non-NaN.
     If all values are NaN, fill with 0. This is assumed to be either a 3D
     or 4D tensor, with the trailing feature channel removed.
@@ -35,7 +35,7 @@ def _nan_fill(hi_res_feature):
     return tf.where(not_nan, hi_res_feature, mean), not_nan_float
 
 
-def nan_fill(hi_res_feature):
+def mean_fill(hi_res_feature):
     """Fill NaN values in the input tensor with the mean of the non-NaN.
     If all values are NaN, fill with 0. This is assumed to be either a 4D
     or 5D tensor, with the trailing feature channel included.
@@ -51,12 +51,147 @@ def nan_fill(hi_res_feature):
     mask = []
     hr_feat = []
     for i in range(hi_res_feature.shape[-1]):
-        hr_feat_i, mask_i = _nan_fill(hi_res_feature[..., i])
+        hr_feat_i, mask_i = _mean_fill(hi_res_feature[..., i])
         hr_feat.append(hr_feat_i)
         mask.append(mask_i)
     mask = tf.stack(mask, axis=-1)
     hr_feat = tf.stack(hr_feat, axis=-1)
     return hr_feat, mask
+
+
+def idw_flat_fill(x_d, coords, is_valid_d):
+    """IDW fill for flattened tensors without depth dimension. Assumes input
+    shape is (N), where N is the number of points (H * W).
+
+    Parameters
+    ----------
+    x : tf.Tensor
+        Tensor with NaNs and shape (N)
+    coords: tf.Tensor
+        Coordinates of the points in the image, shape (N, 2) where N is the
+        number of points (H * W)
+    mask: tf.Tensor
+        Boolean mask of the non-NaN locations in the original x
+
+    Returns
+    -------
+    x_filled: tf.Tensor
+        Flattened tensor with NaNs filled
+    """
+    nan_mask = tf.math.logical_not(is_valid_d)
+    valid_coords = tf.boolean_mask(coords, is_valid_d)
+    nan_coords = tf.boolean_mask(coords, nan_mask)
+    valid_vals = tf.boolean_mask(x_d, is_valid_d)
+
+    diffs = tf.expand_dims(nan_coords, 1) - tf.expand_dims(valid_coords, 0)
+    dists = tf.norm(diffs, axis=-1)
+
+    weights = 1 / dists
+    weights_sum = tf.reduce_sum(weights, axis=1, keepdims=True)
+    weights /= weights_sum
+
+    vals = tf.reduce_sum(weights * tf.expand_dims(valid_vals, 0), axis=1)
+    nan_indices = tf.where(nan_mask)
+
+    filled = tf.where(is_valid_d, x_d, tf.zeros_like(x_d))
+    return tf.tensor_scatter_nd_update(filled, nan_indices, vals)
+
+
+def idw_batch_fill(x, coords, mask):
+    """IDW fill for tensors without batch dimension. Assumes input shape is:
+    - (H, W) or (H, W, D)
+
+    Parameters
+    ----------
+    x : tf.Tensor
+        Tensor with NaNs and shape (H, W) or (H, W, D)
+    coords: tf.Tensor
+        Coordinates of the points in the image, shape (N, 2) where N is the
+        number of points (H * W)
+    mask: tf.Tensor
+        Boolean mask of the non-NaN locations in the original x
+
+    Returns
+    -------
+    x_filled: tf.Tensor
+        Tensor with NaNs filled
+    """
+    rank = len(x.shape)
+    if rank == 2:
+        H, W, D = x.shape[0], x.shape[1], 1
+        x = tf.expand_dims(x, -1)
+    else:
+        H, W, D = x.shape[0], x.shape[1], x.shape[2]
+
+    N = H * W
+
+    x_flat = tf.reshape(x, [N, D])
+    is_valid = tf.reshape(mask, [N, D])
+    out = [
+        idw_flat_fill(x_flat[:, d], coords, is_valid[:, d]) for d in range(D)
+    ]
+    out = tf.stack(out, axis=-1)
+    out = tf.reshape(out, [H, W, D])
+    return tf.squeeze(out, axis=-1) if rank == 2 else tf.cast(out, tf.float32)
+
+
+def idw_ch_fill(x, coords, mask):
+    """IDW fill for tensors without channel dimension. Assumes input shape is:
+    - (B, H, W) or (B, H, W, D)
+
+    Parameters
+    ----------
+    x : tf.Tensor
+        Tensor with NaNs and shape (B, H, W) or (B, H, W, D)
+    coords: tf.Tensor
+        Coordinates of the points in the image, shape (N, 2) where N is the
+        number of points (H * W)
+    mask: tf.Tensor
+        Boolean mask of the non-NaN locations in the original x
+
+    Returns
+    -------
+    x_filled: tf.Tensor
+        Tensor with NaNs filled
+    """
+    rank = len(x.shape)
+    if rank == 3:
+        x = tf.expand_dims(x, -1)
+    res = [idw_batch_fill(x[b], coords, mask[b]) for b in range(x.shape[0])]
+    out = tf.stack(res, axis=0)
+    return tf.squeeze(out, axis=-1) if rank == 3 else tf.cast(out, tf.float32)
+
+
+def idw_fill(x):
+    """IDW fill for tensors with channel dimension. Assumes input shape is:
+    - (B, H, W, C) or (B, H, W, D, C)
+
+    Parameters
+    ----------
+    x : tf.Tensor
+        Tensor with NaNs and shape (B, H, W, C) or (B, H, W, D, C)
+
+    Returns
+    -------
+    x_filled: tf.Tensor
+        Tensor with NaNs filled
+    mask: tf.Tensor
+        Boolean mask of the non-NaN locations in the original x
+    """
+    assert len(x.shape) in [4, 5], "Input tensor must be 4D or 5D"
+    x = tf.cast(x, tf.float32)
+    H, W = x.shape[1], x.shape[2]
+    N = H * W
+    mask = tf.math.logical_not(tf.math.is_nan(x))
+    coords = tf.meshgrid(tf.range(H), tf.range(W), indexing='ij')
+    coords = tf.stack(coords, axis=-1)
+    coords = tf.cast(tf.reshape(coords, [N, 2]), tf.float32)
+    filled_list = [
+        idw_ch_fill(x[..., c], coords, mask[..., c])
+        for c in range(x.shape[-1])
+    ]
+    filled = tf.stack(filled_list, axis=-1)
+    return tf.cast(filled, tf.float32), tf.cast(mask, tf.float32)
 
 
 class FlexiblePadding(tf.keras.layers.Layer):
@@ -1455,18 +1590,31 @@ class Sup3rConcatObs(tf.keras.layers.Layer):
     This uses the first channel of the input tensor as a background for the
     provided values and then concatenates with the input tensor."""
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, fill_method=None, include_mask=False):
         """
         Parameters
         ----------
         name : str | None
             Unique str identifier of the layer. Usually the name of the
             hi-resolution feature used in the concatenation.
+        fill_method : str | None
+            Method to use for filling the NaN values in the hi_res_feature.
+            If this is None then the first channel of x will be used.
+            Otherwise, accepted values are 'mean' and 'idw'.
+        include_mask : bool
+            If True, the mask of the hi_res_feature showing where there is
+            valid observation data will be included in the concatenation.
         """
         super().__init__(name=name)
+        if fill_method == 'mean':
+            self.fill_method = mean_fill
+        elif fill_method == 'idw':
+            self.fill_method = idw_fill
+        else:
+            self.fill_method = None
+        self.include_mask = include_mask
 
-    @staticmethod
-    def call(x, hi_res_feature=None):
+    def call(self, x, hi_res_feature=None):
         """Combine the first channel of x and the non-nan data in
         hi_res_feature and concatenate with x.
 
@@ -1487,8 +1635,17 @@ class Sup3rConcatObs(tf.keras.layers.Layer):
         """
         if hi_res_feature is None:
             hi_res_feature = tf.fill(x[..., :1].shape, np.nan)
-        mask = tf.math.is_nan(hi_res_feature)
-        fixed = tf.where(mask, x[..., :1], hi_res_feature)
+
+        if self.fill_method is None:
+            mask = tf.math.is_nan(hi_res_feature)
+            fixed = tf.where(mask, x[..., :1], hi_res_feature)
+        else:
+            fixed, mask = self.fill_method(hi_res_feature)
+
+        if self.include_mask:
+            mask = tf.cast(mask, dtype=fixed.dtype)
+            fixed = tf.concat((fixed, mask), axis=-1)
+
         return tf.concat((x, fixed), axis=-1)
 
 
@@ -1499,7 +1656,8 @@ class Sup3rObsModel(tf.keras.layers.Layer):
     The embedding network is defined with a list of hidden layers."""
 
     def __init__(
-        self, name=None, features=None, exo_features=None, hidden_layers=None
+        self, name=None, features=None, exo_features=None, hidden_layers=None,
+        fill_method='mean', include_mask=True
     ):
         """
         Parameters
@@ -1512,12 +1670,30 @@ class Sup3rObsModel(tf.keras.layers.Layer):
             input
         hidden_layers : list | None
             The list of layers used to create the embedding network.
+        fill_method : str
+            The method used to fill in the NaN values in the hi_res_feature
+            before embedding. Options are 'mean' or 'idw'
+        include_mask : bool
+            Whether to include the mask for where there is valid observation
+            data in the embedding. If False, the mask will not be included in
+            the embedding.
         """
         super().__init__(name=name)
         self._hidden_layers = hidden_layers
         self.rank = None
         self.features = features
         self.exo_features = exo_features
+        self.include_mask = include_mask
+
+        msg = (
+            'fill_method must be one of "mean" or "idw" but received '
+            f'"{fill_method}"'
+        )
+        assert fill_method in ('mean', 'idw'), msg
+        if fill_method == 'mean':
+            self.fill_method = mean_fill
+        elif fill_method == 'idw':
+            self.fill_method = idw_fill
 
     def build(self, input_shape):
         """Build the weight net layer based on an input shape
@@ -1560,10 +1736,14 @@ class Sup3rObsModel(tf.keras.layers.Layer):
             exo_shape = (*x[..., 0].shape, len(self.exo_features))
             exo_data = tf.fill(exo_shape, 0)
 
-        hr_feat, mask = nan_fill(hi_res_feature)
+        hr_feat, mask = self.fill_method(hi_res_feature)
 
         # get embedding based on obs locations, obs data, and exo data
-        embed = tf.concat([hr_feat, mask], axis=-1)
+        if not self.include_mask:
+            embed = hr_feat
+        else:
+            embed = tf.concat([hr_feat, mask], axis=-1)
+
         if exo_data is not None:
             embed = tf.concat([exo_data, embed], axis=-1)
 
