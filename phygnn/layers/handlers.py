@@ -278,11 +278,13 @@ class HiddenLayers:
             logger.error(msg)
             raise KeyError(msg)
 
+        # If a layer has a hidden_layers argument it's assumed that this is
+        # given as a list of dictionaries for layers which will be initialized
+        # and then given to the parent layer.
         if 'hidden_layers' in kwargs:
             hl = HiddenLayers(hidden_layers=kwargs.pop('hidden_layers'))
             layer = layer_class(hidden_layers=hl._layers, **kwargs)
             self._layers.append(layer)
-
         elif layer_class == SkipConnection:
             self.add_skip_layer(**kwargs)
         else:
