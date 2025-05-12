@@ -21,10 +21,17 @@ def tf_log10(x):
     return num / den
 
 
-def _mean_fill(x):
+def _mean_fill(x, mask):
     """Fill NaN values in the input tensor with the mean of the non-NaN.
     If all values are NaN, fill with 0. This is assumed to be either a 3D
     or 4D tensor, with the trailing feature channel removed.
+
+    Parameters
+    ----------
+    x : tf.Tensor
+        Tensor with NaNs and shape (B, H, W) or (B, H, W, D)
+    mask : tf.Tensor
+        Boolean mask of the non-NaN locations in the original x
 
     Returns
     -------
@@ -32,19 +39,18 @@ def _mean_fill(x):
         Input tensor with NaN values filled with the mean of the non-NaN
         values or 0 if all values are NaN.
     mask : tf.Tensor
-        Mask of the input tensor where 1 is not NaN and 0 is NaN.
+        Mask of the input tensor where True is not NaN and False is NaN.
     """
-    not_nan = tf.math.logical_not(tf.math.is_nan(x))
-    not_nan_float = tf.cast(not_nan, x.dtype)
+    not_nan_float = tf.cast(mask, x.dtype)
 
     hi_res_zeroed = tf.where(
-        not_nan, x, tf.zeros_like(x))
+        mask, x, tf.zeros_like(x))
 
     count = tf.reduce_sum(not_nan_float)
     total = tf.reduce_sum(hi_res_zeroed)
     mean = tf.math.divide_no_nan(total, count)
 
-    return tf.where(not_nan, x, mean), not_nan_float
+    return tf.where(mask, x, mean)
 
 
 def mean_fill(x):
@@ -52,26 +58,26 @@ def mean_fill(x):
     If all values are NaN, fill with 0. This is assumed to be either a 4D
     or 5D tensor, with the trailing feature channel included.
 
+    Parameters
+    ----------
+    x : tf.Tensor
+        Tensor with NaNs and shape (B, H, W, C) or (B, H, W, D, C)
+
     Returns
     -------
-    x : tf.Tensor
+    x_filled : tf.Tensor
         Input tensor with NaN values filled with the mean of the non-NaN
         values or 0 if all values are NaN.
     mask : tf.Tensor
         Mask of the input tensor where 1 is not NaN and 0 is NaN.
     """
-    mask = []
-    hr_feat = []
-    for i in range(x.shape[-1]):
-        hr_feat_i, mask_i = _mean_fill(x[..., i])
-        hr_feat.append(hr_feat_i)
-        mask.append(mask_i)
-    mask = tf.stack(mask, axis=-1)
+    mask = tf.math.logical_not(tf.math.is_nan(x))
+    hr_feat = [_mean_fill(x[..., i], mask[..., i]) for i in range(x.shape[-1])]
     hr_feat = tf.stack(hr_feat, axis=-1)
-    return hr_feat, mask
+    return hr_feat, tf.cast(mask, tf.float32)
 
 
-def idw_flat_fill(x, coords, is_valid_d):
+def idw_flat_fill(x, coords, mask):
     """IDW fill for flattened tensors without depth dimension. Assumes input
     shape is (N), where N is the number of points (H * W).
 
@@ -82,31 +88,29 @@ def idw_flat_fill(x, coords, is_valid_d):
     coords: tf.Tensor
         Coordinates of the points in the image, shape (N, 2) where N is the
         number of points (H * W)
-    mask: tf.Tensor
-        Boolean mask of the non-NaN locations in the original x
+    mask : tf.Tensor
+        Mask of the input tensor where True is not NaN and False is NaN.
 
     Returns
     -------
     x_filled: tf.Tensor
         Flattened tensor with NaNs filled
     """
-    nan_mask = tf.math.logical_not(is_valid_d)
-    valid_coords = tf.boolean_mask(coords, is_valid_d)
+    nan_mask = tf.math.logical_not(mask)
+    valid_coords = tf.boolean_mask(coords, mask)
     nan_coords = tf.boolean_mask(coords, nan_mask)
-    valid_vals = tf.boolean_mask(x, is_valid_d)
+    valid_vals = tf.boolean_mask(x, mask)
 
     diffs = tf.expand_dims(nan_coords, 1) - tf.expand_dims(valid_coords, 0)
     dists = tf.norm(diffs, axis=-1)
 
     weights = 1 / dists
-    weights_sum = tf.reduce_sum(weights, axis=1, keepdims=True)
-    weights /= weights_sum
+    weights /= tf.reduce_sum(weights, axis=1, keepdims=True)
 
     vals = tf.reduce_sum(weights * tf.expand_dims(valid_vals, 0), axis=1)
-    nan_indices = tf.where(nan_mask)
 
-    filled = tf.where(is_valid_d, x, tf.zeros_like(x))
-    return tf.tensor_scatter_nd_update(filled, nan_indices, vals)
+    filled = tf.where(mask, x, tf.zeros_like(x))
+    return tf.tensor_scatter_nd_update(filled, tf.where(nan_mask), vals)
 
 
 def idw_batch_fill(x, coords, mask):
@@ -120,8 +124,8 @@ def idw_batch_fill(x, coords, mask):
     coords: tf.Tensor
         Coordinates of the points in the image, shape (N, 2) where N is the
         number of points (H * W)
-    mask: tf.Tensor
-        Boolean mask of the non-NaN locations in the original x
+    mask : tf.Tensor
+        Mask of the input tensor where True is not NaN and False is NaN.
 
     Returns
     -------
@@ -129,16 +133,11 @@ def idw_batch_fill(x, coords, mask):
         Tensor with NaNs filled
     """
     rank = len(x.shape)
-    if rank == 2:
-        H, W, D = x.shape[0], x.shape[1], 1
-        x = tf.expand_dims(x, -1)
-    else:
-        H, W, D = x.shape[0], x.shape[1], x.shape[2]
+    x = tf.expand_dims(x, -1) if rank == 2 else x
+    H, W, D = x.shape[0], x.shape[1], x.shape[2]
 
-    N = H * W
-
-    x_flat = tf.reshape(x, [N, D])
-    is_valid = tf.reshape(mask, [N, D])
+    x_flat = tf.reshape(x, [H * W, D])
+    is_valid = tf.reshape(mask, [H * W, D])
     out = [
         idw_flat_fill(x_flat[:, d], coords, is_valid[:, d]) for d in range(D)
     ]
@@ -147,7 +146,7 @@ def idw_batch_fill(x, coords, mask):
     return tf.squeeze(out, axis=-1) if rank == 2 else tf.cast(out, tf.float32)
 
 
-def idw_ch_fill(x, coords, mask):
+def _idw_fill(x, coords, mask):
     """IDW fill for tensors without channel dimension. Assumes input shape is:
     - (B, H, W) or (B, H, W, D)
 
@@ -158,8 +157,8 @@ def idw_ch_fill(x, coords, mask):
     coords: tf.Tensor
         Coordinates of the points in the image, shape (N, 2) where N is the
         number of points (H * W)
-    mask: tf.Tensor
-        Boolean mask of the non-NaN locations in the original x
+    mask : tf.Tensor
+        Mask of the input tensor where True is not NaN and False is NaN.
 
     Returns
     -------
@@ -167,8 +166,7 @@ def idw_ch_fill(x, coords, mask):
         Tensor with NaNs filled
     """
     rank = len(x.shape)
-    if rank == 3:
-        x = tf.expand_dims(x, -1)
+    x = tf.expand_dims(x, -1) if rank == 3 else x
     res = [idw_batch_fill(x[b], coords, mask[b]) for b in range(x.shape[0])]
     out = tf.stack(res, axis=0)
     return tf.squeeze(out, axis=-1) if rank == 3 else tf.cast(out, tf.float32)
@@ -187,8 +185,8 @@ def idw_fill(x):
     -------
     x_filled: tf.Tensor
         Tensor with NaNs filled
-    mask: tf.Tensor
-        Boolean mask of the non-NaN locations in the original x
+    mask : tf.Tensor
+        Mask of the input tensor where 1 is not NaN and 0 is NaN.
     """
     assert len(x.shape) in [4, 5], "Input tensor must be 4D or 5D"
     x = tf.cast(x, tf.float32)
@@ -199,7 +197,7 @@ def idw_fill(x):
     coords = tf.stack(coords, axis=-1)
     coords = tf.cast(tf.reshape(coords, [N, 2]), tf.float32)
     filled_list = [
-        idw_ch_fill(x[..., c], coords, mask[..., c])
+        _idw_fill(x[..., c], coords, mask[..., c])
         for c in range(x.shape[-1])
     ]
     filled = tf.stack(filled_list, axis=-1)
