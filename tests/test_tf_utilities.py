@@ -1,6 +1,7 @@
 """
 Test the custom tensorflow utilities
 """
+
 import numpy as np
 import tensorflow as tf
 
