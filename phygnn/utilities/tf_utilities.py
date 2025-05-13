@@ -2,6 +2,7 @@
 """
 Tensorflow utilities
 """
+
 import tensorflow as tf
 
 
@@ -44,8 +45,7 @@ def _mean_fill(x, mask):
     """
     not_nan_float = tf.cast(mask, x.dtype)
 
-    hi_res_zeroed = tf.where(
-        mask, x, tf.zeros_like(x))
+    hi_res_zeroed = tf.where(mask, x, tf.zeros_like(x))
 
     count = tf.reduce_sum(not_nan_float)
     total = tf.reduce_sum(hi_res_zeroed)
@@ -77,33 +77,6 @@ def mean_fill(x):
     hr_feat = [_mean_fill(x[..., i], mask[..., i]) for i in range(x.shape[-1])]
     hr_feat = tf.stack(hr_feat, axis=-1)
     return hr_feat, tf.cast(mask, tf.float32)
-
-
-def compute_idw_weights(coords, mask):
-    """Compute IDW weights using only one set of valid coordinates."""
-    nan_mask = tf.math.logical_not(mask)
-    valid_coords = tf.boolean_mask(coords, mask)
-    nan_coords = tf.boolean_mask(coords, nan_mask)
-
-    diffs = tf.expand_dims(nan_coords, 1) - tf.expand_dims(valid_coords, 0)
-    dists = tf.norm(diffs, axis=-1)
-
-    weights = 1 / dists
-    weights /= tf.reduce_sum(weights, axis=1, keepdims=True)
-
-    # Get indices for NaNs and valid values
-    nan_indices = tf.where(nan_mask)
-    valid_indices = tf.where(mask)
-
-    return weights, nan_indices, valid_indices
-
-
-def apply_idw_weights(x, weights, nan_indices, valid_indices):
-    """Use precomputed weights to fill NaNs in x."""
-    valid_vals = tf.gather_nd(x, valid_indices)
-    vals = tf.reduce_sum(weights * tf.expand_dims(valid_vals, 0), axis=1)
-    filled = tf.tensor_scatter_nd_update(x, nan_indices, vals)
-    return filled
 
 
 def idw_flat_fill(x, coords, mask):
@@ -220,7 +193,7 @@ def idw_fill(x):
     mask : tf.Tensor
         Mask of the input tensor where 1 is not NaN and 0 is NaN.
     """
-    assert len(x.shape) in [4, 5], "Input tensor must be 4D or 5D"
+    assert len(x.shape) in [4, 5], 'Input tensor must be 4D or 5D'
     x = tf.cast(x, tf.float32)
     H, W = x.shape[1], x.shape[2]
     N = H * W
@@ -229,8 +202,7 @@ def idw_fill(x):
     coords = tf.stack(coords, axis=-1)
     coords = tf.cast(tf.reshape(coords, [N, 2]), tf.float32)
     filled_list = [
-        _idw_fill(x[..., c], coords, mask[..., c])
-        for c in range(x.shape[-1])
+        _idw_fill(x[..., c], coords, mask[..., c]) for c in range(x.shape[-1])
     ]
     filled = tf.stack(filled_list, axis=-1)
     return tf.cast(filled, tf.float32), tf.cast(mask, tf.float32)
