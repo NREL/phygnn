@@ -1470,11 +1470,15 @@ class Sup3rObsModel(tf.keras.layers.Layer):
     """Layer to concatenate sparse data in the middle of a super
     resolution forward pass, with a learned embedding. Mutiple observation
     features and multiple continuous exogenous features can be provided.
-    The embedding network is defined with a list of hidden layers."""
+    The embedding network is defined with a list of hidden layers. If no
+    hidden layers are provided, this layer will simply concatenate the
+    hi_res_feature, exogenous data (if provided), and mask (if
+    ``include_mask`` is True), to the input tensor after filling the
+    NaNs."""
 
     def __init__(
         self, name=None, features=None, exo_features=None, hidden_layers=None,
-        fill_method='mean', include_mask=True
+        fill_method='mean', include_mask=False
     ):
         """
         Parameters
@@ -1496,11 +1500,11 @@ class Sup3rObsModel(tf.keras.layers.Layer):
             the embedding.
         """
         super().__init__(name=name)
-        self._hidden_layers = hidden_layers
-        self.rank = None
-        self.features = features
-        self.exo_features = exo_features
+        self._hidden_layers = hidden_layers or []
+        self.features = features or []
+        self.exo_features = exo_features or []
         self.include_mask = include_mask
+        self.rank = None
 
         msg = (
             'fill_method must be one of "mean" or "idw" but received '
@@ -1547,15 +1551,20 @@ class Sup3rObsModel(tf.keras.layers.Layer):
         """
         if hi_res_feature is None:
             hr_shape = (*x[..., 0].shape, len(self.features))
-            hi_res_feature = tf.fill(hr_shape, np.nan)
+            hi_res_feature = tf.constant(np.nan, shape=hr_shape, dtype=x.dtype)
 
-        if exo_data is None and self.exo_features is not None:
+        if exo_data is None and len(self.exo_features) > 0:
             exo_shape = (*x[..., 0].shape, len(self.exo_features))
-            exo_data = tf.fill(exo_shape, 0)
+            exo_data = tf.constant(0, shape=exo_shape, dtype=x.dtype)
 
-        hr_feat, mask = self.fill_method(hi_res_feature)
+        if self.fill_method is None:
+            mask = tf.math.is_nan(hi_res_feature)
+            hr_feat = tf.where(
+                mask, x[..., : len(self.features)], hi_res_feature
+            )
+        else:
+            hr_feat, mask = self.fill_method(hi_res_feature)
 
-        # get embedding based on obs locations, obs data, and exo data
         if not self.include_mask:
             embed = hr_feat
         else:

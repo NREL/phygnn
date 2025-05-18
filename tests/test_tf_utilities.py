@@ -3,6 +3,7 @@ Test the custom tensorflow utilities
 """
 
 import numpy as np
+import pytest
 import tensorflow as tf
 
 from phygnn.utilities.tf_utilities import idw_fill, tf_isin, tf_log10
@@ -27,40 +28,41 @@ def test_tf_log10():
     assert np.allclose(b, tfb.numpy())
 
 
-def test_idw():
+@pytest.mark.parametrize('low_mem', [True, False])
+def test_idw(low_mem):
     """Test the IDW interpolation fill method"""
-    x = np.full([2, 128, 128, 1, 1], np.nan)
-    mask = np.random.uniform(0, 1, size=x.shape[1:3]) < 0.99
+    x = np.full([2, 30, 30, 10, 3], np.nan)
+    mask = np.random.uniform(0, 1, size=x.shape[0:3]) < 0.99
     const = 2.5
     x_input = tf.convert_to_tensor(x, dtype=tf.float64)
 
     # all nans results in all zeros
-    x_out, _ = idw_fill(x_input)
+    x_out, _ = idw_fill(x_input, low_mem=low_mem)
     assert np.allclose(x_out.numpy(), 0)
 
     # all nans with a single value results in all const
-    x[:, 50, 50, :, :] = const
+    x[:, 15, 15, :, :] = const
     x_input = tf.convert_to_tensor(x, dtype=tf.float64)
-    x_out, _ = idw_fill(x_input)
+    x_out, _ = idw_fill(x_input, low_mem=low_mem)
     assert np.allclose(x_out.numpy(), const)
 
     x = np.random.uniform(const, size=x.shape)
-    x[:, mask, :] = np.nan
+    x[mask] = np.nan
     x_input = tf.convert_to_tensor(x, dtype=tf.float64)
-    x_out, _ = idw_fill(x_input)
-    assert np.allclose(x_out.numpy()[:, ~mask, :], x[:, ~mask, :])
-    assert not np.any(np.isnan(x_out.numpy()[:, mask, :]))
+    x_out, _ = idw_fill(x_input, low_mem=low_mem)
+    assert np.allclose(x_out.numpy()[~mask], x[~mask], atol=1e-6)
+    assert not np.any(np.isnan(x_out.numpy()[mask]))
 
     assert np.allclose(
-        np.mean(x_out.numpy()), np.mean(x[:, ~mask, :]), atol=0.1
+        np.mean(x_out.numpy()), np.mean(x[~mask]), atol=0.1
     )
-    assert np.allclose(np.min(x_out.numpy()), np.min(x[:, ~mask, :]), atol=0.1)
-    assert np.allclose(np.max(x_out.numpy()), np.max(x[:, ~mask, :]), atol=0.1)
+    assert np.allclose(np.min(x_out.numpy()), np.min(x[~mask]), atol=0.1)
+    assert np.allclose(np.max(x_out.numpy()), np.max(x[~mask]), atol=0.1)
 
     # manual idw check
     # TensorFlow fill
     x_input = tf.convert_to_tensor(x, dtype=tf.float64)
-    x_out, _ = idw_fill(x_input)
+    x_out, _ = idw_fill(x_input, low_mem=low_mem)
 
     # numpy fill
     B, H, W, D, C = x.shape

@@ -76,10 +76,10 @@ def mean_fill(x):
     mask = tf.math.logical_not(tf.math.is_nan(x))
     hr_feat = [_mean_fill(x[..., i], mask[..., i]) for i in range(x.shape[-1])]
     hr_feat = tf.stack(hr_feat, axis=-1)
-    return hr_feat, tf.cast(mask, tf.float32)
+    return hr_feat, tf.cast(mask, x.dtype)
 
 
-def idw_flat_fill(x, coords, mask):
+def _idw_fill(x, coords, mask):
     """IDW fill for flattened tensors without depth dimension. Assumes input
     shape is (N), where N is the number of points (H * W).
 
@@ -115,76 +115,19 @@ def idw_flat_fill(x, coords, mask):
     return tf.tensor_scatter_nd_update(filled, tf.where(nan_mask), vals)
 
 
-def idw_batch_fill(x, coords, mask):
-    """IDW fill for tensors without batch dimension. Assumes input shape is:
-    - (H, W) or (H, W, D)
-
-    Parameters
-    ----------
-    x : tf.Tensor
-        Tensor with NaNs and shape (H, W) or (H, W, D)
-    coords: tf.Tensor
-        Coordinates of the points in the image, shape (N, 2) where N is the
-        number of points (H * W)
-    mask : tf.Tensor
-        Mask of the input tensor where True is not NaN and False is NaN.
-
-    Returns
-    -------
-    x_filled: tf.Tensor
-        Tensor with NaNs filled
-    """
-    rank = len(x.shape)
-    x = tf.expand_dims(x, -1) if rank == 2 else x
-    H, W, D = x.shape[0], x.shape[1], x.shape[2]
-
-    x_flat = tf.reshape(x, [H * W, D])
-    is_valid = tf.reshape(mask, [H * W, D])
-    out = [
-        idw_flat_fill(x_flat[:, d], coords, is_valid[:, d]) for d in range(D)
-    ]
-    out = tf.stack(out, axis=-1)
-    out = tf.reshape(out, [H, W, D])
-    return tf.squeeze(out, axis=-1) if rank == 2 else tf.cast(out, tf.float32)
-
-
-def _idw_fill(x, coords, mask):
-    """IDW fill for tensors without channel dimension. Assumes input shape is
-    (n_obs, spatial_1, spatial_2) or (n_obs, spatial_1, spatial_2, n_temporal)
-
-    Parameters
-    ----------
-    x : tf.Tensor
-        Tensor with NaNs and shape (n_obs, spatial_1, spatial_2) or
-        (n_obs, spatial_1, spatial_2, n_temporal)
-    coords: tf.Tensor
-        Coordinates of the points in the image, shape (N, 2) where N is the
-        number of points (spatial_1 * spatial_2)
-    mask : tf.Tensor
-        Mask of the input tensor where True is not NaN and False is NaN.
-
-    Returns
-    -------
-    x_filled: tf.Tensor
-        Tensor with NaNs filled
-    """
-    rank = len(x.shape)
-    x = tf.expand_dims(x, -1) if rank == 3 else x
-    res = [idw_batch_fill(x[b], coords, mask[b]) for b in range(x.shape[0])]
-    out = tf.stack(res, axis=0)
-    return tf.squeeze(out, axis=-1) if rank == 3 else tf.cast(out, tf.float32)
-
-
-def idw_fill(x):
+def idw_fill(x, low_mem=True):
     """IDW fill for tensors with channel dimension. Assumes input shape
     is (n_obs, spatial_1, spatial_2, n_features) or (n_obs, spatial_1,
-    spatial_2, n_temporal, n_features)
+    spatial_2, n_temporal, n_features).
 
     Parameters
     ----------
     x : tf.Tensor
         Tensor with NaNs and shape (n_obs, spatial_1, spatial_2, n_features) or
         (n_obs, spatial_1, spatial_2, n_temporal, n_features)
+    low_mem : bool
+        If True, use a low memory implementation that loops over time and
+        channel dimensions. This is slower but uses less memory.
 
     Returns
     -------
@@ -193,16 +136,58 @@ def idw_fill(x):
     mask : tf.Tensor
         Mask of the input tensor where 1 is not NaN and 0 is NaN.
     """
-    assert len(x.shape) in [4, 5], 'Input tensor must be 4D or 5D'
-    x = tf.cast(x, tf.float32)
-    H, W = x.shape[1], x.shape[2]
-    N = H * W
+    rank = len(x.shape)
+    assert rank in [4, 5], 'Input tensor must be 4D or 5D'
+    x = tf.expand_dims(x, axis=-2) if rank == 4 else x
     mask = tf.math.logical_not(tf.math.is_nan(x))
-    coords = tf.meshgrid(tf.range(H), tf.range(W), indexing='ij')
-    coords = tf.stack(coords, axis=-1)
-    coords = tf.cast(tf.reshape(coords, [N, 2]), tf.float32)
-    filled_list = [
-        _idw_fill(x[..., c], coords, mask[..., c]) for c in range(x.shape[-1])
-    ]
-    filled = tf.stack(filled_list, axis=-1)
-    return tf.cast(filled, tf.float32), tf.cast(mask, tf.float32)
+    B, H, W, D, C = x.shape
+
+    if low_mem:
+        N = H * W
+        coords = tf.meshgrid(
+            tf.cast(tf.range(H), x.dtype),
+            tf.cast(tf.range(W), x.dtype),
+            indexing='ij',
+        )
+        coords = tf.reshape(tf.stack(coords, axis=-1), [N, 2])
+        x_flat = tf.reshape(x, [B, N, D, C])
+        mask_flat = tf.reshape(mask, [B, N, D, C])
+
+        filled = []
+        for b in range(B):
+            x_c = []
+            for c in range(C):
+                x_d = [
+                    _idw_fill(
+                        x_flat[b, :, d, c], coords, mask_flat[b, :, d, c]
+                    )
+                    for d in range(D)
+                ]
+                x_c.append(tf.stack(x_d, axis=-1))
+            filled.append(tf.stack(x_c, axis=-1))
+    else:
+        N = H * W * D
+        # weigh time (D) dimension higher than spatial dimensions. hacky, but
+        # efficient, way of ensuring spatial weights are computed only with
+        # distances from the same time while vectorizing
+        coords = tf.meshgrid(
+            tf.range(H),
+            tf.range(W),
+            int(1e3) * tf.range(D),
+            indexing='ij',
+        )
+        coords = tf.reshape(tf.stack(coords, axis=-1), [N, 3])
+        coords = tf.cast(coords, x.dtype)
+        x_flat = tf.reshape(x, [B, N, C])
+        mask_flat = tf.reshape(mask, [B, N, C])
+        filled = []
+        for b in range(B):
+            x_c = [
+                _idw_fill(x_flat[b, ..., c], coords, mask_flat[b, ..., c])
+                for c in range(C)
+            ]
+            filled.append(tf.stack(x_c, axis=-1))
+    filled = tf.stack(filled, axis=0)
+    filled = tf.reshape(filled, [B, H, W, D, C])
+    filled = tf.squeeze(filled, axis=-2) if rank == 4 else filled
+    return tf.cast(filled, x.dtype), tf.cast(mask, x.dtype)
