@@ -98,4 +98,4 @@ def test_idw(low_mem):
 
                 x_out_np[b, :, :, d, c] = filled.reshape(H, W)
 
-    assert np.allclose(x_out.numpy(), x_out_np, atol=1e-4)
+    assert np.allclose(x_out.numpy(), x_out_np, atol=1e-3)

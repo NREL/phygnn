@@ -1451,7 +1451,8 @@ class Sup3rConcatObs(tf.keras.layers.Layer):
             Output tensor with the hi_res_feature used to fix values of x.
         """
         if hi_res_feature is None:
-            hi_res_feature = tf.fill(x[..., :1].shape, np.nan)
+            hi_res_feature = tf.constant(np.nan, shape=x[..., :1].shape,
+                                         dtype=x.dtype)
 
         if self.fill_method is None:
             mask = tf.math.is_nan(hi_res_feature)

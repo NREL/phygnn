@@ -169,11 +169,11 @@ def idw_fill(x, low_mem=True):
         N = H * W * D
         # weigh time (D) dimension higher than spatial dimensions. hacky, but
         # efficient, way of ensuring spatial weights are computed only with
-        # distances from the same time while vectorizing
+        # distances from the same time while vectorizing across time
         coords = tf.meshgrid(
             tf.range(H),
             tf.range(W),
-            int(1e3) * tf.range(D),
+            int(1e6) * tf.range(D),
             indexing='ij',
         )
         coords = tf.reshape(tf.stack(coords, axis=-1), [N, 3])
