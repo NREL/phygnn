@@ -1323,9 +1323,7 @@ class FNO(tf.keras.layers.Layer):
         else:
             msg = (
                 'FNO layer can only accept 4D or 5D data for image or video '
-                'input but received input shape: {}'.format(
-                    input_shape
-                )
+                'input but received input shape: {}'.format(input_shape)
             )
             logger.error(msg)
             raise RuntimeError(msg)
@@ -1451,8 +1449,9 @@ class Sup3rConcatObs(tf.keras.layers.Layer):
             Output tensor with the hi_res_feature used to fix values of x.
         """
         if hi_res_feature is None:
-            hi_res_feature = tf.constant(np.nan, shape=x[..., :1].shape,
-                                         dtype=x.dtype)
+            hi_res_feature = tf.constant(
+                np.nan, shape=x[..., :1].shape, dtype=x.dtype
+            )
 
         if self.fill_method is None:
             mask = tf.math.is_nan(hi_res_feature)
@@ -1478,8 +1477,13 @@ class Sup3rObsModel(tf.keras.layers.Layer):
     NaNs."""
 
     def __init__(
-        self, name=None, features=None, exo_features=None, hidden_layers=None,
-        fill_method='mean', include_mask=False
+        self,
+        name=None,
+        features=None,
+        exo_features=None,
+        hidden_layers=None,
+        fill_method='mean',
+        include_mask=False,
     ):
         """
         Parameters
@@ -1487,6 +1491,9 @@ class Sup3rObsModel(tf.keras.layers.Layer):
         name : str | None
             Unique str identifier of the layer. Usually the name of the
             hi-resolution feature used in the concatenation.
+        features : list | None
+            The names of the observation features to be included in the
+            embedding input.
         exo_features : list | None
             The names of exogenous features to be included in the embedding
             input
@@ -1494,7 +1501,8 @@ class Sup3rObsModel(tf.keras.layers.Layer):
             The list of layers used to create the embedding network.
         fill_method : str
             The method used to fill in the NaN values in the hi_res_feature
-            before embedding. Options are 'mean' or 'idw'
+            before embedding. Options are 'mean', 'idw', or None. If None then
+            the first channel of x will be used to fill the NaN values.
         include_mask : bool
             Whether to include the mask for where there is valid observation
             data in the embedding. If False, the mask will not be included in
@@ -1506,12 +1514,8 @@ class Sup3rObsModel(tf.keras.layers.Layer):
         self.exo_features = exo_features or []
         self.include_mask = include_mask
         self.rank = None
+        self.fill_method = None
 
-        msg = (
-            'fill_method must be one of "mean" or "idw" but received '
-            f'"{fill_method}"'
-        )
-        assert fill_method in ('mean', 'idw'), msg
         if fill_method == 'mean':
             self.fill_method = mean_fill
         elif fill_method == 'idw':
@@ -1528,20 +1532,22 @@ class Sup3rObsModel(tf.keras.layers.Layer):
         self.rank = len(input_shape)
 
     def call(self, x, hi_res_feature=None, exo_data=None):
-        """Apply the embed net to x, hi_res_feature, exogenous data, and the
+        """Apply the embed net to hi_res_feature, exogenous data, and the
         mask representing where hi_res_feature is not nan. Concatenate the
-        output with x
+        output with x. ``hi_res_feature`` and ``exo_data`` are allowed to be
+        None so that models can be trained with hi_res_feature and exogenous
+        data and then run with various sets of inputs.
 
         Parameters
         ----------
         x : tf.Tensor
             Input tensor
-        hi_res_feature : tf.Tensor | np.ndarray
+        hi_res_feature : tf.Tensor | np.ndarray | None
             This should be a 4D array for spatial enhancement model or 5D array
             for a spatiotemporal enhancement model (obs, spatial_1, spatial_2,
             (temporal), features). This is NaN where there are no observations
             and real values where observations exist.
-        exo_data : tf.Tensor | np.ndarray
+        exo_data : tf.Tensor | np.ndarray | None
             This is an array of exogenous data used to imform the embedding,
             like topography
 

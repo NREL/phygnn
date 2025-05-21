@@ -43,14 +43,9 @@ def _mean_fill(x, mask):
     mask : tf.Tensor
         Mask of the input tensor where True is not NaN and False is NaN.
     """
-    not_nan_float = tf.cast(mask, x.dtype)
-
-    hi_res_zeroed = tf.where(mask, x, tf.zeros_like(x))
-
-    count = tf.reduce_sum(not_nan_float)
-    total = tf.reduce_sum(hi_res_zeroed)
-    mean = tf.math.divide_no_nan(total, count)
-
+    if tf.reduce_all(tf.math.logical_not(mask)):
+        return tf.zeros_like(x)
+    mean = tf.reduce_mean(x[mask])
     return tf.where(mask, x, mean)
 
 
