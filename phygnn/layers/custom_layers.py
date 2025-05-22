@@ -6,6 +6,8 @@ import logging
 import numpy as np
 import tensorflow as tf
 
+from phygnn.utilities.tf_utilities import idw_fill, mean_fill
+
 logger = logging.getLogger(__name__)
 
 
@@ -1321,9 +1323,7 @@ class FNO(tf.keras.layers.Layer):
         else:
             msg = (
                 'FNO layer can only accept 4D or 5D data for image or video '
-                'input but received input shape: {}'.format(
-                    input_shape
-                )
+                'input but received input shape: {}'.format(input_shape)
             )
             logger.error(msg)
             raise RuntimeError(msg)
@@ -1405,18 +1405,31 @@ class Sup3rConcatObs(tf.keras.layers.Layer):
     This uses the first channel of the input tensor as a background for the
     provided values and then concatenates with the input tensor."""
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, fill_method=None, include_mask=False):
         """
         Parameters
         ----------
         name : str | None
             Unique str identifier of the layer. Usually the name of the
             hi-resolution feature used in the concatenation.
+        fill_method : str | None
+            Method to use for filling the NaN values in the hi_res_feature.
+            If this is None then the first channel of x will be used.
+            Otherwise, accepted values are 'mean' and 'idw'.
+        include_mask : bool
+            If True, the mask of the hi_res_feature showing where there is
+            valid observation data will be included in the concatenation.
         """
         super().__init__(name=name)
+        if fill_method == 'mean':
+            self.fill_method = mean_fill
+        elif fill_method == 'idw':
+            self.fill_method = idw_fill
+        else:
+            self.fill_method = None
+        self.include_mask = include_mask
 
-    @staticmethod
-    def call(x, hi_res_feature=None):
+    def call(self, x, hi_res_feature=None):
         """Combine the first channel of x and the non-nan data in
         hi_res_feature and concatenate with x.
 
@@ -1436,32 +1449,77 @@ class Sup3rConcatObs(tf.keras.layers.Layer):
             Output tensor with the hi_res_feature used to fix values of x.
         """
         if hi_res_feature is None:
-            hi_res_feature = tf.fill(x[..., :1].shape, np.nan)
-        mask = tf.math.is_nan(hi_res_feature)
-        fixed = tf.where(mask, x[..., :1], hi_res_feature)
+            hi_res_feature = tf.constant(
+                np.nan, shape=x[..., :1].shape, dtype=x.dtype
+            )
+
+        if self.fill_method is None:
+            mask = tf.math.is_nan(hi_res_feature)
+            fixed = tf.where(mask, x[..., :1], hi_res_feature)
+        else:
+            fixed, mask = self.fill_method(hi_res_feature)
+
+        if self.include_mask:
+            mask = tf.cast(mask, dtype=fixed.dtype)
+            fixed = tf.concat((fixed, mask), axis=-1)
+
         return tf.concat((x, fixed), axis=-1)
 
 
-class Sup3rConcatEmbeddedObs(tf.keras.layers.Layer):
-    """Layer to concatenate sparse data in the middle of a super resolution
-    forward pass, with a learned embedding. This is used to condition models
-    on sparse observation data."""
+class Sup3rObsModel(tf.keras.layers.Layer):
+    """Layer to concatenate sparse data in the middle of a super
+    resolution forward pass, with a learned embedding. Mutiple observation
+    features and multiple continuous exogenous features can be provided.
+    The embedding network is defined with a list of hidden layers. If no
+    hidden layers are provided, this layer will simply concatenate the
+    hi_res_feature, exogenous data (if provided), and mask (if
+    ``include_mask`` is True), to the input tensor after filling the
+    NaNs."""
 
-    def __init__(self, filters=32, name=None):
+    def __init__(
+        self,
+        name=None,
+        features=None,
+        exo_features=None,
+        hidden_layers=None,
+        fill_method='mean',
+        include_mask=False,
+    ):
         """
         Parameters
         ----------
-        filters : int
-            Number of filters to use for each convolutional layer. e.g.
-            [64, 32] for one layer with 64 and another with 32.
         name : str | None
             Unique str identifier of the layer. Usually the name of the
             hi-resolution feature used in the concatenation.
+        features : list | None
+            The names of the observation features to be included in the
+            embedding input.
+        exo_features : list | None
+            The names of exogenous features to be included in the embedding
+            input
+        hidden_layers : list | None
+            The list of layers used to create the embedding network.
+        fill_method : str
+            The method used to fill in the NaN values in the hi_res_feature
+            before embedding. Options are 'mean', 'idw', or None. If None then
+            the first channel of x will be used to fill the NaN values.
+        include_mask : bool
+            Whether to include the mask for where there is valid observation
+            data in the embedding. If False, the mask will not be included in
+            the embedding.
         """
         super().__init__(name=name)
-        self.embed_net = None
+        self._hidden_layers = hidden_layers or []
+        self.features = features or []
+        self.exo_features = exo_features or []
+        self.include_mask = include_mask
         self.rank = None
-        self.filters = filters if isinstance(filters, list) else [filters]
+        self.fill_method = None
+
+        if fill_method == 'mean':
+            self.fill_method = mean_fill
+        elif fill_method == 'idw':
+            self.fill_method = idw_fill
 
     def build(self, input_shape):
         """Build the weight net layer based on an input shape
@@ -1473,77 +1531,56 @@ class Sup3rConcatEmbeddedObs(tf.keras.layers.Layer):
         """
         self.rank = len(input_shape)
 
-        msg = 'Sup3rConcatEmbeddedObs layer can only accept 4D or 5D data'
-        assert self.rank in (4, 5), msg
-
-        if self.rank == 4:
-            conv_class = tf.keras.layers.Conv2D
-        else:
-            conv_class = tf.keras.layers.Conv3D
-        self.embed_net = []
-        for _, filters in enumerate(self.filters):
-            self.embed_net += [
-                conv_class(
-                    filters=filters,
-                    kernel_size=1,
-                    padding='same'),
-                tf.keras.layers.LeakyReLU(alpha=0.2)
-            ]
-
-    @staticmethod
-    def nan_fill(hi_res_feature):
-        """Fill NaN values in the input tensor with the mean of the non-NaN.
-        If all values are NaN, fill with 0.
-
-        Returns
-        -------
-        hi_res_feature : tf.Tensor
-            Input tensor with NaN values filled with the mean of the non-NaN
-            values or 0 if all values are NaN.
-        mask : tf.Tensor
-            Mask of the input tensor where 1 is not NaN and 0 is NaN.
-        """
-        not_nan = tf.math.logical_not(tf.math.is_nan(hi_res_feature))
-        not_nan_float = tf.cast(not_nan, hi_res_feature.dtype)
-
-        hi_res_zeroed = tf.where(
-            not_nan, hi_res_feature, tf.zeros_like(hi_res_feature))
-
-        count = tf.reduce_sum(not_nan_float)
-        total = tf.reduce_sum(hi_res_zeroed)
-        mean = tf.math.divide_no_nan(total, count)
-
-        return tf.where(not_nan, hi_res_feature, mean), not_nan_float
-
-    def call(self, x, hi_res_feature=None):
-        """Apply the embed net to x, hi_res_feature, and the mask
-        representing where hi_res_feature is not nan. Concatenate the output
-        with x
+    def call(self, x, hi_res_feature=None, exo_data=None):
+        """Apply the embed net to hi_res_feature, exogenous data, and the
+        mask representing where hi_res_feature is not nan. Concatenate the
+        output with x. ``hi_res_feature`` and ``exo_data`` are allowed to be
+        None so that models can be trained with hi_res_feature and exogenous
+        data and then run with various sets of inputs.
 
         Parameters
         ----------
         x : tf.Tensor
             Input tensor
-        hi_res_feature : tf.Tensor | np.ndarray
+        hi_res_feature : tf.Tensor | np.ndarray | None
             This should be a 4D array for spatial enhancement model or 5D array
             for a spatiotemporal enhancement model (obs, spatial_1, spatial_2,
-            (temporal), 1). This is NaN where there are no observations and
-            real values where observations exist.
+            (temporal), features). This is NaN where there are no observations
+            and real values where observations exist.
+        exo_data : tf.Tensor | np.ndarray | None
+            This is an array of exogenous data used to imform the embedding,
+            like topography
 
         Returns
         -------
         x : tf.Tensor
-            Output tensor with embedded hi_res_feature and observation mask
-            concatenated to input.
+            Output tensor with embedding concatenated to input.
         """
         if hi_res_feature is None:
-            hi_res_feature = tf.fill(x[..., :1].shape, np.nan)
+            hr_shape = (*x[..., 0].shape, len(self.features))
+            hi_res_feature = tf.constant(np.nan, shape=hr_shape, dtype=x.dtype)
 
-        hr_feat, mask = self.nan_fill(hi_res_feature)
+        if exo_data is None and len(self.exo_features) > 0:
+            exo_shape = (*x[..., 0].shape, len(self.exo_features))
+            exo_data = tf.constant(0, shape=exo_shape, dtype=x.dtype)
 
-        # get embedding based on obs locations, obs data
-        embed = tf.concat([hr_feat, mask], axis=-1)
-        for layer in self.embed_net:
+        if self.fill_method is None:
+            mask = tf.math.is_nan(hi_res_feature)
+            hr_feat = tf.where(
+                mask, x[..., : len(self.features)], hi_res_feature
+            )
+        else:
+            hr_feat, mask = self.fill_method(hi_res_feature)
+
+        if not self.include_mask:
+            embed = hr_feat
+        else:
+            embed = tf.concat([hr_feat, mask], axis=-1)
+
+        if exo_data is not None:
+            embed = tf.concat([exo_data, embed], axis=-1)
+
+        for layer in self._hidden_layers:
             embed = layer(embed)
 
         return tf.concat([x, embed], axis=-1)
