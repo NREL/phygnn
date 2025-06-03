@@ -412,7 +412,7 @@ class SpatialExpansion(tf.keras.layers.Layer):
     (n_observations, n_spatial_0, n_spatial_1, n_features)
     """
 
-    def __init__(self, spatial_mult=1):
+    def __init__(self, spatial_mult=1, spatial_method='depth_to_space'):
         """
         Parameters
         ----------
@@ -423,9 +423,13 @@ class SpatialExpansion(tf.keras.layers.Layer):
             multiplier=2 the output shape will be (123, 10, 10, 4). The
             input feature dimension must be divisible by the spatial multiplier
             squared.
+        spatial_method : str
+            Either "depth_to_space" or an interpolation method for
+            tf.image.resize().
         """
         super().__init__()
         self._spatial_mult = int(spatial_mult)
+        self._spatial_meth = spatial_method
 
     @staticmethod
     def _check_shape(input_shape):
@@ -457,23 +461,34 @@ class SpatialExpansion(tf.keras.layers.Layer):
     def _spatial_expand(self, x):
         """Expand the two spatial dimensions (axis=1,2) of a 4D tensor using
         data from the last axes"""
-        check_shape = x.shape[-1] % self._spatial_mult**2
-        if check_shape != 0:
-            msg = (
-                'Spatial expansion of factor {} is being attempted on '
-                'input tensor of shape {}, but the last dimension of the '
-                'input tensor ({}) must be divisible by the spatial '
-                'factor squared ({}).'.format(
-                    self._spatial_mult,
-                    x.shape,
-                    x.shape[-1],
-                    self._spatial_mult**2,
-                )
-            )
-            logger.error(msg)
-            raise RuntimeError(msg)
 
-        return tf.nn.depth_to_space(x, self._spatial_mult)
+        if self._spatial_meth == 'depth_to_space':
+            check_shape = x.shape[-1] % self._spatial_mult**2
+            if check_shape != 0:
+                msg = (
+                    'Spatial expansion of factor {} is being attempted on '
+                    'input tensor of shape {}, but the last dimension of the '
+                    'input tensor ({}) must be divisible by the spatial '
+                    'factor squared ({}).'.format(
+                        self._spatial_mult,
+                        x.shape,
+                        x.shape[-1],
+                        self._spatial_mult**2,
+                    )
+                )
+                logger.error(msg)
+                raise RuntimeError(msg)
+
+            out = tf.nn.depth_to_space(x, self._spatial_mult)
+
+        else:
+            s_expand_shape = tf.stack([
+                x.shape[1] * self._spatial_mult,
+                x.shape[2] * self._spatial_mult,
+            ])
+            out = tf.image.resize(x, s_expand_shape, method=self._spatial_meth)
+
+        return out
 
     def call(self, x):
         """Call the custom SpatialExpansion layer
@@ -506,6 +521,7 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
         self,
         spatial_mult=1,
         temporal_mult=1,
+        spatial_method='depth_to_space',
         temporal_method='nearest',
         t_roll=0,
     ):
@@ -523,6 +539,9 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
             Number of times to multiply the temporal dimension. For example,
             if the input layer has shape (123, 5, 5, 24, 2) with multiplier=2
             the output shape will be (123, 5, 5, 48, 2).
+        spatial_method : str
+            Either "depth_to_space" or an interpolation method for
+            tf.image.resize().
         temporal_method : str
             Interpolation method for tf.image.resize(). Can also be
             "depth_to_time" for an operation similar to tf.nn.depth_to_space
@@ -542,6 +561,7 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
         self._spatial_mult = int(spatial_mult)
         self._temporal_mult = int(temporal_mult)
         self._temporal_meth = temporal_method
+        self._spatial_meth = spatial_method
         self._t_roll = t_roll
 
     @staticmethod
@@ -602,7 +622,7 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
             out = tf.roll(out, self._t_roll, axis=3)
 
         else:
-            temp_expand_shape = tf.stack([
+            t_expand_shape = tf.stack([
                 x.shape[2],
                 x.shape[3] * self._temporal_mult,
             ])
@@ -611,7 +631,7 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
                 out.append(
                     tf.image.resize(
                         x_unstack,
-                        temp_expand_shape,
+                        t_expand_shape,
                         method=self._temporal_meth,
                     )
                 )
@@ -622,25 +642,41 @@ class SpatioTemporalExpansion(tf.keras.layers.Layer):
     def _spatial_expand(self, x):
         """Expand the two spatial dimensions (axis=1,2) of a 5D tensor using
         data from the last axes"""
-        check_shape = x.shape[-1] % self._spatial_mult**2
-        if check_shape != 0:
-            msg = (
-                'Spatial expansion of factor {} is being attempted on '
-                'input tensor of shape {}, but the last dimension of the '
-                'input tensor ({}) must be divisible by the spatial '
-                'factor squared ({}).'.format(
-                    self._spatial_mult,
-                    x.shape,
-                    x.shape[-1],
-                    self._spatial_mult**2,
-                )
-            )
-            logger.error(msg)
-            raise RuntimeError(msg)
 
-        out = []
-        for x_unstack in tf.unstack(x, axis=3):
-            out.append(tf.nn.depth_to_space(x_unstack, self._spatial_mult))
+        if self._spatial_meth == 'depth_to_space':
+            check_shape = x.shape[-1] % self._spatial_mult**2
+            if check_shape != 0:
+                msg = (
+                    'Spatial expansion of factor {} is being attempted on '
+                    'input tensor of shape {}, but the last dimension of the '
+                    'input tensor ({}) must be divisible by the spatial '
+                    'factor squared ({}).'.format(
+                        self._spatial_mult,
+                        x.shape,
+                        x.shape[-1],
+                        self._spatial_mult**2,
+                    )
+                )
+                logger.error(msg)
+                raise RuntimeError(msg)
+
+            out = [tf.nn.depth_to_space(x_unstack, self._spatial_mult)
+                   for x_unstack in tf.unstack(x, axis=3)]
+
+        else:
+            s_expand_shape = tf.stack([
+                x.shape[1] * self._spatial_mult,
+                x.shape[2] * self._spatial_mult,
+            ])
+            out = []
+            for x_unstack in tf.unstack(x, axis=3):
+                out.append(
+                    tf.image.resize(
+                        x_unstack,
+                        s_expand_shape,
+                        method=self._spatial_meth,
+                    )
+                )
 
         return tf.stack(out, axis=3)
 
