@@ -291,6 +291,31 @@ def test_st_expansion(t_mult, s_mult):
 
 
 @pytest.mark.parametrize(
+    ('spatial_method'), ('depth_to_space', 'bilinear', 'nearest')
+)
+def test_st_expansion_with_spatial_meth(spatial_method):
+    """Test the spatiotemporal expansion layer with different spatial resize
+    methods."""
+    s_mult = 3
+    t_mult = 5
+    layer = SpatioTemporalExpansion(
+        spatial_mult=s_mult,
+        temporal_mult=t_mult,
+        spatial_method=spatial_method,
+    )
+    n_filters = 2 * s_mult**2
+    x = np.ones((123, 10, 10, 24, n_filters))
+    y = layer(x)
+    assert y.shape[0] == x.shape[0]
+    assert y.shape[1] == s_mult * x.shape[1]
+    assert y.shape[2] == s_mult * x.shape[2]
+    assert y.shape[3] == t_mult * x.shape[3]
+
+    if spatial_method == 'depth_to_space':
+        assert y.shape[4] == x.shape[4] / (s_mult**2)
+
+
+@pytest.mark.parametrize(
     ('t_mult', 's_mult', 't_roll'),
     (
         (2, 1, 0),
