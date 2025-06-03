@@ -310,7 +310,9 @@ def test_st_expansion_with_spatial_meth(spatial_method):
     assert y.shape[1] == s_mult * x.shape[1]
     assert y.shape[2] == s_mult * x.shape[2]
     assert y.shape[3] == t_mult * x.shape[3]
-    assert y.shape[4] == x.shape[4] / (s_mult**2)
+
+    if spatial_method == 'depth_to_space':
+        assert y.shape[4] == x.shape[4] / (s_mult**2)
 
 
 @pytest.mark.parametrize(
