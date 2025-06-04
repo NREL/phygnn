@@ -5,7 +5,7 @@ import os
 
 from tensorflow.keras.utils import get_custom_objects
 
-from phygnn.version import __version__
+from ._version import __version__
 
 from .base import CustomNetwork, GradientUtils
 from .layers import HiddenLayers, Layers
