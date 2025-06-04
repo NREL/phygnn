@@ -113,3 +113,6 @@ ENV/
 # vim
 *.swp
 tags
+
+# dynamic versioning
+_version.py
