@@ -1,0 +1,65 @@
+phygnn.model\_interfaces.random\_forest\_model.RandomForestModel
+================================================================
+
+.. currentmodule:: phygnn.model_interfaces.random_forest_model
+
+.. autoclass:: RandomForestModel
+   :members:
+   :show-inheritance:
+   :inherited-members:
+   :special-members: __call__, __add__, __mul__
+
+   
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~RandomForestModel.build_trained
+      ~RandomForestModel.compile_model
+      ~RandomForestModel.dict_json_convert
+      ~RandomForestModel.get_mean
+      ~RandomForestModel.get_norm_params
+      ~RandomForestModel.get_stdev
+      ~RandomForestModel.load
+      ~RandomForestModel.make_one_hot_feature_names
+      ~RandomForestModel.normalize
+      ~RandomForestModel.parse_features
+      ~RandomForestModel.parse_labels
+      ~RandomForestModel.predict
+      ~RandomForestModel.save_model
+      ~RandomForestModel.seed
+      ~RandomForestModel.train_model
+      ~RandomForestModel.unnormalize
+      ~RandomForestModel.unnormalize_prediction
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~RandomForestModel.feature_dims
+      ~RandomForestModel.feature_means
+      ~RandomForestModel.feature_names
+      ~RandomForestModel.feature_stdevs
+      ~RandomForestModel.input_feature_names
+      ~RandomForestModel.label_dims
+      ~RandomForestModel.label_means
+      ~RandomForestModel.label_names
+      ~RandomForestModel.label_stdevs
+      ~RandomForestModel.means
+      ~RandomForestModel.model
+      ~RandomForestModel.model_summary
+      ~RandomForestModel.normalization_parameters
+      ~RandomForestModel.normalize_features
+      ~RandomForestModel.normalize_labels
+      ~RandomForestModel.one_hot_categories
+      ~RandomForestModel.one_hot_feature_names
+      ~RandomForestModel.one_hot_input_feature_names
+      ~RandomForestModel.stdevs
+      ~RandomForestModel.version_record
+   
+   
