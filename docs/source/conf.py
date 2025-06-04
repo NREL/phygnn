@@ -30,7 +30,7 @@ pkg = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
 pkg = os.path.dirname(pkg)
 sys.path.append(pkg)
 
-from ._version import __version__ as v
+from phygnn import __version__ as v
 # The short X.Y version
 version = v
 # The full version, including alpha/beta/rc tags
