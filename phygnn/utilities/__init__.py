@@ -10,7 +10,7 @@ import sklearn
 import tensorflow as tf
 from packaging import version
 
-from phygnn.version import __version__
+from ._version import __version__
 
 from .pre_processing import PreProcess
 from .tf_utilities import tf_isin, tf_log10
