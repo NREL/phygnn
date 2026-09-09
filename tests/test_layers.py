@@ -753,7 +753,7 @@ def test_tokenize_encode_lat_lon_encoding_values():
     max_period = pos_enc.max_period_spatial
     lat_lon = tf.concat([lat, lon], axis=-1)
 
-    enc = pos_enc.encode_lat_lon(lat_lon, min_period, max_period)
+    enc = pos_enc.encode_lat_lon(lat_lon)
     lat_enc = PositionEncoder._freq_encode(
         lat, d=embed_dim // 2, min_period=min_period, max_period=max_period
     )

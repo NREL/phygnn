@@ -275,7 +275,7 @@ class PatchEncoder(tf.keras.layers.Layer):
         """
         return self.proj_layer(x)
 
-    def prepare_sparse_tensor(self, x, lat_lon=None):
+    def prepare_sparse_tensor(self, x):
         """Prepare sparse spatial inputs for patch encoding.
 
         NaNs are filled patchwise so partially observed patches remain usable.
@@ -285,9 +285,6 @@ class PatchEncoder(tf.keras.layers.Layer):
         ----------
         x : tf.Tensor
             4D or 5D sparse input tensor.
-        lat_lon : tf.Tensor | None
-            Optional coordinate grid with latitude and longitude in the last
-            dimension. Pooled to token resolution when patching is active.
 
         Returns
         -------
@@ -295,21 +292,18 @@ class PatchEncoder(tf.keras.layers.Layer):
             Sparse input with NaNs filled patchwise.
         nan_mask : tf.Tensor
             Boolean token mask where True marks fully invalid patches.
-        pooled_lat_lon : tf.Tensor | None
-            Coordinates pooled to token resolution when patching is active.
         """
         pixel_valid = ~tf.math.reduce_all(tf.math.is_nan(x), axis=-1)
         x_clean = self._fill_patchwise_nans(x)
         nan_mask = ~pixel_valid
 
         if self.patch_size == 1:
-            return x_clean, nan_mask, lat_lon
+            return x_clean, nan_mask
 
         token_valid = tf.cast(pixel_valid[..., tf.newaxis], tf.float32)
         token_valid = self.valid_pool(token_valid) > 0
         nan_mask = ~tf.squeeze(token_valid, axis=-1)
-        pooled_lat_lon = None if lat_lon is None else self.avg_pool(lat_lon)
-        return x_clean, nan_mask, pooled_lat_lon
+        return x_clean, nan_mask
 
     def _fill_patchwise_nans(self, x):
         """Fill NaNs with the mean of valid values inside each patch."""
@@ -508,7 +502,7 @@ class PositionEncoder(tf.keras.layers.Layer):
             (soy / np.timedelta64(1, 's')).astype(np.float32),
         )
 
-    def encode_lat_lon(self, lat_lon, min_period, max_period):
+    def encode_lat_lon(self, lat_lon):
         """Sinusoidal positional encoding for latitude and longitude.
 
         Parameters
@@ -516,10 +510,6 @@ class PositionEncoder(tf.keras.layers.Layer):
         lat_lon : tf.Tensor
             Coordinate tensor (..., 2) in degrees with latitude in channel 0
             and longitude in channel 1.
-        min_period : float
-            Minimum period in degrees.
-        max_period : float
-            Maximum period in degrees.
 
         Returns
         -------
@@ -535,14 +525,14 @@ class PositionEncoder(tf.keras.layers.Layer):
         lat_lon_enc = self._freq_encode(
             lat_lon,
             d=self.embed_dim // 2,
-            min_period=min_period,
-            max_period=max_period,
+            min_period=self.min_period_spatial,
+            max_period=self.max_period_spatial,
         )
         return tf.reshape(
             lat_lon_enc, tf.concat([tf.shape(lat_lon_enc)[:-2], [-1]], axis=0)
         )
 
-    def encode_time(self, time, min_period, max_period):
+    def encode_time(self, time):
         """Sinusoidal positional encoding for time.
 
         Parameters
@@ -550,10 +540,6 @@ class PositionEncoder(tf.keras.layers.Layer):
         time : tf.Tensor
             Tensor of Unix timestamps in seconds since epoch with shape
             ``(..., 1)``.
-        min_period : float
-            Minimum period in seconds.
-        max_period : float
-            Maximum period in seconds.
 
         Returns
         -------
@@ -570,13 +556,16 @@ class PositionEncoder(tf.keras.layers.Layer):
         )
         doy = tf.reshape(doy, tf.shape(time))
         soy = tf.reshape(soy, tf.shape(time))
-        min_period_doy = min_period / 86400  # convert seconds to days
-        max_period_doy = max_period / 86400  # convert seconds to days
+        min_period_doy = self.min_period_temporal / 86400
+        max_period_doy = self.max_period_temporal / 86400
         doy_enc = self._freq_encode(
             doy, min_period_doy, max_period_doy, d=self.embed_dim // 2
         )
         soy_enc = self._freq_encode(
-            soy, min_period, max_period, d=self.embed_dim // 2
+            soy,
+            self.min_period_temporal,
+            self.max_period_temporal,
+            d=self.embed_dim // 2,
         )
         return tf.concat([doy_enc, soy_enc], axis=-1)
 
@@ -625,13 +614,9 @@ class PositionEncoder(tf.keras.layers.Layer):
         lat_lon = self._pool_layer(lat_lon)
         time = self._pool_layer(time) if time is not None else None
 
-        x_enc = self.encode_lat_lon(
-            lat_lon, self.min_period_spatial, self.max_period_spatial
-        )
+        x_enc = self.encode_lat_lon(lat_lon)
         if self.rank == 5 and time is not None:
-            x_enc += self.encode_time(
-                time, self.min_period_temporal, self.max_period_temporal
-            )
+            x_enc += self.encode_time(time)
         return x_enc
 
     def get_config(self):
@@ -809,9 +794,7 @@ class WindowedMultiHeadAttention(MultiHeadAttention):
         )
         output = layer(
             query, value,
-            bias=alibi_bias,
-            query_spatial_shape=(32, 32),
-            kv_spatial_shape=(64, 64),
+            lat_lon=lat_lon,
         )
     """
 
@@ -955,7 +938,7 @@ class WindowedMultiHeadAttention(MultiHeadAttention):
         return tf.reshape(t, [flat, ws * ws * t_steps, c])
 
     @classmethod
-    def _build_window_mask(cls, kv_nan_mask, dtype, geometry):
+    def _build_window_mask(cls, kv_nan_mask, geometry):
         """Build the full per-window boolean attention mask.
 
         Combines padding validity and optional NaN positions from
@@ -976,7 +959,7 @@ class WindowedMultiHeadAttention(MultiHeadAttention):
 
         # --- NaN / padding validity -----------------------------------------
         if kv_nan_mask is not None:
-            kv_valid = tf.cast(~kv_nan_mask, dtype)
+            kv_valid = ~kv_nan_mask
             if len(kv_valid.shape) == 3:  # 4D: (B, H, W) -> add channel dim
                 kv_valid = kv_valid[..., tf.newaxis]
         else:
@@ -987,21 +970,52 @@ class WindowedMultiHeadAttention(MultiHeadAttention):
                     geometry.query_width,
                     T,
                 ]),
-                dtype=dtype,
+                dtype=tf.bool,
             )
 
         # _partition_windows zero-pads, so padded positions become 0.0
         # Output shape: (B*n_windows, ws*ws*T, 1)
         valid_win = cls._partition_windows(kv_valid, geometry)
 
-        # Broadcast to full mask: each Q token attends to all valid KV tokens
-        # valid_win shape: (flat, ws*ws*T, 1) -> (flat, 1, ws*ws*T) for KV dim
+        # Keras broadcasts this key-validity vector over all query tokens.
         flat = geometry.batch_size * geometry.n_windows
         window_t = ws * ws * T
         kv_mask = tf.reshape(valid_win, [flat, window_t, 1])
-        kv_mask = tf.transpose(kv_mask, [0, 2, 1])  # (flat, 1, window_t)
-        kv_mask = tf.broadcast_to(kv_mask, [flat, window_t, window_t])
-        return tf.cast(kv_mask, tf.bool)
+        return tf.transpose(kv_mask, [0, 2, 1])
+
+    @staticmethod
+    def _compact_kv(tensors, valid):
+        """Gather valid K/V tokens and aligned metadata in each group.
+
+        Parameters
+        ----------
+        tensors : tuple[tf.Tensor | None, ...]
+            Grouped K/V tensors and metadata with token axis 1.
+        valid : tf.Tensor
+            Boolean mask with shape ``(groups, tokens)`` where True marks
+            valid K/V positions.
+
+        Returns
+        -------
+        compact_tensors : tuple[tf.Tensor | None, ...]
+            Input tensors gathered to the largest valid count per group.
+        compact_mask : tf.Tensor
+            Boolean mask for valid entries in the compact tensors.
+        """
+        max_valid = tf.maximum(
+            tf.reduce_max(tf.reduce_sum(tf.cast(valid, tf.int32), axis=1)),
+            1,
+        )
+        indices = tf.argsort(
+            tf.cast(valid, tf.int32), axis=1, direction='DESCENDING'
+        )[:, :max_valid]
+        compact_tensors = tuple(
+            None
+            if tensor is None
+            else tf.gather(tensor, indices, batch_dims=1)
+            for tensor in tensors
+        )
+        return compact_tensors, tf.gather(valid, indices, batch_dims=1)
 
     def _haversine_bias(self, lat_lon_q, lat_lon_v):
         """Compute scaled haversine ALiBi bias.
@@ -1063,13 +1077,29 @@ class WindowedMultiHeadAttention(MultiHeadAttention):
         )
         return tf.expand_dims(bias, axis=1) * self.head_slopes
 
-    def _position_bias(self, lat_lon, time):
-        """Combine enabled spatial and temporal ALiBi components."""
+    def _position_bias(
+        self, query_lat_lon, query_time, kv_lat_lon=None, kv_time=None
+    ):
+        """Combine enabled spatial and temporal ALiBi components.
+
+        Parameters
+        ----------
+        query_lat_lon : tf.Tensor | None
+            Query latitude and longitude coordinates.
+        query_time : tf.Tensor | None
+            Query timestamps.
+        kv_lat_lon : tf.Tensor | None
+            K/V coordinates. Defaults to the query coordinates.
+        kv_time : tf.Tensor | None
+            K/V timestamps. Defaults to the query timestamps.
+        """
+        kv_lat_lon = query_lat_lon if kv_lat_lon is None else kv_lat_lon
+        kv_time = query_time if kv_time is None else kv_time
         bias = None
-        if self.use_spatial_bias and lat_lon is not None:
-            bias = self._haversine_bias(lat_lon, lat_lon)
-        if self.use_temporal_bias and time is not None:
-            temporal_bias = self._temporal_bias(time, time)
+        if self.use_spatial_bias and query_lat_lon is not None:
+            bias = self._haversine_bias(query_lat_lon, kv_lat_lon)
+        if self.use_temporal_bias and query_time is not None:
+            temporal_bias = self._temporal_bias(query_time, kv_time)
             bias = temporal_bias if bias is None else bias + temporal_bias
         return bias
 
@@ -1140,12 +1170,20 @@ class WindowedMultiHeadAttention(MultiHeadAttention):
         flat_time = (
             None if time is None else tf.reshape(time, [batch_size, -1, 1])
         )
-        bias = self._position_bias(flat_lat_lon, flat_time)
 
         attention_mask = None
         if kv_nan_mask is not None:
-            nan_flat = tf.reshape(kv_nan_mask, [batch_size, 1, -1])
-            attention_mask = ~tf.cast(nan_flat, tf.bool)
+            valid = ~tf.reshape(kv_nan_mask, [batch_size, -1])
+            (k_flat, v_flat, kv_lat_lon, kv_time), valid = self._compact_kv(
+                (k_flat, v_flat, flat_lat_lon, flat_time), valid
+            )
+            attention_mask = valid[:, tf.newaxis, :]
+        else:
+            kv_lat_lon = flat_lat_lon
+            kv_time = flat_time
+        bias = self._position_bias(
+            flat_lat_lon, flat_time, kv_lat_lon, kv_time
+        )
 
         output = super().call(
             query=q_flat,
@@ -1179,7 +1217,6 @@ class WindowedMultiHeadAttention(MultiHeadAttention):
         q_win = self._partition_windows(query, geometry)
         k_win = self._partition_windows(key, geometry)
         v_win = self._partition_windows(value, geometry)
-        kv_mask = self._build_window_mask(kv_nan_mask, query.dtype, geometry)
 
         coords_win = (
             None
@@ -1189,7 +1226,24 @@ class WindowedMultiHeadAttention(MultiHeadAttention):
         time_win = (
             None if time is None else self._partition_windows(time, geometry)
         )
-        bias_win = self._position_bias(coords_win, time_win)
+        if kv_nan_mask is None:
+            kv_mask = self._build_window_mask(None, geometry)
+            kv_coords_win = coords_win
+            kv_time_win = time_win
+        else:
+            valid = tf.cast(~kv_nan_mask, tf.bool)[..., tf.newaxis]
+            valid = tf.squeeze(
+                self._partition_windows(valid, geometry), axis=-1
+            )
+            (k_win, v_win, kv_coords_win, kv_time_win), kv_valid = (
+                self._compact_kv(
+                    (k_win, v_win, coords_win, time_win), valid
+                )
+            )
+            kv_mask = kv_valid[:, tf.newaxis, :]
+        bias_win = self._position_bias(
+            coords_win, time_win, kv_coords_win, kv_time_win
+        )
 
         output = super().call(
             query=q_win,
@@ -1212,7 +1266,6 @@ class WindowedMultiHeadAttention(MultiHeadAttention):
         time=None,
         training=None,
         use_causal_mask=False,
-        bias=None,
         kv_nan_mask=None,
         lat_lon=None,
     ):
@@ -1229,12 +1282,6 @@ class WindowedMultiHeadAttention(MultiHeadAttention):
         time : tf.Tensor | None
             Unix timestamps in seconds with shape ``(B, H, W, T, 1)`` for
             temporal ALiBi bias.
-        bias : tf.Tensor | None
-            Additive pre-softmax bias ``(batch, heads, n_q, n_v)`` or None.
-            When provided, overrides the internally-computed ALiBi / NaN bias
-            in the full-attention path.  Not supported for the windowed path
-            (a warning is logged and the value is ignored); use ``lat_lon``
-            for ALiBi bias with windowed attention.
         kv_nan_mask : tf.Tensor | None
             Boolean ``(B, H_v, W_v)`` where True marks NaN KV positions.
             Both the full and windowed paths convert this internally to the
@@ -1282,148 +1329,6 @@ class WindowedMultiHeadAttention(MultiHeadAttention):
             'distance_scale': self.distance_scale,
             'temporal_bias_scale': self.temporal_bias_scale,
             'temporal_distance_scale': self.temporal_distance_scale,
-        })
-        return config
-
-
-class TransformerLayer(tf.keras.layers.Layer):
-    """Custom transformer layer with multi-head attention layer that allows
-    for additive bias pre-softmax."""
-
-    def __init__(
-        self,
-        num_heads,
-        key_dim,
-        bias_scale=0.0,
-        embed_dim=64,
-        window_size=None,
-        window_shift=0,
-        distance_scale=10000.0,
-        dropout=0.0,
-        **kwargs,
-    ):
-        """Initialize the transformer layer.
-
-        Parameters
-        ----------
-        num_heads : int
-            Number of attention heads.
-        key_dim : int
-            Size of each attention head.
-        bias_scale : float
-            Positive values enable the sinusoidal position kernel and set its
-            sharpness. Non-positive values use content attention only.
-        window_size : int | None
-            Side length of the non-overlapping query execution block in token
-            units.
-            Patch encoding is applied before windowed attention, so this is
-            measured on the token grid. ``None`` uses full attention over the
-            entire token grid.
-        window_shift : int
-            Shift of the query-window start on the token grid. This is only
-            active when the current call uses multiple windows; otherwise it
-            is ignored because the layer routes to full attention.
-        distance_scale : float
-            Length scale (in meters) over which the ALiBi distance bias
-            decays. Larger values produce a gentler decay, allowing
-            attention to reach farther spatially.
-        dropout : float
-            Dropout rate for attention weights.
-        **kwargs
-            Additional keyword arguments passed to ``tf.keras.layers.Layer``.
-        """
-        super().__init__(**kwargs)
-        self.num_heads = num_heads
-        self.key_dim = key_dim
-        self.bias_scale = float(bias_scale)
-        self.embed_dim = int(embed_dim)
-        self.window_size = window_size
-        self.window_shift = window_shift
-        self.distance_scale = float(distance_scale)
-        self.dropout = dropout
-
-        self.attn = WindowedMultiHeadAttention(
-            window_size=window_size,
-            window_shift=window_shift,
-            num_heads=self.num_heads,
-            key_dim=self.key_dim,
-            bias_scale=bias_scale,
-            distance_scale=self.distance_scale,
-            dropout=self.dropout,
-        )
-        self.lo = tf.keras.layers.RMSNormalization()
-        self.mlp = None  # built in build() once query feature dim is known
-
-    def build(self, query_shape, key_shape, value_shape):
-        """Build all sub-layers."""
-        self.attn.build(query_shape, value_shape, key_shape)
-        self.lo.build((None, None, query_shape[-1]))
-        self.mlp = tf.keras.Sequential([
-            tf.keras.layers.Dense(4 * query_shape[-1]),
-            SwiGLU(),
-            tf.keras.layers.Dense(query_shape[-1]),
-            tf.keras.layers.Dropout(self.dropout),
-        ])
-        self.mlp.build((None, None, query_shape[-1]))
-        super().build(query_shape)
-
-    @tf.function
-    def call(
-        self,
-        query,
-        key,
-        value,
-        kv_nan_mask=None,
-        lat_lon=None,
-        training=None,
-    ):
-        """Call transformer layer with multi-head attention output.
-
-        Parameters
-        ----------
-        query : tf.Tensor
-            ``(B, H, W, C)`` query tensor.
-        key : tf.Tensor
-            ``(B, H, W, C)`` key tensor.
-        value : tf.Tensor
-            ``(B, H, W, C)`` value tensor.
-        kv_nan_mask : tf.Tensor | None
-            Boolean mask for NaN KV positions.
-        lat_lon : tf.Tensor | None
-            Coordinate grid for ALiBi bias.
-        training : bool | None
-            Training flag. Keras passes ``False`` during inference
-            (``model.predict`` / ``model(x, training=False)``), which
-            disables dropout in both the attention and MLP layers.
-        """
-        attn = self.attn(
-            query=query,
-            key=key,
-            value=value,
-            kv_nan_mask=kv_nan_mask,
-            lat_lon=lat_lon,
-            training=training,
-        )
-        attn_res = query + attn
-        out = self.lo(attn_res)
-        out_shape = tf.shape(out)
-        out_flat = tf.reshape(out, [out_shape[0], -1, out_shape[-1]])
-        mlp_out = self.mlp(out_flat, training=training)
-        mlp_out = tf.reshape(mlp_out, out_shape)
-        return attn_res + mlp_out
-
-    def get_config(self):
-        """Get config for Keras serialization."""
-        config = super().get_config()
-        config.update({
-            'num_heads': self.num_heads,
-            'key_dim': self.key_dim,
-            'bias_scale': self.bias_scale,
-            'embed_dim': self.embed_dim,
-            'window_size': self.window_size,
-            'window_shift': self.window_shift,
-            'distance_scale': self.distance_scale,
-            'dropout': self.dropout,
         })
         return config
 
@@ -1790,21 +1695,13 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
 
         pos_enc = None
         if not self.use_spatial_bias:
-            pos_enc = self.pe.encode_lat_lon(
-                lat_lon,
-                self.min_period_spatial,
-                self.max_period_spatial,
-            )
+            pos_enc = self.pe.encode_lat_lon(lat_lon)
         if (
             not self.use_temporal_bias
             and self.rank == 5
             and time is not None
         ):
-            temporal_enc = self.pe.encode_time(
-                time,
-                self.min_period_temporal,
-                self.max_period_temporal,
-            )
+            temporal_enc = self.pe.encode_time(time)
             pos_enc = (
                 temporal_enc if pos_enc is None else pos_enc + temporal_enc
             )
@@ -1812,7 +1709,7 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
             q = q + pos_enc  # noqa: PLR6104
 
         # joint K/V encoding across all features
-        hr_clean, nan_mask, _ = self.ek.prepare_sparse_tensor(hi_res_feature)
+        hr_clean, nan_mask = self.ek.prepare_sparse_tensor(hi_res_feature)
         k = self.ek(hr_clean)
         v = self.ev(hr_clean)
 
@@ -1888,13 +1785,15 @@ class Sup3rTransformerBlock(tf.keras.layers.Layer):
         self.exo_features = exo_features
         self.n_layers = n_layers
         self.window_shift = window_shift
-        self.window_size = layer_kwargs.get('window_size', 1)
+        self.window_size = layer_kwargs.get('window_size')
         self._layer_kwargs = {
             k: v for k, v in layer_kwargs.items() if k != 'window_shift'
         }
         self.transformer_layers = []
         for i in range(n_layers):
-            shift = i * window_shift % self.window_size
+            shift = (
+                window_shift if self.window_size is not None and i % 2 else 0
+            )
             self.transformer_layers.append(
                 Sup3rTransformerLayer(
                     features=features,
