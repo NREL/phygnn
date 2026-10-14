@@ -833,6 +833,13 @@ class WindowedMultiHeadAttention(MultiHeadAttention):
             msg = 'window_shift must be < window_size.'
             logger.error(msg)
             raise ValueError(msg)
+        if self.use_temporal_bias and self.temporal_distance_scale <= 0:
+            msg = (
+                'temporal_distance_scale must be > 0 when temporal ALiBi '
+                'is enabled.'
+            )
+            logger.error(msg)
+            raise ValueError(msg)
 
     def build(self, query_shape, value_shape, key_shape=None):
         """Build projection layers with 3D shapes.
@@ -945,9 +952,9 @@ class WindowedMultiHeadAttention(MultiHeadAttention):
         *kv_nan_mask*.
 
         For 4D Q/KV, *kv_nan_mask* is ``(B, H, W)`` and the returned
-        mask has shape ``(B*n_windows, ws*ws, ws*ws)``.
+        mask has shape ``(B*n_windows, 1, ws*ws)``.
         For 5D Q/KV, *kv_nan_mask* is ``(B, H, W, T)`` and the
-        returned mask has shape ``(B*n_windows, ws*ws*T, ws*ws*T)``.
+        returned mask has shape ``(B*n_windows, 1, ws*ws*T)``.
 
         Returns
         -------
@@ -1055,14 +1062,14 @@ class WindowedMultiHeadAttention(MultiHeadAttention):
         return bias * self.head_slopes
 
     def _temporal_bias(self, time_q, time_v):
-        """Compute temporal ALiBi bias from Unix timestamps.
+        """Compute temporal ALiBi bias from relative time offsets.
 
         Parameters
         ----------
         time_q : tf.Tensor
-            Query timestamps in seconds with shape ``(..., n_q, 1)``.
+            Query time offsets in seconds with shape ``(..., n_q, 1)``.
         time_v : tf.Tensor
-            Key/value timestamps in seconds with shape ``(..., n_v, 1)``.
+            Key/value time offsets in seconds with shape ``(..., n_v, 1)``.
 
         Returns
         -------
@@ -1280,7 +1287,7 @@ class WindowedMultiHeadAttention(MultiHeadAttention):
         key : tf.Tensor | None
             ``(batch, H_v, W_v, features)``. Defaults to *value*.
         time : tf.Tensor | None
-            Unix timestamps in seconds with shape ``(B, H, W, T, 1)`` for
+            Relative seconds with shape ``(B, H, W, T, 1)`` for
             temporal ALiBi bias.
         kv_nan_mask : tf.Tensor | None
             Boolean ``(B, H_v, W_v)`` where True marks NaN KV positions.
@@ -1377,7 +1384,7 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
             List of hi-resolution feature names used for exogenous-data
             dispatch by the calling framework.
         exo_features : list[str] | None
-            List of exogenous feature names (latitude, longitude, time).
+            List of exogenous feature names (latitude, longitude, and time).
         patch_size : int
             Height, width, and optional depth of attention patches.
         num_heads : int
@@ -1419,6 +1426,7 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
         **kwargs
             Additional keyword arguments for the layer.
         """
+        kwargs.setdefault('autocast', False)
         super().__init__(name=name, **kwargs)
         self.features = features or []
         self.exo_features = exo_features or []
@@ -1534,14 +1542,24 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
 
     @staticmethod
     def _split_exo_inputs(exo_data):
-        """Split exogenous inputs into coordinates and optional time."""
-        lat_lon = None if exo_data is None else exo_data[..., :2]
+        """Extract coordinates and normalize optional Unix timestamps."""
+        lat_lon = tf.cast(exo_data[..., :2], tf.float32)
         time = (
             None
-            if exo_data is None or exo_data.shape[-1] < 3
-            else exo_data[..., 2:3]
+            if exo_data.shape[-1] < 3
+            else Sup3rTransformerLayer._normalize_time(exo_data[..., 2:3])
         )
         return lat_lon, time
+
+    @staticmethod
+    def _normalize_time(time):
+        """Convert precise Unix timestamps to relative float32 seconds."""
+        if time is None:
+            return None
+        time = tf.cast(time, tf.float64)
+        axes = tf.range(1, tf.rank(time) - 1)
+        reference = tf.reduce_min(time, axis=axes, keepdims=True)
+        return tf.cast(time - reference, tf.float32)
 
     def _pad_to_patch_multiple(
         self, tensor, mode='CONSTANT', constant_values=0
@@ -1642,7 +1660,13 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
         return config
 
     @tf.function
-    def call(self, x, hi_res_feature=None, exo_data=None, training=None):
+    def call(
+        self,
+        x,
+        hi_res_feature=None,
+        exo_data=None,
+        training=None,
+    ):
         """Call the transformer layer.
 
         Parameters
@@ -1655,8 +1679,8 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
             May contain NaNs for sparse observations.
         exo_data : tf.Tensor
             Exogenous data with latitude/longitude in channels 0:2 and
-            optionally time in channel 2. Required
-            whenever *hi_res_feature* is provided.
+            optional float64 Unix timestamps in channel 2. Required whenever
+            *hi_res_feature* is provided.
         training : bool | None
             Training flag forwarded to dropout layers.
 
@@ -1675,6 +1699,9 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
             )
             logger.error(msg)
             raise ValueError(msg)
+
+        x = tf.cast(x, self.compute_dtype)
+        hi_res_feature = tf.cast(hi_res_feature, self.compute_dtype)
 
         x_in = x
         original_shape = tf.shape(x)
@@ -1765,13 +1792,12 @@ class Sup3rTransformerBlock(tf.keras.layers.Layer):
             List of hi-resolution feature names used for exogenous-data
             dispatch by the calling framework.
         exo_features : list[str] | None
-            List of exogenous feature names (latitude, longitude, time).
+            List of exogenous feature names (latitude, longitude, and time).
         n_layers : int
             Number of ``Sup3rTransformerLayer`` instances in the stack.
         window_shift : int
-            Shift applied to odd-indexed layers in the stack.
-            Even-indexed layers always use zero shift.
-            Zero disables shifting entirely.
+            Shift increment between layers. The shift for layer ``i`` is
+            ``i * window_shift % window_size``. Zero disables shifting.
         name : str | None
             Name for this block.
         **layer_kwargs
@@ -1780,7 +1806,7 @@ class Sup3rTransformerBlock(tf.keras.layers.Layer):
             ``window_shift`` in *layer_kwargs* is silently replaced by
             the per-layer value computed here.
         """
-        super().__init__(name=name)
+        super().__init__(name=name, autocast=False)
         self.features = features
         self.exo_features = exo_features
         self.n_layers = n_layers
@@ -1792,7 +1818,9 @@ class Sup3rTransformerBlock(tf.keras.layers.Layer):
         self.transformer_layers = []
         for i in range(n_layers):
             shift = (
-                window_shift if self.window_size is not None and i % 2 else 0
+                i * window_shift % self.window_size
+                if self.window_size is not None
+                else 0
             )
             self.transformer_layers.append(
                 Sup3rTransformerLayer(
@@ -1835,7 +1863,13 @@ class Sup3rTransformerBlock(tf.keras.layers.Layer):
         })
         return config
 
-    def call(self, x, hi_res_feature=None, exo_data=None, training=None):
+    def call(
+        self,
+        x,
+        hi_res_feature=None,
+        exo_data=None,
+        training=None,
+    ):
         """Run *x* through each transformer layer in sequence.
 
         Parameters
@@ -1845,7 +1879,7 @@ class Sup3rTransformerBlock(tf.keras.layers.Layer):
         hi_res_feature : tf.Tensor | None
             High-resolution features (passed to every layer).
         exo_data : tf.Tensor | None
-            Exogenous lat/lon(/time) data (passed to every layer).
+            Exogenous latitude/longitude/time data passed to every layer.
         training : bool | None
             Training flag forwarded to dropout layers.
 

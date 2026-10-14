@@ -805,22 +805,42 @@ def test_tokenize_encode_call_adds_time_encoding(monkeypatch):
     assert calls['time'] == 1
 
 
-def test_transformer_exo_data_time_forwarding():
-    """Test Sup3rTransformerLayer forwards lat/lon/time from exo_data."""
+def test_transformer_time_forwarding(monkeypatch):
+    """Test float64 exo timestamps become relative seconds in attention."""
     layer = Sup3rTransformerLayer()
 
     x = tf.random.normal((1, 3, 4, 2), dtype=tf.float32)
     y = tf.random.normal((1, 3, 4, 1), dtype=tf.float32)
+    lat_lon = tf.random.normal((1, 3, 4, 2), dtype=tf.float64)
+    time = tf.broadcast_to(
+        tf.constant(
+            [[[[1_700_000_000], [1_700_000_060], [1_700_000_000],
+               [1_700_000_060]]]],
+            tf.float64,
+        ),
+        (1, 3, 4, 1),
+    )
+    exo_data = tf.concat([lat_lon, time], axis=-1)
+    captured = {}
 
-    # With 3 exo channels (lat, lon, time) - should not error
-    exo_data = tf.random.normal((1, 3, 4, 3), dtype=tf.float32)
-    out = layer(x, y, exo_data=exo_data)
-    assert out.shape == x.shape
+    def _fake_call(query, value, time=None, **kwargs):  # noqa: ARG001
+        captured['time'] = time
+        return query
 
-    # With 2 exo channels (lat, lon only) - should not error
-    exo_data = tf.random.normal((1, 3, 4, 2), dtype=tf.float32)
-    out = layer(x, y, exo_data=exo_data)
+    monkeypatch.setattr(layer.attn, 'call', _fake_call)
+
+    run_eagerly = tf.config.functions_run_eagerly()
+    tf.config.run_functions_eagerly(True)
+    try:
+        out = layer(x, y, exo_data=exo_data)
+    finally:
+        tf.config.run_functions_eagerly(run_eagerly)
+
     assert out.shape == x.shape
+    assert captured['time'].dtype == tf.float32
+    np.testing.assert_array_equal(
+        tf.unique(tf.reshape(captured['time'], [-1])).y.numpy(), [0.0, 60.0]
+    )
 
 
 @pytest.mark.parametrize(

@@ -72,6 +72,20 @@ def test_wmha_get_config():
     assert config['temporal_distance_scale'] == pytest.approx(3_600.0)
 
 
+@pytest.mark.parametrize('temporal_distance_scale', [0, -1])
+def test_wmha_rejects_invalid_temporal_distance_scale(
+    temporal_distance_scale,
+):
+    """Enabled temporal ALiBi requires a positive distance scale."""
+    with pytest.raises(
+        ValueError, match='temporal_distance_scale must be > 0'
+    ):
+        WindowedMultiHeadAttention(
+            temporal_bias_scale=1.0,
+            temporal_distance_scale=temporal_distance_scale,
+        )
+
+
 def test_wmha_temporal_bias():
     """Temporal ALiBi should be symmetric and decay with time separation."""
     layer = WindowedMultiHeadAttention(
@@ -82,7 +96,7 @@ def test_wmha_temporal_bias():
     )
     layer.build((None, None, None, 8), (None, None, None, 8))
     time = tf.constant(
-        [[[1_700_000_000], [1_700_003_600], [1_700_007_200]]],
+        [[[0], [3_600], [7_200]]],
         dtype=tf.float32,
     )
 
@@ -105,7 +119,7 @@ def test_wmha_combines_spatial_and_temporal_bias():
     )
     layer.build((None, None, None, 8), (None, None, None, 8))
     lat_lon = tf.constant([[[30.0, -100.0], [31.0, -99.0]]])
-    time = tf.constant([[[1_700_000_000.0], [1_700_003_600.0]]])
+    time = tf.constant([[[0.0], [3_600.0]]])
 
     expected = layer._haversine_bias(lat_lon, lat_lon)
     expected += layer._temporal_bias(time, time)
@@ -126,7 +140,7 @@ def test_wmha_temporal_bias_5d(window_size):
     )
     query = tf.random.normal((1, 4, 4, 2, 8))
     hours = tf.reshape(
-        tf.range(2, dtype=tf.float32) * 3_600 + 1_700_000_000,
+        tf.range(2, dtype=tf.float32) * 3_600,
         (1, 1, 1, 2, 1),
     )
     time = tf.broadcast_to(hours, (1, 4, 4, 2, 1))
@@ -182,6 +196,7 @@ def test_wmha_shifted_window_path(monkeypatch):
 
 def test_wmha_shifted_window_compacts_sparse_kv(monkeypatch):
     """Shifted windows should compact sparse K/V before attention."""
+
     def fake_call(
         self,
         query,
@@ -231,6 +246,7 @@ def test_wmha_shifted_window_compacts_sparse_kv(monkeypatch):
 
 def test_wmha_full_attention_compacts_sparse_kv(monkeypatch):
     """Full attention should use the shared sparse K/V compaction."""
+
     def fake_call(
         self,
         query,
@@ -361,12 +377,12 @@ def test_sup3r_transformer_layer_dropout():
 
 @pytest.mark.parametrize(
     ('window_size', 'expected_shifts'),
-    [(4, [0, 2, 0, 2]), (None, [0, 0, 0, 0])],
+    [(5, [0, 2, 4, 1, 3]), (None, [0, 0, 0, 0, 0])],
 )
 def test_sup3r_transformer_block_shifts(window_size, expected_shifts):
-    """Transformer blocks should alternate unshifted and shifted layers."""
+    """Transformer blocks should cycle shifts across layers."""
     block = Sup3rTransformerBlock(
-        n_layers=4,
+        n_layers=5,
         window_size=window_size,
         window_shift=2,
     )
