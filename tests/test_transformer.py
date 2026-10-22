@@ -440,6 +440,59 @@ def test_sup3r_transformer_layer_patch_size_restores_shape():
     assert output.shape == x.shape
 
 
+def test_spatial_only_patch_size_preserves_time():
+    """A per-axis patch size should compress space but preserve time."""
+    layer = Sup3rTransformerLayer(
+        features=['obs'],
+        patch_size=(2, 2, 1),
+        num_heads=2,
+        key_dim=8,
+        embed_dim=8,
+        window_size=2,
+    )
+    x = tf.random.normal((1, 4, 4, 3, 16))
+    hr = tf.random.normal((1, 4, 4, 3, 1))
+    lat_lon = tf.random.normal((1, 4, 4, 3, 2))
+
+    output = layer(x, hi_res_feature=hr, exo_data=lat_lon)
+
+    assert layer.eq(x).shape == (1, 2, 2, 3, 8)
+    assert output.shape == x.shape
+    assert layer.get_config()['patch_size'] == [2, 2, 1]
+
+
+def test_spatial_only_patch_does_not_fill_future_time():
+    """Spatial patch filling should not copy observations into later times."""
+    layer = Sup3rTransformerLayer(
+        features=['obs'],
+        patch_size=(2, 2, 1),
+        num_heads=2,
+        key_dim=8,
+        embed_dim=8,
+    )
+    x = tf.zeros((1, 2, 2, 2, 4), dtype=tf.float32)
+    hr = np.full((1, 2, 2, 2, 1), np.nan, dtype=np.float32)
+    hr[:, :, :, 0, :] = 5.0
+    lat_lon = tf.zeros((1, 2, 2, 2, 2), dtype=tf.float32)
+    layer.build(x.shape, hr.shape, lat_lon.shape)
+
+    hr_clean, nan_mask = layer.ek.prepare_sparse_tensor(tf.constant(hr))
+
+    np.testing.assert_allclose(hr_clean[..., 0, :], 5.0)
+    np.testing.assert_allclose(hr_clean[..., 1, :], 0.0)
+    np.testing.assert_array_equal(
+        nan_mask.numpy(), np.array([[[[False, True]]]])
+    )
+
+
+def test_tuple_patch_size_config_round_trip():
+    """Tuple patch sizes should survive Keras config serialization."""
+    layer = Sup3rTransformerLayer(patch_size=(4, 4, 1))
+    restored = Sup3rTransformerLayer.from_config(layer.get_config())
+
+    assert restored.patch_size == [4, 4, 1]
+
+
 def test_sup3r_transformer_layer_patch_size_odd_restores_shape():
     """Patchified attention should preserve non-divisible query shapes."""
     layer = Sup3rTransformerLayer(

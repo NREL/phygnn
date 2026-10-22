@@ -74,6 +74,36 @@ def _set_keras_mask(x, mask):
         x._keras_mask = mask
 
 
+def _parse_patch_size(patch_size, rank):
+    """Normalize a scalar or per-axis patch size for an input rank."""
+    n_patch_axes = rank - 2
+    if isinstance(patch_size, (int, np.integer)):
+        patch_shape = (int(patch_size),) * n_patch_axes
+    else:
+        patch_shape = tuple(int(size) for size in patch_size)
+
+    invalid_size = len(patch_shape) != n_patch_axes or any(
+        size < 1 for size in patch_shape
+    )
+    if invalid_size:
+        msg = (
+            f'patch_size must contain {n_patch_axes} positive integers for '
+            f'a rank-{rank} input, but received {patch_size}.'
+        )
+        logger.error(msg)
+        raise ValueError(msg)
+    return patch_shape
+
+
+def _serialize_patch_size(patch_size):
+    """Return a JSON-compatible patch size without changing scalar configs."""
+    return (
+        int(patch_size)
+        if isinstance(patch_size, (int, np.integer))
+        else list(patch_size)
+    )
+
+
 class SwiGLU(tf.keras.layers.Layer):
     """SwiGLU activation function."""
 
@@ -201,9 +231,10 @@ class PatchEncoder(tf.keras.layers.Layer):
         ----------
         name : str | None
             Name of layer.
-        patch_size : int
-            Height, width, and depth of tokens. Default is 1 for pixel-wise
-            tokenization.
+        patch_size : int | tuple[int, ...]
+            Patch size for each non-batch, non-feature axis. A scalar applies
+            the same size to every axis. For 5D inputs, ``(y, x, 1)`` applies
+            spatial patching while preserving each temporal step.
         embed_dim : int
             Dimension of the embedding. This determines the size of the output
             tokens after tokenization. Default is 64.
@@ -217,6 +248,7 @@ class PatchEncoder(tf.keras.layers.Layer):
         self.valid_pool = None
         self.embed_dim = embed_dim
         self.patch_size = patch_size
+        self.patch_shape = None
         self.rank = None
 
     def build(self, input_shape):
@@ -228,15 +260,16 @@ class PatchEncoder(tf.keras.layers.Layer):
             Shape tuple of the input tensor
         """
         self.rank = len(input_shape)
+        self.patch_shape = _parse_patch_size(self.patch_size, self.rank)
         kwargs = {
-            'kernel_size': [self.patch_size] * (self.rank - 2),
-            'strides': [self.patch_size] * (self.rank - 2),
+            'kernel_size': self.patch_shape,
+            'strides': self.patch_shape,
             'filters': self.embed_dim,
             'padding': 'valid',
         }
         pool_kwargs = {
-            'pool_size': self.patch_size,
-            'strides': self.patch_size,
+            'pool_size': self.patch_shape,
+            'strides': self.patch_shape,
             'padding': 'valid',
         }
         self.proj_layer = (
@@ -297,7 +330,7 @@ class PatchEncoder(tf.keras.layers.Layer):
         x_clean = self._fill_patchwise_nans(x)
         nan_mask = ~pixel_valid
 
-        if self.patch_size == 1:
+        if all(size == 1 for size in self.patch_shape):
             return x_clean, nan_mask
 
         token_valid = tf.cast(pixel_valid[..., tf.newaxis], tf.float32)
@@ -308,7 +341,7 @@ class PatchEncoder(tf.keras.layers.Layer):
     def _fill_patchwise_nans(self, x):
         """Fill NaNs with the mean of valid values inside each patch."""
         x_zero = tf.where(tf.math.is_nan(x), 0.0, x)
-        if self.patch_size == 1:
+        if all(size == 1 for size in self.patch_shape):
             return x_zero
 
         valid = tf.cast(~tf.math.is_nan(x), x.dtype)
@@ -318,8 +351,8 @@ class PatchEncoder(tf.keras.layers.Layer):
 
         spatial_axes = range(1, self.rank - 1)
         upsampled = patch_mean
-        for axis in spatial_axes:
-            upsampled = tf.repeat(upsampled, self.patch_size, axis=axis)
+        for axis, size in zip(spatial_axes, self.patch_shape):
+            upsampled = tf.repeat(upsampled, size, axis=axis)
 
         target_shape = tf.shape(x)
         current_shape = tf.shape(upsampled)
@@ -335,7 +368,7 @@ class PatchEncoder(tf.keras.layers.Layer):
         """Get config for Keras serialization."""
         config = super().get_config()
         config.update({
-            'patch_size': self.patch_size,
+            'patch_size': _serialize_patch_size(self.patch_size),
             'embed_dim': self.embed_dim,
         })
         return config
@@ -357,8 +390,9 @@ class PatchDecoder(tf.keras.layers.Layer):
         ----------
         name : str | None
             Name of layer.
-        patch_size : int
-            Height, width, and depth of attention patches.
+        patch_size : int | tuple[int, ...]
+            Patch size for each non-batch, non-feature axis. A scalar applies
+            the same size to every axis.
         output_dim : int | None
             Number of output features after decoding.
         **kwargs : dict
@@ -367,6 +401,7 @@ class PatchDecoder(tf.keras.layers.Layer):
         """
         super().__init__(name=name, **kwargs)
         self.patch_size = patch_size
+        self.patch_shape = None
         self.output_dim = output_dim
         self.rank = None
         self.proj_layer = None
@@ -374,10 +409,11 @@ class PatchDecoder(tf.keras.layers.Layer):
     def build(self, input_shape):
         """Build the PatchDecoder layer based on an input shape."""
         self.rank = len(input_shape)
+        self.patch_shape = _parse_patch_size(self.patch_size, self.rank)
         kwargs = {
             'filters': self.output_dim,
-            'kernel_size': [self.patch_size] * (self.rank - 2),
-            'strides': [self.patch_size] * (self.rank - 2),
+            'kernel_size': self.patch_shape,
+            'strides': self.patch_shape,
             'padding': 'valid',
         }
         self.proj_layer = (
@@ -397,7 +433,7 @@ class PatchDecoder(tf.keras.layers.Layer):
         """Get config for Keras serialization."""
         config = super().get_config()
         config.update({
-            'patch_size': self.patch_size,
+            'patch_size': _serialize_patch_size(self.patch_size),
             'output_dim': self.output_dim,
         })
         return config
@@ -423,10 +459,10 @@ class PositionEncoder(tf.keras.layers.Layer):
         ----------
         name : str | None
             Name of layer.
-        patch_size : int
-            Height, width, and depth of patches. This is used to pool the
-            positional encoding into the same patch shape as tokens. Default is
-            1 for pixel-wise tokenization and encoding.
+        patch_size : int | tuple[int, ...]
+            Patch size for each non-batch, non-feature axis. A scalar applies
+            the same size to every axis. This pools positional encodings to
+            the same patch shape as tokens.
         embed_dim : int
             Dimension of the embedding. This determines the size of the output
             tokens after encoding. Default is 64.
@@ -445,6 +481,7 @@ class PositionEncoder(tf.keras.layers.Layer):
         super().__init__(name=name, **kwargs)
         self._pool_layer = None
         self.patch_size = patch_size
+        self.patch_shape = None
         self.embed_dim = embed_dim
         self.min_period_spatial = min_period_spatial
         self.max_period_spatial = max_period_spatial
@@ -578,9 +615,10 @@ class PositionEncoder(tf.keras.layers.Layer):
             Shape tuple of the input tensor
         """
         self.rank = len(input_shape)
+        self.patch_shape = _parse_patch_size(self.patch_size, self.rank)
         kwargs = {
-            'pool_size': self.patch_size,
-            'strides': self.patch_size,
+            'pool_size': self.patch_shape,
+            'strides': self.patch_shape,
             'padding': 'valid',
         }
         self._pool_layer = (
@@ -608,8 +646,8 @@ class PositionEncoder(tf.keras.layers.Layer):
         x_enc : tf.Tensor
             Positional encoding tensor with the same leading dimensions as the
             active spatial or token grid and final dimension ``embed_dim``.
-            When ``patch_size > 1``, this corresponds to the pooled token grid
-            rather than the unpooled coordinate grid.
+            When any patch dimension is greater than one, this corresponds to
+            the pooled token grid rather than the unpooled coordinate grid.
         """
         lat_lon = self._pool_layer(lat_lon)
         time = self._pool_layer(time) if time is not None else None
@@ -623,7 +661,7 @@ class PositionEncoder(tf.keras.layers.Layer):
         """Get config for Keras serialization."""
         config = super().get_config()
         config.update({
-            'patch_size': self.patch_size,
+            'patch_size': _serialize_patch_size(self.patch_size),
             'embed_dim': self.embed_dim,
             'min_period_spatial': self.min_period_spatial,
             'max_period_spatial': self.max_period_spatial,
@@ -1385,8 +1423,9 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
             dispatch by the calling framework.
         exo_features : list[str] | None
             List of exogenous feature names (latitude, longitude, and time).
-        patch_size : int
-            Height, width, and optional depth of attention patches.
+        patch_size : int | tuple[int, ...]
+            Patch size for each non-batch, non-feature axis. A scalar applies
+            the same size to every axis.
         num_heads : int
             Number of attention heads.
         key_dim : int | None
@@ -1542,7 +1581,7 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
 
     @staticmethod
     def _split_exo_inputs(exo_data):
-        """Extract coordinates and normalize optional Unix timestamps."""
+        """Extract coordinates and normalize optional time coordinates."""
         lat_lon = tf.cast(exo_data[..., :2], tf.float32)
         time = (
             None
@@ -1553,7 +1592,7 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
 
     @staticmethod
     def _normalize_time(time):
-        """Convert precise Unix timestamps to relative float32 seconds."""
+        """Convert time coordinates to relative float32 seconds."""
         if time is None:
             return None
         time = tf.cast(time, tf.float64)
@@ -1569,22 +1608,25 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
         Parameters
         ----------
         tensor : tf.Tensor | None
-            Tensor to pad.  Returned unchanged when ``None`` or when
-            ``patch_size == 1``.
+            Tensor to pad. Returned unchanged when ``None`` or when every
+            patch dimension is one.
         mode : str
             Padding mode forwarded to ``tf.pad``.
         constant_values : float
             Fill value used only when ``mode='CONSTANT'``.
         """
-        if tensor is None or self.patch_size == 1:
+        patch_shape = _parse_patch_size(self.patch_size, self.rank)
+        if tensor is None or all(size == 1 for size in patch_shape):
             return tensor
 
         paddings = [[0, 0]]
-        for axis in range(1, self.rank - 1):
+        for axis, patch_size in zip(
+            range(1, self.rank - 1), patch_shape
+        ):
             size = tf.shape(tensor)[axis]
             pad = (
-                self.patch_size - tf.math.floormod(size, self.patch_size)
-            ) % self.patch_size
+                patch_size - tf.math.floormod(size, patch_size)
+            ) % patch_size
             paddings.append([0, pad])
         paddings.append([0, 0])
         if mode == 'CONSTANT':
@@ -1641,7 +1683,7 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
         config.update({
             'features': self.features,
             'exo_features': self.exo_features,
-            'patch_size': self.patch_size,
+            'patch_size': _serialize_patch_size(self.patch_size),
             'num_heads': self.num_heads,
             'key_dim': self.key_dim,
             'embed_dim': self.embed_dim,
@@ -1679,7 +1721,7 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
             May contain NaNs for sparse observations.
         exo_data : tf.Tensor
             Exogenous data with latitude/longitude in channels 0:2 and
-            optional float64 Unix timestamps in channel 2. Required whenever
+            optional time coordinates in seconds in channel 2. Required when
             *hi_res_feature* is provided.
         training : bool | None
             Training flag forwarded to dropout layers.
