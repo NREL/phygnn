@@ -661,6 +661,28 @@ def test_transformer_layer_3d():
     assert not any(np.isnan(x.numpy().flatten()))
 
 
+def test_hierarchical_transformer_hidden_layers_config():
+    """HiddenLayers should resolve hierarchical transformer configs."""
+    hidden_layers = [{
+        'class': 'Sup3rHierarchicalTransformerBlock',
+        'features': ['obs'],
+        'exo_features': ['latitude', 'longitude', 'time'],
+        'patch_size': [1, 1, 1],
+        'stage_dims': [8, 16, 32, 64],
+        'stage_depths': [1, 1, 1, 1],
+        'num_heads': [2, 2, 4, 4],
+        'key_dims': [4, 8, 8, 16],
+        'window_sizes': [4, 4, 2, 2],
+        'window_shifts': [2, 2, 1, 1],
+    }]
+
+    layers = HiddenLayers(hidden_layers)
+
+    assert len(layers.layers) == 1
+    assert layers.layers[0].stage_dims == [8, 16, 32, 64]
+    assert layers.layers[0].features == ['obs']
+
+
 def test_pos_encoding_patch_size_gt1_2d():
     """Test 2D positional encoding with patch_size > 1.
 

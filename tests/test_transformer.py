@@ -8,6 +8,9 @@ from phygnn.layers import custom_layers as custom_layers_module
 
 MultiHeadAttention = custom_layers_module.MultiHeadAttention
 Sup3rTransformerBlock = custom_layers_module.Sup3rTransformerBlock
+Sup3rHierarchicalTransformerBlock = (
+    custom_layers_module.Sup3rHierarchicalTransformerBlock
+)
 Sup3rTransformerLayer = custom_layers_module.Sup3rTransformerLayer
 WindowedMultiHeadAttention = custom_layers_module.WindowedMultiHeadAttention
 
@@ -334,6 +337,79 @@ def test_wmha_masks_padded_kv_positions():
 # --- Sup3rTransformerLayer ---
 
 
+def test_sup3r_transformer_layer_without_decode():
+    """Transformer layer should optionally return trainable latent tokens."""
+    layer = Sup3rTransformerLayer(
+        features=['obs'],
+        patch_size=(2, 2, 1),
+        embed_dim=8,
+        num_heads=2,
+        key_dim=4,
+        window_size=2,
+        window_shift=1,
+        bias_scale=1.0,
+        temporal_bias_scale=1.0,
+        decode=False,
+    )
+    x = tf.Variable(tf.random.normal((1, 4, 4, 2, 3)))
+    observations = tf.random.normal((1, 4, 4, 2, 1))
+    exo_data = tf.random.normal((1, 4, 4, 2, 3))
+
+    with tf.GradientTape() as tape:
+        output = layer(
+            x,
+            hi_res_feature=observations,
+            exo_data=exo_data,
+        )
+        loss = tf.reduce_sum(output)
+    gradients = tape.gradient(loss, [x, *layer.trainable_variables])
+
+    assert output.shape == (1, 2, 2, 2, 8)
+    assert layer.decoder is None
+    assert all(gradient is not None for gradient in gradients)
+    restored = Sup3rTransformerLayer.from_config(layer.get_config())
+    assert restored.embed_dim == 8
+    assert restored.window_shift == 1
+    assert not restored.decode
+
+
+def test_hierarchical_transformer_shape_gradients_and_config():
+    """Hierarchical assimilation should round-trip odd spatial shapes."""
+    layer = Sup3rHierarchicalTransformerBlock(
+        features=['obs'],
+        exo_features=['latitude', 'longitude', 'time'],
+        patch_size=(1, 1, 1),
+        stage_dims=(8, 16, 32, 64),
+        stage_depths=(1, 1, 1, 1),
+        num_heads=(2, 2, 4, 4),
+        key_dims=(4, 8, 8, 16),
+        window_sizes=(4, 4, 2, 2),
+        window_shifts=(2, 2, 1, 1),
+        bias_scales=(1.0, 1.0, 1.0, 1.0),
+        distance_scales=(100.0, 100.0, 100.0, 100.0),
+        temporal_bias_scales=(1.0, 1.0, 1.0, 1.0),
+        temporal_distance_scales=(3600.0, 3600.0, 3600.0, 3600.0),
+    )
+    x = tf.Variable(tf.random.normal((1, 9, 11, 2, 3)))
+    observations = np.full((1, 9, 11, 2, 1), np.nan, np.float32)
+    observations[:, ::2, ::2, :, :] = 1.0
+    exo_data = tf.random.normal((1, 9, 11, 2, 3))
+
+    with tf.GradientTape() as tape:
+        output = layer(x, tf.constant(observations), exo_data)
+        loss = tf.reduce_sum(output)
+    gradients = tape.gradient(loss, [x, *layer.trainable_variables])
+
+    assert output.shape == x.shape
+    assert not tf.reduce_any(tf.math.is_nan(output))
+    assert all(gradient is not None for gradient in gradients)
+    restored = Sup3rHierarchicalTransformerBlock.from_config(
+        layer.get_config()
+    )
+    assert restored.stage_dims == [8, 16, 32, 64]
+    assert restored.patch_size == [1, 1, 1]
+
+
 def test_sup3r_transformer_layer_windowed():
     """Sup3rTransformerLayer should forward window params and work."""
     layer = Sup3rTransformerLayer(
@@ -483,6 +559,26 @@ def test_spatial_only_patch_does_not_fill_future_time():
     np.testing.assert_array_equal(
         nan_mask.numpy(), np.array([[[[False, True]]]])
     )
+
+
+def test_sparse_patch_pool_preserves_validity_and_time():
+    """Sparse pooling should average valid values without temporal mixing."""
+    encoder = custom_layers_module.PatchEncoder(
+        patch_size=(2, 2, 1), embed_dim=4
+    )
+    values = np.full((1, 4, 4, 2, 1), np.nan, dtype=np.float32)
+    values[0, 0, 0, 0, 0] = 2.0
+    values[0, 0, 1, 0, 0] = 4.0
+    values[0, 2, 2, 1, 0] = 8.0
+    encoder.build(values.shape)
+
+    pooled = encoder.pool_sparse_tensor(tf.constant(values)).numpy()
+
+    assert pooled.shape == (1, 2, 2, 2, 1)
+    assert pooled[0, 0, 0, 0, 0] == pytest.approx(3.0)
+    assert np.isnan(pooled[0, 0, 0, 1, 0])
+    assert np.isnan(pooled[0, 1, 1, 0, 0])
+    assert pooled[0, 1, 1, 1, 0] == pytest.approx(8.0)
 
 
 def test_tuple_patch_size_config_round_trip():

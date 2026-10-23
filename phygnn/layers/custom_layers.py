@@ -338,6 +338,24 @@ class PatchEncoder(tf.keras.layers.Layer):
         nan_mask = ~tf.squeeze(token_valid, axis=-1)
         return x_clean, nan_mask
 
+    def pool_sparse_tensor(self, x):
+        """Pool sparse inputs while preserving fully invalid tokens.
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            4D or 5D sparse input tensor.
+
+        Returns
+        -------
+        tf.Tensor
+            Patchwise means with fully invalid patches represented by NaN.
+        """
+        x_clean, nan_mask = self.prepare_sparse_tensor(x)
+        if not all(size == 1 for size in self.patch_shape):
+            x_clean = self.avg_pool(x_clean)
+        return tf.where(nan_mask[..., tf.newaxis], float('nan'), x_clean)
+
     def _fill_patchwise_nans(self, x):
         """Fill NaNs with the mean of valid values inside each patch."""
         x_zero = tf.where(tf.math.is_nan(x), 0.0, x)
@@ -1411,6 +1429,7 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
         window_size=None,
         window_shift=0,
         dropout=0.0,
+        decode=True,
         **kwargs,
     ):
         """
@@ -1462,6 +1481,9 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
             attention.
         dropout : float
             Dropout rate for attention weights.
+        decode : bool
+            Whether to decode tokens back to the input grid and add the input
+            residual. If False, return the encoded latent tokens.
         **kwargs
             Additional keyword arguments for the layer.
         """
@@ -1488,6 +1510,7 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
         self.use_temporal_bias = self.temporal_bias_scale > 0
         self.use_pos_bias = self.use_spatial_bias or self.use_temporal_bias
         self.dropout = dropout
+        self.decode = decode
 
         # -- shared layers --
         self.eq = PatchEncoder(
@@ -1665,10 +1688,11 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
             tf.keras.layers.Dense(self.embed_dim),
         ])
         self.mlp.build((None, None, self.embed_dim))
-        self.decoder = PatchDecoder(
-            patch_size=self.patch_size, output_dim=x_shape[-1]
-        )
-        self.decoder.build(embed_shape)
+        if self.decode:
+            self.decoder = PatchDecoder(
+                patch_size=self.patch_size, output_dim=x_shape[-1]
+            )
+            self.decoder.build(embed_shape)
 
         # single K/V encoder and attention (joint across all features)
         self.ek.build(hr_shape)
@@ -1698,6 +1722,7 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
             'window_size': self.window_size,
             'window_shift': self.window_shift,
             'dropout': self.dropout,
+            'decode': self.decode,
         })
         return config
 
@@ -1729,7 +1754,8 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
         Returns
         -------
         tf.Tensor
-            Output tensor with the same shape as *x*.
+            Output tensor with the same shape as *x* when decoding, otherwise
+            encoded latent tokens with ``embed_dim`` features.
         """
         if hi_res_feature is None:
             return x
@@ -1803,6 +1829,9 @@ class Sup3rTransformerLayer(tf.keras.layers.Layer):
         out = attn_res + tf.reshape(
             self.mlp(out, training=training), out_shape
         )
+
+        if not self.decode:
+            return out
 
         decoded = self.decoder(out)
         decoded = tf.slice(
@@ -1938,6 +1967,373 @@ class Sup3rTransformerBlock(tf.keras.layers.Layer):
                 training=training,
             )
         return x
+
+
+class Sup3rHierarchicalTransformerBlock(tf.keras.layers.Layer):
+    """Hierarchical sparse-observation cross-attention with spatial skips."""
+
+    def __init__(
+        self,
+        name=None,
+        features=None,
+        exo_features=None,
+        patch_size=(1, 1, 1),
+        stage_dims=(64, 128, 256),
+        stage_depths=2,
+        num_heads=4,
+        key_dims=None,
+        window_sizes=None,
+        window_shifts=0,
+        bias_scales=0.0,
+        distance_scales=10000.0,
+        temporal_bias_scales=0.0,
+        temporal_distance_scales=86400.0,
+        dropout=0.0,
+        min_period_spatial=1e-4,
+        max_period_spatial=2,
+        min_period_temporal=1,
+        max_period_temporal=864000,
+        **kwargs,
+    ):
+        """Initialize the hierarchical transformer block.
+
+        Parameters
+        ----------
+        name : str | None
+            Name of layer.
+        features : list[str] | None
+            High-resolution observation features used for data dispatch.
+        exo_features : list[str] | None
+            Latitude, longitude, and optional time features used for dispatch.
+        patch_size : int | tuple[int, ...]
+            Finest-level patch size. Each deeper level doubles only the two
+            spatial patch dimensions.
+        stage_dims : sequence[int]
+            Embedding width at each unique spatial scale.
+        stage_depths : int | sequence[int]
+            Number of cross-attention layers at each scale. Decoder stages
+            mirror the corresponding encoder depth.
+        num_heads : int | sequence[int]
+            Number of attention heads at each scale.
+        key_dims : int | sequence[int] | None
+            Per-head key dimension at each scale. If None, each value is the
+            stage embedding width divided by its number of heads.
+        window_sizes : int | sequence[int] | None
+            Spatial attention-window side length at each scale.
+        window_shifts : int | sequence[int]
+            Shift increment between attention layers at each scale.
+        bias_scales : float | sequence[float]
+            Spatial ALiBi scale at each scale.
+        distance_scales : float | sequence[float]
+            Spatial ALiBi distance scale in meters at each scale.
+        temporal_bias_scales : float | sequence[float]
+            Temporal ALiBi scale at each scale.
+        temporal_distance_scales : float | sequence[float]
+            Temporal ALiBi distance scale in seconds at each scale.
+        dropout : float | sequence[float]
+            Attention dropout rate at each scale.
+        min_period_spatial : float
+            Minimum period for spatial positional encoding.
+        max_period_spatial : float
+            Maximum period for spatial positional encoding.
+        min_period_temporal : float
+            Minimum period for temporal positional encoding.
+        max_period_temporal : float
+            Maximum period for temporal positional encoding.
+        **kwargs
+            Additional keyword arguments for the layer.
+        """
+        kwargs.setdefault('autocast', False)
+        super().__init__(name=name, **kwargs)
+        self.features = features or []
+        self.exo_features = exo_features or []
+        self.patch_size = patch_size
+        self.stage_dims = list(stage_dims)
+        if not self.stage_dims:
+            raise ValueError('stage_dims must contain at least one value.')
+
+        n_stages = len(self.stage_dims)
+        self.stage_depths = self._stage_values(
+            stage_depths, n_stages, 'stage_depths'
+        )
+        self.num_heads = self._stage_values(
+            num_heads, n_stages, 'num_heads'
+        )
+        self.key_dims = (
+            [dim // heads for dim, heads in zip(
+                self.stage_dims, self.num_heads
+            )]
+            if key_dims is None
+            else self._stage_values(key_dims, n_stages, 'key_dims')
+        )
+        self.window_sizes = self._stage_values(
+            window_sizes, n_stages, 'window_sizes'
+        )
+        self.window_shifts = self._stage_values(
+            window_shifts, n_stages, 'window_shifts'
+        )
+        self.bias_scales = self._stage_values(
+            bias_scales, n_stages, 'bias_scales'
+        )
+        self.distance_scales = self._stage_values(
+            distance_scales, n_stages, 'distance_scales'
+        )
+        self.temporal_bias_scales = self._stage_values(
+            temporal_bias_scales, n_stages, 'temporal_bias_scales'
+        )
+        self.temporal_distance_scales = self._stage_values(
+            temporal_distance_scales,
+            n_stages,
+            'temporal_distance_scales',
+        )
+        self.dropout = self._stage_values(dropout, n_stages, 'dropout')
+        self.min_period_spatial = min_period_spatial
+        self.max_period_spatial = max_period_spatial
+        self.min_period_temporal = min_period_temporal
+        self.max_period_temporal = max_period_temporal
+        self.rank = None
+        self.initial_encoder = PatchEncoder(
+            patch_size=patch_size, embed_dim=self.stage_dims[0]
+        )
+        self.merge_encoders = []
+        self.expand_decoders = []
+        self.final_decoder = None
+        self.encoder_stages = [
+            self._make_stage(i, f'encoder_stage_{i}')
+            for i in range(n_stages)
+        ]
+        self.decoder_stages = [
+            self._make_stage(i, f'decoder_stage_{i}')
+            for i in range(n_stages - 1)
+        ]
+
+    @staticmethod
+    def _stage_values(value, n_stages, name):
+        """Expand a scalar stage setting or validate a stage sequence."""
+        values = list(value) if isinstance(value, (list, tuple)) else [value]
+        if len(values) == 1:
+            values *= n_stages
+        if len(values) != n_stages:
+            raise ValueError(
+                f'{name} must contain one or {n_stages} values, but '
+                f'received {len(values)}.'
+            )
+        return values
+
+    def _make_stage(self, stage_index, name):
+        """Create one same-resolution latent cross-attention stage."""
+        layers = []
+        window_size = self.window_sizes[stage_index]
+        for layer_index in range(self.stage_depths[stage_index]):
+            shift = (
+                layer_index * self.window_shifts[stage_index] % window_size
+                if window_size is not None
+                else 0
+            )
+            layers.append(Sup3rTransformerLayer(
+                name=f'{name}_layer_{layer_index}',
+                patch_size=1,
+                num_heads=self.num_heads[stage_index],
+                embed_dim=self.stage_dims[stage_index],
+                key_dim=self.key_dims[stage_index],
+                min_period_spatial=self.min_period_spatial,
+                max_period_spatial=self.max_period_spatial,
+                min_period_temporal=self.min_period_temporal,
+                max_period_temporal=self.max_period_temporal,
+                bias_scale=self.bias_scales[stage_index],
+                distance_scale=self.distance_scales[stage_index],
+                temporal_bias_scale=self.temporal_bias_scales[stage_index],
+                temporal_distance_scale=(
+                    self.temporal_distance_scales[stage_index]
+                ),
+                window_size=window_size,
+                window_shift=shift,
+                dropout=self.dropout[stage_index],
+                decode=False,
+            ))
+        return layers
+
+    def build(self, x_shape, hi_res_feature_shape=None, exo_data_shape=None):
+        """Build spatial transitions and the final decoder.
+
+        Parameters
+        ----------
+        x_shape : tuple
+            Shape tuple of the query tensor.
+        hi_res_feature_shape : tuple | None
+            Shape tuple of the sparse observation tensor.
+        exo_data_shape : tuple | None
+            Shape tuple of the coordinate tensor.
+        """
+        self.rank = len(x_shape)
+        patch_shape = _parse_patch_size(self.patch_size, self.rank)
+        if self.rank == 5 and patch_shape[-1] != 1:
+            raise ValueError(
+                'Sup3rHierarchicalTransformerBlock requires temporal patch '
+                'size 1.'
+            )
+        merge_patch = (2, 2) if self.rank == 4 else (2, 2, 1)
+        self.merge_encoders = [
+            PatchEncoder(patch_size=merge_patch, embed_dim=embed_dim)
+            for embed_dim in self.stage_dims[1:]
+        ]
+        self.expand_decoders = [
+            PatchDecoder(
+                patch_size=merge_patch,
+                output_dim=self.stage_dims[stage_index],
+            )
+            for stage_index in range(len(self.stage_dims) - 1)
+        ]
+        self.final_decoder = PatchDecoder(
+            patch_size=self.patch_size, output_dim=x_shape[-1]
+        )
+        super().build(x_shape)
+
+    def _pad_to_multiple(
+        self, tensor, patch_size, mode='CONSTANT', constant_values=0
+    ):
+        """Pad non-feature axes to a patch multiple."""
+        patch_shape = _parse_patch_size(patch_size, self.rank)
+        paddings = [[0, 0]]
+        for axis, size in zip(range(1, self.rank - 1), patch_shape):
+            remainder = tf.math.floormod(tf.shape(tensor)[axis], size)
+            paddings.append([0, tf.math.floormod(size - remainder, size)])
+        paddings.append([0, 0])
+        if mode == 'CONSTANT':
+            return tf.pad(tensor, paddings, constant_values=constant_values)
+        return tf.pad(tensor, paddings, mode=mode)
+
+    def _encode_level(self, x, observations, exo_data, encoder):
+        """Patch encode a query and pool its aligned observation inputs."""
+        x = self._pad_to_multiple(x, encoder.patch_size, mode='REFLECT')
+        observations = self._pad_to_multiple(
+            observations, encoder.patch_size, constant_values=float('nan')
+        )
+        exo_data = self._pad_to_multiple(
+            exo_data, encoder.patch_size, mode='REFLECT'
+        )
+        x = encoder(x)
+        observations = encoder.pool_sparse_tensor(observations)
+        if not all(size == 1 for size in encoder.patch_shape):
+            exo_data = encoder.avg_pool(exo_data)
+        return x, observations, exo_data
+
+    @staticmethod
+    def _crop_like(x, reference):
+        """Crop a decoded tensor to the non-feature shape of a reference."""
+        size = tf.concat([tf.shape(reference)[:-1], [tf.shape(x)[-1]]], axis=0)
+        return tf.slice(x, tf.zeros(tf.rank(x), dtype=tf.int32), size)
+
+    def _run_stage(self, layers, x, observations, exo_data, training):
+        """Run a latent tensor through one cross-attention stage."""
+        for layer in layers:
+            x = layer(
+                x,
+                hi_res_feature=observations,
+                exo_data=exo_data,
+                training=training,
+            )
+        return x
+
+    def call(
+        self,
+        x,
+        hi_res_feature=None,
+        exo_data=None,
+        training=None,
+    ):
+        """Run hierarchical sparse-observation assimilation.
+
+        Parameters
+        ----------
+        x : tf.Tensor
+            4D or 5D query tensor.
+        hi_res_feature : tf.Tensor | None
+            Sparse observations aligned with the query grid.
+        exo_data : tf.Tensor | None
+            Latitude, longitude, and optional time coordinates.
+        training : bool | None
+            Training flag forwarded to attention layers.
+
+        Returns
+        -------
+        tf.Tensor
+            Assimilated tensor with the same shape as ``x``.
+        """
+        if hi_res_feature is None:
+            return x
+        if exo_data is None:
+            raise ValueError(
+                'Sup3rHierarchicalTransformerBlock requires exo_data.'
+            )
+
+        x = tf.cast(x, self.compute_dtype)
+        observations = tf.cast(hi_res_feature, self.compute_dtype)
+        exo_data = tf.cast(exo_data, self.compute_dtype)
+        x_in = x
+        x, observations, exo_data = self._encode_level(
+            x, observations, exo_data, self.initial_encoder
+        )
+        x = self._run_stage(
+            self.encoder_stages[0], x, observations, exo_data, training
+        )
+        skips = [x]
+        observation_levels = [observations]
+        exo_levels = [exo_data]
+
+        for stage_index, encoder in enumerate(self.merge_encoders, start=1):
+            x, observations, exo_data = self._encode_level(
+                x, observations, exo_data, encoder
+            )
+            x = self._run_stage(
+                self.encoder_stages[stage_index],
+                x,
+                observations,
+                exo_data,
+                training,
+            )
+            skips.append(x)
+            observation_levels.append(observations)
+            exo_levels.append(exo_data)
+
+        for stage_index in range(len(self.stage_dims) - 2, -1, -1):
+            x = self.expand_decoders[stage_index](x)
+            x = self._crop_like(x, skips[stage_index]) + skips[stage_index]
+            x = self._run_stage(
+                self.decoder_stages[stage_index],
+                x,
+                observation_levels[stage_index],
+                exo_levels[stage_index],
+                training,
+            )
+
+        x = self.final_decoder(x)
+        return x_in + self._crop_like(x, x_in)
+
+    def get_config(self):
+        """Get config for Keras serialization."""
+        config = super().get_config()
+        config.update({
+            'features': self.features,
+            'exo_features': self.exo_features,
+            'patch_size': _serialize_patch_size(self.patch_size),
+            'stage_dims': self.stage_dims,
+            'stage_depths': self.stage_depths,
+            'num_heads': self.num_heads,
+            'key_dims': self.key_dims,
+            'window_sizes': self.window_sizes,
+            'window_shifts': self.window_shifts,
+            'bias_scales': self.bias_scales,
+            'distance_scales': self.distance_scales,
+            'temporal_bias_scales': self.temporal_bias_scales,
+            'temporal_distance_scales': self.temporal_distance_scales,
+            'dropout': self.dropout,
+            'min_period_spatial': self.min_period_spatial,
+            'max_period_spatial': self.max_period_spatial,
+            'min_period_temporal': self.min_period_temporal,
+            'max_period_temporal': self.max_period_temporal,
+        })
+        return config
 
 
 class ExpandDims(tf.keras.layers.Layer):
